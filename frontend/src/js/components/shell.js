@@ -14,6 +14,7 @@ import { hydrateIcons, icon } from './icons.js';
 const NAV = [
   { key: 'overview', label: 'Overview', icon: 'home', href: 'dashboard.html#overview' },
   { key: 'resume', label: 'Resume analyzer', icon: 'file', href: 'upload.html' },
+  { key: 'builder', label: 'Resume Builder', icon: 'sparkle', href: 'resume-builder.html' },
   { key: 'matches', label: 'Role matches', icon: 'target', href: 'dashboard.html#matches' },
   { key: 'jd', label: 'JD match', icon: 'briefcase', href: 'dashboard.html#jd' },
   { key: 'jobs', label: 'Jobs for you', icon: 'search', href: 'jobs.html' },
