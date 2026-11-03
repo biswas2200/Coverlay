@@ -4,7 +4,8 @@ A planned feature: a page where the resume is shown on the left and can be edite
 with Lay AI (the assistant) in a right-side panel -- Chat and Versions tabs -- that changes the
 same resume. The full plan is on the "Roadmap" tab of the Project Tracker sheet.
 
-`wireframe.json` is the source of the wireframe. It is a list of Excalidraw elements in the
+To look at it: open `wireframe-v2.png`. To edit it by hand: open `wireframe-v2.excalidraw` at
+excalidraw.com (menu -> Open). `wireframe.json` is the source of the wireframe. It is a list of Excalidraw elements in the
 simplified format of the Excalidraw drawing tool Claude uses (shapes with a `label`,
 `cameraUpdate` steps), so it can be re-rendered and changed in a later session. To change the
 wireframe, edit this file and render it again; git history keeps every version.
