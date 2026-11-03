@@ -13,3 +13,4 @@ wireframe, edit this file and render it again; git history keeps every version.
 | Version | What it shows |
 |---|---|
 | v1 | The two-pane page: resume preview with editable (dashed) fields on the left, AI chat on the right, and green highlights for what the AI just changed. |
+| v2 (owner's sketch) | `owner-sketch-v2.webp`: the owner's notes on v1 -- the chat starts closed behind a floating "Coverlay AI" button, and an extra "AI pointer" follows the user's edits. Not yet turned into `wireframe.json`. |
