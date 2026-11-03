@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Resume Builder · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
+        <div>
+          <p class="crumb">Resume</p>
+          <h1 class="page-title">Resume Builder</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-violet">Preview</span>
+          <button class="btn btn-ghost" id="start-over" type="button" hidden><i data-icon="refresh"></i>Start over</button>
+          <button class="btn btn-secondary" id="change-template" type="button" hidden>Change template</button>
+          <button class="btn btn-primary" id="finish-button" type="button" hidden><i data-icon="check"></i>Done</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <p class="alert alert-info" role="note">
+          Preview with sample data: nothing here is saved to your account, and Lay AI's replies are
+          samples. No AI is called yet.
+        </p>
+        <p class="sr-only" id="rb-status" role="status"></p>
+
+        <!-- 1. Start: a few basic questions -->
+        <section class="card rb-start" id="step-start" aria-labelledby="start-title" hidden>
+          <div>
+            <h2 id="start-title">Let's start with a few questions</h2>
+            <p class="muted">Lay AI suggests templates from your answers.</p>
+          </div>
+          <form class="rb-start-form" id="start-form">
+            <div class="field">
+              <label for="target-role">Target role</label>
+              <input class="input" id="target-role" name="role" maxlength="80" placeholder="e.g. Backend Developer" autocomplete="off" />
+            </div>
+            <fieldset class="rb-question">
+              <legend>Experience</legend>
+              <div class="rb-choices">
+                <label class="rb-choice"><input type="radio" name="level" value="student" /><span>Student</span></label>
+                <label class="rb-choice"><input type="radio" name="level" value="fresher" /><span>Fresher</span></label>
+                <label class="rb-choice"><input type="radio" name="level" value="junior" /><span>1-3 yrs</span></label>
+                <label class="rb-choice"><input type="radio" name="level" value="senior" /><span>3+ yrs</span></label>
+              </div>
+            </fieldset>
+            <fieldset class="rb-question">
+              <legend>Style</legend>
+              <div class="rb-choices">
+                <label class="rb-choice"><input type="radio" name="style" value="simple" /><span>Simple</span></label>
+                <label class="rb-choice"><input type="radio" name="style" value="modern" /><span>Modern</span></label>
+                <label class="rb-choice"><input type="radio" name="style" value="academic" /><span>Academic</span></label>
+              </div>
+            </fieldset>
+            <fieldset class="rb-question">
+              <legend>Length</legend>
+              <div class="rb-choices">
+                <label class="rb-choice"><input type="radio" name="pages" value="1" /><span>1 page</span></label>
+                <label class="rb-choice"><input type="radio" name="pages" value="2" /><span>2 pages</span></label>
+              </div>
+            </fieldset>
+            <div class="rb-start-actions">
+              <button class="rb-link" id="from-upload" type="button"><i data-icon="upload"></i>Start from my uploaded resume</button>
+              <button class="btn btn-primary" type="submit"><i data-icon="sparkle"></i>Suggest templates</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 2. Templates from the answers -->
+        <section class="rb-step" id="step-templates" aria-labelledby="templates-title" hidden>
+          <div class="rb-step-head">
+            <div>
+              <h2 id="templates-title">Templates for you</h2>
+              <p class="muted" id="templates-sub"></p>
+            </div>
+            <button class="btn btn-ghost" id="templates-back" type="button">Change answers</button>
+          </div>
+          <ul class="rb-templates" id="template-list"></ul>
+        </section>
+
+        <!-- 3-6. Editor: the resume on the left, Lay AI on the right -->
+        <section class="rb-editor" id="step-editor" aria-label="Resume editor" hidden>
+          <div class="rb-stage" id="rb-stage">
+            <div class="alert alert-info rb-viewing" id="viewing-banner" hidden>
+              <span id="viewing-text"></span>
+              <span class="rb-viewing-actions">
+                <button class="btn btn-secondary btn-sm" id="viewing-restore" type="button">Restore this version</button>
+                <button class="btn btn-ghost btn-sm" id="viewing-back" type="button">Back to current</button>
+              </span>
+            </div>
+            <p class="muted rb-hint" id="editor-hint">Click any part of your resume and type to change it. Every change is kept as a version.</p>
+            <article class="rb-paper" id="rb-paper" aria-label="Your resume"></article>
+            <div class="rb-pointer" id="rb-pointer" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4.5 2.5 19.5 12l-6.8 1.7L9.3 20.5z" /></svg>
+              <span>Lay AI</span>
+            </div>
+          </div>
+
+          <aside class="lay-panel" id="lay-panel" aria-label="Lay AI" hidden>
+            <div class="lay-panel-head">
+              <span class="lay-avatar" aria-hidden="true"><i data-icon="sparkle"></i></span>
+              <div>
+                <p class="lay-title">Lay AI</p>
+                <p class="lay-sub">Preview: sample replies</p>
+              </div>
+              <button class="icon-btn lay-close" id="lay-close" type="button" aria-label="Close Lay AI"><i data-icon="close"></i></button>
+            </div>
+            <div class="lay-tabs" role="tablist" aria-label="Lay AI">
+              <button class="lay-tab" id="tab-chat" type="button" role="tab" aria-controls="lay-chat" aria-selected="true">Chat</button>
+              <button class="lay-tab" id="tab-versions" type="button" role="tab" aria-controls="lay-versions" aria-selected="false">Versions <span class="count" id="versions-count"></span></button>
+            </div>
+            <div class="lay-body" id="lay-chat" role="tabpanel" aria-labelledby="tab-chat">
+              <ul class="lay-messages" id="lay-messages" role="log" aria-live="polite"></ul>
+              <div class="lay-suggestions" id="lay-suggestions">
+                <button class="lay-suggestion" type="button" data-prompt="Add Docker and Kubernetes to my skills">Add Docker and Kubernetes</button>
+                <button class="lay-suggestion" type="button" data-prompt="Shorten my summary">Shorten my summary</button>
+                <button class="lay-suggestion" type="button" data-prompt="Rewrite my summary for a senior backend role">Fit a senior backend role</button>
+              </div>
+              <form class="lay-form" id="lay-form">
+                <label class="sr-only" for="lay-input">Ask Lay AI</label>
+                <input class="input" id="lay-input" maxlength="300" placeholder="Ask Lay AI to change your resume…" autocomplete="off" />
+                <button class="btn btn-primary" id="lay-send" type="submit">Send</button>
+              </form>
+            </div>
+            <div class="lay-body" id="lay-versions" role="tabpanel" aria-labelledby="tab-versions" hidden>
+              <ul class="lay-version-list" id="lay-version-list"></ul>
+            </div>
+          </aside>
+        </section>
+
+        <!-- 7. Finished -->
+        <section class="rb-finished" id="step-finished" aria-label="Finished resume" hidden>
+          <article class="rb-paper" id="final-paper" aria-label="Your finished resume"></article>
+          <div class="card rb-finished-actions">
+            <h2>Your resume is ready</h2>
+            <p class="muted" id="finished-sub"></p>
+            <button class="btn btn-primary" id="download-pdf" type="button"><i data-icon="file"></i>Download PDF</button>
+            <p class="field-hint">Opens the print window: choose "Save as PDF".</p>
+            <button class="btn btn-secondary" id="download-docx" type="button">Download DOCX</button>
+            <p class="field-hint" id="docx-note" hidden>DOCX comes with the real build. For now, use Download PDF.</p>
+            <button class="btn btn-ghost" id="back-to-editor" type="button">Back to editor</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <button class="lay-fab" id="lay-fab" type="button" aria-controls="lay-panel" aria-expanded="false" hidden>
+      <span class="lay-hi" aria-hidden="true">Hi!</span>
+      <span class="lay-orb"><i data-icon="sparkle"></i></span>
+      <span class="lay-name">Lay AI</span>
+    </button>
+
+    <script type="module" src="js/pages/resume-builder.js"></script>
+  </body>
+</html>
