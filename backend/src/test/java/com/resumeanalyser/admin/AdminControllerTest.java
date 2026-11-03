@@ -54,25 +54,34 @@ class AdminControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "PREMIUM_USER")
-    void updateRole_isForbidden_forAPremiumUser() throws Exception {
+    @WithMockUser(roles = "USER")
+    void updateRole_isForbidden_forAnOrdinaryUser() throws Exception {
         mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"PREMIUM_USER\"}"))
+                        .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "ADMIN")
     void updateRole_isAllowed_forTheAdminRole() throws Exception {
-        when(adminService.updateRole(userId, UserRole.PREMIUM_USER))
-                .thenReturn(new UserDto(userId, "a@b.c", UserRole.PREMIUM_USER, Instant.now(), null));
+        when(adminService.updateRole(userId, UserRole.ADMIN))
+                .thenReturn(new UserDto(userId, "a@b.c", UserRole.ADMIN, Instant.now()));
 
         mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"role\":\"PREMIUM_USER\"}"))
+                        .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.role").value("PREMIUM_USER"));
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateRole_rejectsTheRemovedPremiumRole() throws Exception {
+        mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"PREMIUM_USER\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

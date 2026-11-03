@@ -13,7 +13,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -30,9 +28,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Web-layer tests for {@code POST /resumes/{id}/jd-match}: the service's
- * Premium refusal (FR-12.2; see ResumeServiceTest) becomes a 403, body
- * validation, and the pass-through of the service's result.
+ * Web-layer tests for {@code POST /resumes/{id}/jd-match}: open to an
+ * ordinary account, body validation, and the pass-through of the service's
+ * result.
  */
 @WebMvcTest(
         controllers = ResumeController.class,
@@ -55,26 +53,11 @@ class ResumeControllerJdMatchTest {
     private final UUID resumeId = UUID.randomUUID();
 
     @Test
-    @WithMockUser(username = "free@example.com", roles = "USER")
-    void jdMatch_isForbidden_whenTheServiceRefusesAFreeAccount() throws Exception {
+    @WithMockUser(username = "user@example.com", roles = "USER")
+    void jdMatch_returnsTheMatchForAnOrdinaryAccount() throws Exception {
         User user = new User();
         user.setId(UUID.randomUUID());
-        when(userRepository.findByEmail("free@example.com")).thenReturn(Optional.of(user));
-        when(resumeService.matchJobDescription(eq(user), eq(resumeId), any()))
-                .thenThrow(new AccessDeniedException("JD match is a Premium feature"));
-
-        mockMvc.perform(post("/resumes/{id}/jd-match", resumeId).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"jdText\":\"Java, Spring Boot, SQL\"}"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(username = "premium@example.com", roles = "PREMIUM_USER")
-    void jdMatch_returnsTheMatchForAPremiumAccount() throws Exception {
-        User user = new User();
-        user.setId(UUID.randomUUID());
-        when(userRepository.findByEmail("premium@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(resumeService.matchJobDescription(eq(user), eq(resumeId), eq("Java, Spring Boot, SQL")))
                 .thenReturn(new JdMatchResponse(resumeId, 0.68, 0.54, 0.9,
                         List.of("Java", "Spring Boot", "SQL"), List.of("Java", "SQL"), List.of("Spring Boot"),

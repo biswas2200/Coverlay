@@ -1,7 +1,7 @@
-"""Measure what a Premium analysis really costs against what ml-service/
-README.md assumes.
+"""Measure what an analysis really costs against what ml-service/README.md
+assumes.
 
-Runs the full pipeline (services/pipeline.py, tier=premium) over the
+Runs the full pipeline (services/pipeline.py: extraction + narrative) over the
 bundled sample resumes -- or the files you pass -- and prints, per call,
 the token counts the provider reported and the price they work out to
 next to the pre-call estimate (characters / 4). Nothing here is special-
@@ -11,7 +11,6 @@ cased: it is the exact code path POST /analyze-file takes.
     python scripts/llm_cost_check.py                      # real calls (ADC + GOOGLE_CLOUD_PROJECT)
     python scripts/llm_cost_check.py resume.pdf cv.docx   # your own files
     python scripts/llm_cost_check.py --repeat             # run twice: the second pass should be cache hits
-    python scripts/llm_cost_check.py --tier free          # the free AI analysis: extraction only, no narrative
 
 Run from ml-service/ with its virtualenv active (the pipeline needs the
 local models, and Settings reads ml-service/.env).
@@ -91,11 +90,8 @@ def main() -> int:
     ap.add_argument("files", nargs="*", type=Path, help="resume files (.txt/.pdf/.docx); default: scripts/samples/*")
     ap.add_argument("--dry-run", action="store_true", help="print estimates only; make no API call")
     ap.add_argument("--repeat", action="store_true", help="analyse each file twice to show the cache")
-    ap.add_argument("--top-n", type=int, default=3)
-    ap.add_argument("--tier", choices=["premium", "free"], default="premium",
-                    help="premium (default: extract + narrative) or free (one AI extraction, template)")
+    ap.add_argument("--top-n", type=int, default=5)
     args = ap.parse_args()
-    premium = args.tier == "premium"
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("app.services.llm_client").setLevel(logging.INFO)
@@ -121,15 +117,11 @@ def main() -> int:
         text = _read_text(path)
         domain = detect_domain(text)
         est = _pre_call_estimate(text, domain.name)
-        if domain.engine == "llm":
-            est_calls = ["extract", "narrate"] if premium else ["extract"]
-        else:
-            est_calls = ["narrate"] if premium else []
+        est_calls = ["extract", "narrate"]
         est_cost = sum(_price(est[c]["prompt_tokens"], est[c]["output_tokens"]) for c in est_calls)
         grand_est += est_cost
 
-        print(f"== {path.name}: {len(text)} chars, domain={domain.domain} ({domain.engine}, {domain.tier}), "
-              f"confidence={domain.confidence}, tier={args.tier}")
+        print(f"== {path.name}: {len(text)} chars, domain={domain.domain}, confidence={domain.confidence}")
         print(f"  {'call':<26} {'prompt':>8} {'output':>8} {'thinking':>9}   {'est. USD':<10}")
         for call in est_calls:
             _print_row(f"assumed {call}", est[call]["prompt_tokens"], est[call]["output_tokens"], 0,
@@ -146,7 +138,7 @@ def main() -> int:
         passes = 2 if args.repeat else 1
         for n in range(passes):
             started = time.perf_counter()
-            response = pipeline.analyze_text(text, top_n=args.top_n, tier=args.tier, llm_allowed=not premium)
+            response = pipeline.analyze_text(text, top_n=args.top_n)
             elapsed = time.perf_counter() - started
             usage = response.llm_usage
             if usage is None:
@@ -159,8 +151,7 @@ def main() -> int:
                            call.estimated_cost_usd)
             print(f"  {'actual total':<26} {'':>8} {'':>8} {'':>9}   ${usage.estimated_cost_usd:.6f}  "
                   f"({elapsed:.1f}s, explanation_source={response.explanation_source}, "
-                  f"{len(response.matches)} matches, {len(response.profile.skills)} skills, "
-                  f"ai_extraction_used={response.ai_extraction_used})")
+                  f"{len(response.matches)} matches, {len(response.profile.skills)} skills)")
             if n == 0:
                 grand_actual += usage.estimated_cost_usd
                 ratio = usage.estimated_cost_usd / est_cost if est_cost else float("nan")

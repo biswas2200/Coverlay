@@ -45,8 +45,8 @@ build/
 # Internal working docs (SRS draft, notes) -- not meant for the public repo
 documents/
 
-# Trained NER models -- fetched from the bucket by
-# ml-service/scripts/fetch_ner_models.sh, too large for git
+# Trained NER models (archived, see ml-service/archive/ner_model/) -- fetched
+# from the bucket by archive/ner_model/scripts/fetch_ner_models.sh, too large for git
 ml-service/models/
 
 # Downloaded evaluation/training datasets -- large, not meant for the repo

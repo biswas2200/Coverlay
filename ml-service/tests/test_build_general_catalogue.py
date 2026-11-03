@@ -18,9 +18,9 @@ from build_general_catalogue import build, clean_skill, read_postings  # noqa: E
 from compare_catalogues import report, summary  # noqa: E402
 
 DOMAINS = {
-    "engineering": {"id": "engineering", "name": "Engineering & Technology", "engine": "local"},
-    "healthcare": {"id": "healthcare", "name": "Healthcare & Life Sciences", "engine": "llm"},
-    "legal": {"id": "legal", "name": "Legal", "engine": "llm"},
+    "engineering": {"id": "engineering", "name": "Engineering & Technology"},
+    "healthcare": {"id": "healthcare", "name": "Healthcare & Life Sciences"},
+    "legal": {"id": "legal", "name": "Legal"},
 }
 
 

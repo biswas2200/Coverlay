@@ -1,10 +1,10 @@
 # Full local stack: `docker compose up --build` serves the frontend on
 # http://localhost:4200, the backend on :8080 and the ML service on :8000.
 #
-# Google credentials for the Premium (Gemini) paths are Application Default
-# Credentials only -- the file `gcloud auth application-default login` writes
-# is mounted read-only into the ML service; there is no API key anywhere.
-# Free-tier / engineering analyses never need it.
+# Google credentials for Gemini, which reads every resume, are Application
+# Default Credentials only -- the file `gcloud auth application-default login`
+# writes is mounted read-only into the ML service; there is no API key
+# anywhere. Without them an analysis still returns its ATS score, locked.
 services:
   postgres:
     image: postgres:15
@@ -35,9 +35,9 @@ services:
   ml-service:
     build: ./ml-service
     environment:
-      # gemini (default) or none for a Community Edition build.
+      # gemini (default), or none to run without the AI engine (every result locked).
       LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
-      # Set in your shell (or a root .env file) to enable the Premium paths.
+      # Set in your shell (or a root .env file): Gemini reads every resume.
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
       GOOGLE_APPLICATION_CREDENTIALS: /gcloud/application_default_credentials.json
@@ -48,14 +48,10 @@ services:
       LLM_INPUT_USD_PER_1M: ${LLM_INPUT_USD_PER_1M:-0.10}
       LLM_OUTPUT_USD_PER_1M: ${LLM_OUTPUT_USD_PER_1M:-0.40}
       LLM_DAILY_BUDGET_USD: ${LLM_DAILY_BUDGET_USD:-0}
-      # The trained NER model is downloaded from this bucket folder on the
-      # first start (ADC below) into the ner-models volume, then reused.
-      NER_MODEL_GCS_URI: ${NER_MODEL_GCS_URI:-gs://smart-resume-analyzer-a7x2-data/runs/teacher}
     ports:
       - "8000:8000"
     volumes:
       - hf-models:/models
-      - ner-models:/srv/models
       - ${GCLOUD_ADC_PATH:-~/.config/gcloud/application_default_credentials.json}:/gcloud/application_default_credentials.json:ro
 
   backend:
@@ -76,7 +72,6 @@ services:
       APP_ADMIN_EMAILS: ${APP_ADMIN_EMAILS:-}
       GITHUB_ISSUES_TOKEN: ${GITHUB_ISSUES_TOKEN:-}
       GITHUB_ISSUES_REPO: ${GITHUB_ISSUES_REPO:-biswas2200/Smart-Resume-Analyzer-and-Job-Recommendation-System}
-      PREVIEW_MODE: ${PREVIEW_MODE:-true}
     ports:
       - "8080:8080"
 
@@ -91,4 +86,3 @@ volumes:
   postgres-data:
   minio-data:
   hf-models:
-  ner-models:

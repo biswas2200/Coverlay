@@ -197,8 +197,8 @@ def _highlight(properties) -> str | None:
 
 
 def _lines_to_text(lines: Iterable[str]) -> str:
-    """Joins lines with newlines, dropping blank runs so section headings the
-    sectioner looks for ("Experience" alone on a line) stay on their own
-    line while empty spacer paragraphs don't pad the word count."""
+    """Joins lines with newlines, dropping blank runs so section headings
+    ("Experience" alone on a line, which the ATS checks look for) stay on
+    their own line while empty spacer paragraphs don't pad the word count."""
     kept = [line.strip() for line in lines]
     return "\n".join(line for line in kept if line)

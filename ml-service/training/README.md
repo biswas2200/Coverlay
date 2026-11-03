@@ -1,5 +1,10 @@
 # Model Training & Fine-Tuning on Google Cloud Platform (GCP)
 
+> **Archived (November 2026).** The NER model this pipeline trains is no longer used by the
+> service: Gemini reads every resume instead. The code is kept for reference; see
+> [`docs/archive/ner-model.md`](../../docs/archive/ner-model.md) and
+> [`archive/ner_model/README.md`](../archive/ner_model/README.md).
+
 > **Purpose:** Setup and execution guide for training, fine-tuning, and distilling models for Coverlay using GCP cloud compute resources (e.g., Compute Engine GPU VM or Vertex AI Workbench).
 
 ---
@@ -59,7 +64,8 @@ By leveraging **Google Cloud Platform (GCP)** and the allocated **$300 GCP credi
 #### Track A run order (on the GPU VM)
 
 Code: `data_prep/training_set.py` (step 2), `train_ner.py` (step 3),
-`label_quality.py` (the label-quality classifier) and `evaluate_model.py`.
+`label_quality.py` (the label-quality classifier) and `evaluate_model.py`
+(now in `archive/ner_model/training/`, with the parser it scores through).
 Each step's output goes to the bucket before the next starts. Stop at any
 failed gate.
 

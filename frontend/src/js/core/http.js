@@ -6,7 +6,7 @@ import { clearSession, getToken } from './session.js';
 // treats them as unauthenticated on purpose (see AuthController), and an unrelated 401 from a
 // leftover token would be confusing to debug.
 // Public endpoints: never send a (possibly expired) token, so a 401 can't sign the visitor out.
-const UNAUTHENTICATED_PATHS = ['/auth/login', '/auth/register', '/tiers'];
+const UNAUTHENTICATED_PATHS = ['/auth/login', '/auth/register'];
 
 /**
  * The one place every backend call goes through.

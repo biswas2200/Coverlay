@@ -1,12 +1,8 @@
-# ML service / core engine. The same image serves the hosted Web tiers and,
-# later, the Community Edition (docs/editions-and-parity.md): parity is
-# structural because it is literally the same artifact.
-#
-# The trained resume NER model is mounted at /srv/models (docker-compose.yml;
-# fetch it with scripts/fetch_ner_models.sh). MiniLM is downloaded on first
-# use into HF_HOME; mount a volume there (see docker-compose.yml) so it is
-# fetched once, not on every container start. Baking the models into the
-# image is a later step (ONNX export).
+# ML service / core engine. Gemini (Vertex AI, ADC) reads every resume; the
+# only local model is MiniLM for embeddings, downloaded on first use into
+# HF_HOME -- mount a volume there (see docker-compose.yml) so it is fetched
+# once, not on every container start. (The local NER model is archived:
+# archive/ner_model/README.md.)
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

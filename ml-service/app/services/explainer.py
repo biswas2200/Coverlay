@@ -3,9 +3,10 @@ backends, selected by Settings.explainer_backend (default "template", per
 FR-5.4): TemplateExplainer composes deterministic, network-free prose from
 the already-computed data; the LLM backend asks a coaching-framed model for a
 more polished narrative. Neither ever rewrites resume content or influences
-the underlying score (FR-5.3) -- the LLM backend is Premium/opt-in, since it
-costs money, needs network access, and (unlike the template) is not
-reproducible for the same input.
+the underlying score (FR-5.3). The analysis pipeline asks for the LLM
+narrative; the template is its fallback and the default for other callers,
+since the LLM costs money, needs network access, and (unlike the template)
+is not reproducible for the same input.
 """
 
 import logging
@@ -73,23 +74,15 @@ class Explanation(NamedTuple):
 
 
 # One sentence per lock reason (schemas.LockReason), appended after the ATS
-# line of a locked result in place of the role lines. Keyed so the copy
-# never claims "upgrade" to a Community Edition user who has nothing to
-# upgrade to.
+# line of a locked result in place of the role lines.
 LOCKED_MESSAGES = {
-    "ai_engine_required": (
-        "Your resume reads as {domain}. Role recommendations and skill gaps for this "
-        "field come from the AI engine, and this month's free AI analyses are used up "
-        "-- upgrade to Premium for unlimited analyses, or check back next month."
-    ),
-    "community_edition": (
-        "Your resume reads as {domain}. Role recommendations and skill gaps for this "
-        "field need the AI engine, which the Community Edition does not include -- "
-        "use the cloud version for this resume."
+    "ai_unavailable": (
+        "Your resume reads as {domain}. Role recommendations and skill gaps come from "
+        "the AI engine, which is not available right now -- analyse this resume again later."
     ),
     "ai_budget_exhausted": (
-        "Your resume reads as {domain}. The free AI engine has reached today's budget "
-        "-- try again tomorrow, or upgrade to Premium, which is not limited."
+        "Your resume reads as {domain}. The AI engine has reached today's budget "
+        "-- analyse this resume again tomorrow."
     ),
 }
 # What to do about each failed ATS check (ats_score.BASE_CHECK_WEIGHTS), in

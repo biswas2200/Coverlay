@@ -1,7 +1,5 @@
 package com.resumeanalyser.recommendation;
 
-import com.resumeanalyser.account.AiAllowanceService;
-import com.resumeanalyser.account.TierProperties;
 import com.resumeanalyser.account.User;
 import com.resumeanalyser.client.dto.RoleMatchDto;
 import com.resumeanalyser.common.ResourceNotFoundException;
@@ -32,25 +30,19 @@ public class RecommendationService {
     private final ResumeRepository resumeRepository;
     private final ParsedProfileRepository parsedProfileRepository;
     private final SkillVectorService skillVectorService;
-    private final AiAllowanceService aiAllowanceService;
-    private final TierProperties tiers;
 
     public RecommendationService(
             RoleRepository roleRepository,
             RecommendationRepository recommendationRepository,
             ResumeRepository resumeRepository,
             ParsedProfileRepository parsedProfileRepository,
-            SkillVectorService skillVectorService,
-            AiAllowanceService aiAllowanceService,
-            TierProperties tiers
+            SkillVectorService skillVectorService
     ) {
         this.roleRepository = roleRepository;
         this.recommendationRepository = recommendationRepository;
         this.resumeRepository = resumeRepository;
         this.parsedProfileRepository = parsedProfileRepository;
         this.skillVectorService = skillVectorService;
-        this.aiAllowanceService = aiAllowanceService;
-        this.tiers = tiers;
     }
 
     /**
@@ -160,9 +152,7 @@ public class RecommendationService {
         DashboardResponse.DomainInfo domain = new DashboardResponse.DomainInfo(
                 profile.getDomain(),
                 profile.getDomainName(),
-                profile.getDomainConfidence(),
-                profile.getDomainEngine(),
-                profile.getDomainTier());
+                profile.getDomainConfidence());
 
         return Optional.of(new DashboardResponse(
                 resume.getId(),
@@ -171,8 +161,6 @@ public class RecommendationService {
                 roleRecommendations,
                 profile.isRecommendationsLocked(),
                 profile.getLockReason(),
-                tiers.tierFor(user.getRole()),
-                aiAllowanceService.status(user),
                 profile.getExplanation(),
                 profile.getExplanationSource()));
     }

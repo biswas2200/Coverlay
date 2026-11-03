@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Limits on the company watchlist ({@code app.watchlist.*} in application.yml),
- * the same for every user and tier. They keep one account from filling the
+ * the same for every user. They keep one account from filling the
  * table or hammering the server by watching and un-watching in a loop.
  *
  * @param maxCompanies     how many companies one user may watch at a time

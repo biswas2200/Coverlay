@@ -1,6 +1,5 @@
 package com.resumeanalyser.auth;
 
-import com.resumeanalyser.account.AiAllowanceService;
 import com.resumeanalyser.account.User;
 import com.resumeanalyser.account.UserRepository;
 import com.resumeanalyser.account.UserRole;
@@ -44,12 +43,10 @@ class AuthServiceTest {
     private JwtService jwtService;
     @Mock
     private UserDetailsService userDetailsService;
-    @Mock
-    private AiAllowanceService aiAllowanceService;
 
     private AuthService serviceWithAdmins(String... emails) {
         return new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService,
-                userDetailsService, aiAllowanceService, List.of(emails));
+                userDetailsService, List.of(emails));
     }
 
     private void stubRegistration() {

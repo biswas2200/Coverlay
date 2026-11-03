@@ -17,13 +17,9 @@ import {
   demandChipLabel,
   demandFor,
   demandHeading,
-  engineLabel,
   isBudgetExhausted,
-  isCommunityEdition,
   isLlmExplanation,
   isLocked,
-  resetDate,
-  showsAllowance,
 } from './dashboard-rules.js';
 import {
   atsChange,
@@ -41,12 +37,12 @@ import {
 
 // The dashboard for the latest resume version, in three tabs driven by the address hash:
 // - #overview: ATS score and band, detected field, best match, every ATS check with how to fix
-//   it, the suggestions (Premium: written by AI) and the next steps.
+//   it, the suggestions (written by AI) and the next steps.
 // - #matches: ranked role matches with the skills the user has and the ones to add, plus
-//   helpful/not-helpful feedback (FR-10.1). When the field needs the AI engine and this
-//   analysis could not use it, a locked card whose wording follows `lockReason` shows instead.
-// - #jd: the Premium job-description match.
-// Tier and lock decisions live in dashboard-rules.js, the wording in insights.js.
+//   helpful/not-helpful feedback (FR-10.1). When the AI engine could not run for this
+//   analysis, a locked card whose wording follows `lockReason` shows instead.
+// - #jd: the job-description match.
+// Lock decisions live in dashboard-rules.js, the wording in insights.js.
 
 const TABS = ['overview', 'matches', 'jd'];
 const TAB_LABELS = { overview: 'Dashboard', matches: 'Role matches', jd: 'JD match' };
@@ -184,16 +180,10 @@ function renderDomain(data) {
   }
   setText(byId('domain-name'), domain.name);
   setText(byId('domain-confidence'), `${confidencePercent(domain)}% sure`);
-  setText(byId('domain-engine'), engineLabel(domain));
   setText(
     byId('domain-note'),
-    domain.engine === 'local' ? 'Analysed in full on our own engine, as often as you like.' : 'Analysed with the AI engine.',
+    isLocked(data) ? 'The AI engine was not available, so only the basics were read.' : 'Read in full by the AI engine.',
   );
-  const allowance = byId('ai-allowance');
-  if (showsAllowance(data)) {
-    setText(allowance, `AI analyses: ${data.aiAllowance.used} of ${data.aiAllowance.quota} used this month · resets ${resetDate(data)}`);
-  }
-  show(allowance, showsAllowance(data));
 }
 
 function renderTopMatch(data) {
@@ -246,13 +236,12 @@ function order(view) {
 function renderSuggestions(data) {
   const llm = isLlmExplanation(data);
   const badge = byId('coaching-badge');
-  setText(badge, llm ? 'AI · Premium' : 'Standard');
+  setText(badge, llm ? 'Written by AI' : 'Standard');
   badge.className = `badge ${llm ? 'badge-violet' : ''}`.trim();
   const parts = paragraphs(data.explanation);
   byId('explanation').replaceChildren(
     ...(parts.length > 0 ? parts : ['No suggestions for this version.']).map((text) => el('p', { class: 'preserve-lines' }, text)),
   );
-  show(byId('coaching-upgrade-hint'), !llm && data.userTier !== 'premium');
   byId('next-steps').replaceChildren(...nextSteps(data).map((step) => el('li', {}, el('span', {}, step))));
 }
 
@@ -263,34 +252,10 @@ function renderLockedCard(data) {
   for (const element of document.querySelectorAll('#locked-card [data-field="domain-name"]')) {
     setText(element, domainName);
   }
-  const community = isCommunityEdition(data);
   const budget = isBudgetExhausted(data);
-  show(byId('locked-community'), community);
   show(byId('locked-budget'), budget);
-  show(byId('locked-default'), !community && !budget);
-  setText(byId('locked-quota'), String(data.aiAllowance?.quota ?? 3));
-
-  const lockedAllowance = byId('locked-allowance');
-  const showAllowanceLine = data.userTier === 'free' && !!data.aiAllowance;
-  if (showAllowanceLine) {
-    setText(
-      lockedAllowance,
-      `You've used ${data.aiAllowance.used} of ${data.aiAllowance.quota} free AI analyses this month. They reset on ${resetDate(data)}.`,
-    );
-  }
-  show(lockedAllowance, showAllowanceLine);
-
-  const unlockable = canUnlock(data);
-  show(byId('unlock-section'), unlockable);
-  if (unlockable) {
-    setText(
-      byId('unlock-message'),
-      data.userTier === 'premium'
-        ? 'Your account is Premium: re-run the analysis to unlock them.'
-        : 'You have a free AI analysis left: re-run the analysis to unlock them.',
-    );
-  }
-  show(byId('locked-upgrade-hint'), !unlockable && !community);
+  show(byId('locked-default'), !budget);
+  show(byId('unlock-section'), canUnlock(data));
   show(byId('locked-card'));
 }
 
@@ -401,9 +366,7 @@ async function onReanalyze() {
 // ---------- JD match ----------
 
 function renderJdPanel(data) {
-  const available = canMatchJd(data);
-  show(byId('jd-section'), available);
-  show(byId('jd-upgrade-hint'), !available);
+  show(byId('jd-section'), canMatchJd(data));
 }
 
 async function onMatchJd(event) {

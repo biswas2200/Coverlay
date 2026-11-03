@@ -31,16 +31,16 @@ router = APIRouter()
 
 @router.post("/parse")
 def parse(request: ParseRequest) -> ParseResponse:
-    """Extract a structured profile from raw resume text via the configured
-    parsing backend (local NER by default, LLM if PARSER_BACKEND=llm)."""
+    """Extract a structured profile from raw resume text with the AI engine
+    (parser.py). 503 when the engine is not configured."""
     profile = parse_resume(request.resume_text)
     return ParseResponse(profile=profile)
 
 
 @router.post("/detect-domain")
 def detect(request: ParseRequest) -> DomainDetection:
-    """Which job domain the resume belongs to, and the engine/tier that
-    serves it -- deterministic, no LLM (see domain_classifier.py)."""
+    """Which job domain the resume belongs to -- deterministic, no LLM (see
+    domain_classifier.py)."""
     return detect_domain(request.resume_text)
 
 
@@ -58,7 +58,7 @@ def match_jd(request: JdMatchRequest) -> JdMatchResponse:
     """How well an already-extracted skill set covers one pasted job
     description: score, matched/missing JD skills and the closest catalogue
     role (see jd_match.py). Deterministic, no LLM -- the backend exposes it
-    to Premium accounts as POST /resumes/{id}/jd-match."""
+    as POST /resumes/{id}/jd-match."""
     return jd_match.match_jd(request.skills, request.jd_text, domain=request.domain)
 
 
@@ -73,9 +73,6 @@ def score(request: AtsScoreRequest) -> AtsScoreResponse:
 def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     """Full pipeline in one call: detect domain, ATS-score, parse, match
     roles, find skill gaps, and explain -- or lock recommendations when the
-    domain needs the AI engine and this request may not use it (see
-    services/pipeline.py). The text-in counterpart to upload.py's
-    analyze_file()."""
-    return pipeline.analyze_text(
-        request.resume_text, top_n=request.top_n, tier=request.tier, llm_allowed=request.llm_allowed
-    )
+    AI engine cannot run (see services/pipeline.py). The text-in counterpart
+    to upload.py's analyze_file()."""
+    return pipeline.analyze_text(request.resume_text, top_n=request.top_n)

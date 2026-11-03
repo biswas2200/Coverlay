@@ -25,7 +25,7 @@ public class MlServiceException extends RuntimeException {
      * @param llmUnavailable true if the ML service reported its LLM provider is
      *                       unavailable (its {@code 503} -- Gemini on Vertex AI
      *                       without a project id or Application Default
-     *                       Credentials); only Premium analyses can hit this
+     *                       Credentials) while extracting a profile
      */
     public MlServiceException(String message, boolean unsupportedFileType, boolean llmUnavailable, Throwable cause) {
         super(message, cause);

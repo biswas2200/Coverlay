@@ -37,7 +37,7 @@ public class ResumeExceptionHandler {
 
     /**
      * Handles a failure calling the ML service -- it rejected the file's
-     * format (415), its LLM provider was unavailable for a Premium analysis
+     * format (415), its LLM provider was unavailable during an analysis
      * (503, passed through so the client can say "try again later"), or it
      * was unreachable/errored (502, since that's this backend's fault for
      * depending on a service that's currently down, not the caller's).

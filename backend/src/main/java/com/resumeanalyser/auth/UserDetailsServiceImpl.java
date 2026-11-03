@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
  * mechanism. Spring Security calls {@link #loadUserByUsername} whenever it needs
  * to know who a set of credentials (login form) or a token (JWT filter) belongs to.
  * Because this always reads the account fresh from the database, a role change
- * (e.g. upgrading someone to PREMIUM_USER) takes effect on their very next
+ * (e.g. making someone an ADMIN) takes effect on their very next
  * request -- not only after they log in again.
  */
 @Service

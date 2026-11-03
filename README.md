@@ -3,48 +3,39 @@
 A **Career OS for every job domain**: an AI-assisted resume analyser and career
 recommendation system, built with a deterministic core (domain detection, ATS
 scoring, embedding-based skill-to-role matching) and a narrow, well-scoped use of
-an LLM (extraction for non-engineering resumes, a Premium coaching narrative —
-never scoring, never resume rewriting). It is delivered as a hosted cloud platform on **Google Cloud Platform (GCP)** with two tiers — **Web Free** and **Web Premium** — sharing a single deterministic core engine (domain detection, ATS scoring, embedding-based skill-to-role matching) with targeted Google Vertex AI (Gemini) integrations. (The standalone offline self-hosted distribution has been archived for reference in [`docs/archive/community-edition.md`](docs/archive/community-edition.md)). Full design docs live in [`docs/`](docs/) — see the **Documentation** section below.
+an LLM (reading the resume into a profile, and a coaching narrative — never
+scoring, never resume rewriting). It is delivered as a hosted cloud platform on **Google Cloud Platform (GCP)**, one plan for every account, with a single deterministic core engine (domain detection, ATS scoring, embedding-based skill-to-role matching) and Google Vertex AI (Gemini) reading every resume. (The standalone offline self-hosted distribution has been archived for reference in [`docs/archive/community-edition.md`](docs/archive/community-edition.md)). Full design docs live in [`docs/`](docs/) — see the **Documentation** section below.
 
-## Domains, engines and tiers
+## Domains and the AI engine
 
-Every upload is classified into one job domain (`ml-service/app/data/domains.json`,
-deterministic, no API call). Each domain declares which **engine** serves it:
+Every upload is classified into one of 23 job domains (`ml-service/app/data/domains.json`,
+deterministic, no API call): Engineering & Technology (software, data, ML/AI, DevOps,
+cloud, security, hardware, product/QA) · Core Engineering (mechanical, electrical,
+civil, chemical) · Healthcare · Science & Research · Finance & Accounting · Banking &
+Insurance · Sales · Retail & E-commerce · Marketing · HR · Operations & Supply Chain ·
+Manufacturing & Production · Quality, Safety & EHS · Consulting & Project Management ·
+Education · Legal · Social Services · Design & Creative · Customer Service &
+Hospitality · Construction & Trades · Real Estate & Property · Veterinary, Agriculture
+& Environment · Administration.
 
-| Domain | Engine |
-|---|---|
-| Engineering & Technology (software, data, ML/AI, DevOps, cloud, security, hardware, product/QA) | **deterministic local** — NER + dictionary + embedding matcher, no external API call, zero cloud inference cost |
-| 22 other domains — Core Engineering (mechanical, electrical, civil, chemical) · Healthcare · Science & Research · Finance & Accounting · Banking & Insurance · Sales · Retail & E-commerce · Marketing · HR · Operations & Supply Chain · Manufacturing & Production · Quality, Safety & EHS · Consulting & Project Management · Education · Legal · Social Services · Design & Creative · Customer Service & Hospitality · Construction & Trades · Real Estate & Property · Veterinary, Agriculture & Environment · Administration | **llm** — Gemini on Vertex AI (ADC) for extraction; matching stays the deterministic matcher against a curated catalogue (260 roles, built from 1.35M LinkedIn postings by `scripts/build_general_catalogue.py`) |
+Every domain is served the same way: **Gemini on Vertex AI (ADC)** reads the resume
+into a profile, with the domain's skill dictionary merged in and every extracted skill
+checked against the resume text; matching stays the deterministic embedding matcher
+against that domain's catalogue (engineering: curated by hand; the other 22: 260 roles
+built from 1.35M LinkedIn postings by `scripts/build_general_catalogue.py`); and
+Gemini writes the coaching narrative. The local NER model that used to read
+engineering resumes is archived ([`docs/archive/ner-model.md`](docs/archive/ner-model.md)).
 
-Tiers gate on **depth and volume, not on domain** — every field is available to
-every tier; what differs is how much and how deep:
+**No tiers.** Every account gets the whole product: all 23 domains, analysed as often
+as they like, five role matches with skill gaps, the AI-written suggestions, the
+JD-targeted match (paste a job description → covered / missing requirements;
+deterministic, no LLM) and every resume version kept.
 
-| Feature | Cloud Web Free | Cloud Web Premium |
-|---|---|---|
-| Domains | all 23 domains | all 23 domains |
-| ATS score, detected domain, profile card | ✓ | ✓ |
-| Role matches + skill gaps | engineering **unlimited**; other fields **3 AI analyses / month** | unlimited |
-| Coaching explanation | template | **AI-written narrative** |
-| Roles shown | 3 | 5 |
-| Resume history | 3 versions | unlimited |
-| JD-targeted match (paste a job description → covered / missing requirements) | – | ✓ (deterministic, no LLM) |
-| LLM calls | ≤ 3 paid extractions per user per month, plus an operator daily budget guard | unlimited |
-
-A free AI analysis is charged only when a paid extraction actually runs
-(`ai_extraction_used` in the ML response): an engineering resume, a locked result
-or a cache hit never costs the user a credit. When a free account's allowance is
-spent, a non-engineering upload still returns its ATS score, detected domain and
-profile card with `recommendationsLocked = true` and `lockReason =
-"ai_engine_required"`; the dashboard shows the reset date and an upgrade prompt,
-and `POST /resumes/{id}/reanalyze` unlocks it once the allowance resets or the
-account is Premium. Flipping a domain's `engine` to deterministic once trained models
-support it is a data change, not a code change.
-
-**Preview mode (0.x, on by default).** Until the beta, Premium is waived:
-`PREVIEW_MODE=true` gives every account Premium (AI suggestions, five roles, JD
-match, unlimited analyses and history), and the app and landing page show a
-"Preview" banner instead of upgrade prompts. Roles are never
-changed, so `PREVIEW_MODE=false` restores the table above.
+When the AI engine cannot run — `LLM_PROVIDER=none`, or the operator's
+`LLM_DAILY_BUDGET_USD` brake — an upload still returns its ATS score, detected domain
+and a rules-only profile card, with `recommendationsLocked = true` and `lockReason`
+`"ai_unavailable"` or `"ai_budget_exhausted"`; `POST /resumes/{id}/reanalyze` fills
+in the matches once the engine is back.
 
 **Credentials:** the only Google credential is Application Default Credentials —
 `gcloud auth application-default login` on a dev machine, an attached service
@@ -56,7 +47,7 @@ account on GCP — plus `GOOGLE_CLOUD_PROJECT`. There is no API key anywhere.
 |---|---|---|
 | [`ml-service/`](ml-service/README.md) | Integrated | Python/FastAPI ML pipeline: parsing, skill normalization, embedding-based role matching, ATS scoring, gap analysis, explanations. |
 | [`backend/`](backend/README.md) | Integrated | Spring Boot API: auth + RBAC roles, resume upload/versioning (MinIO), ML-service orchestration, recommendation/feedback persistence, and the temporal (EMA) skill-vector update job (FR-7). |
-| [`frontend/`](frontend/README.md) | Integrated | Static web client (HTML, one hand-written stylesheet, vanilla JavaScript, no build step), laid out as a clean dashboard: auth, resume analyzer with versions, ATS checks with fixes, role matches, feedback and Premium JD match, all wired to the real backend and checked end to end against it. |
+| [`frontend/`](frontend/README.md) | Integrated | Static web client (HTML, one hand-written stylesheet, vanilla JavaScript, no build step), laid out as a clean dashboard: auth, resume analyzer with versions, ATS checks with fixes, role matches, feedback and JD match, all wired to the real backend and checked end to end against it. |
 
 ## Running the full stack locally
 
@@ -65,7 +56,7 @@ terminal):
 
 1. **ML service** (`ml-service/`, port 8000) — see [its README](ml-service/README.md) for setup.
    ```bash
-   gcloud auth application-default login   # once; only needed for Premium/LLM paths
+   gcloud auth application-default login   # once; Gemini reads every resume
    export GOOGLE_CLOUD_PROJECT=<your-project>
    uvicorn app.main:app --reload
    ```
@@ -76,8 +67,8 @@ terminal):
    docker compose up -d       # starts Postgres + MinIO
    APP_ADMIN_EMAILS=you@example.com mvn spring-boot:run   # your account becomes ADMIN; ML_SERVICE_BASE_URL defaults to http://localhost:8000
    ```
-   There are no payments in the MVP: an ADMIN promotes accounts to `PREMIUM_USER` with
-   `PATCH /admin/users/{id}/role` (find the id with `GET /admin/users?email=`).
+   An ADMIN can make another account ADMIN with `PATCH /admin/users/{id}/role` (find the
+   id with `GET /admin/users?email=`). There are no tiers or payments.
 3. **Frontend** (`frontend/`, port 4200) — plain HTML/CSS/JS, nothing to install or build.
    It expects the backend at `http://localhost:8080` (`frontend/src/js/config.js`). Serve the
    `src/` folder over HTTP (ES modules don't load from `file://`):
@@ -117,7 +108,7 @@ mkdocs build --strict # broken links fail the build
 
 | Doc | What it covers |
 |---|---|
-| [SRS v2.0](docs/srs.md) | Requirements, incl. editions, result parity, tier gating, model training |
+| [SRS v2.0](docs/srs.md) | Requirements, incl. editions, result parity, tier gating (tiers since removed — see the archive), model training |
 | [Editions & Parity](docs/editions-and-parity.md) | How Community and Web Free stay identical; restaged pipeline; PC spec; costs; fine-tuning; research |
 | [Architecture](docs/architecture.md) | System diagram, deterministic-vs-LLM split, editions, deployment |
 | [HLD](docs/hld.md) | Layer responsibilities, key design decisions |
@@ -127,6 +118,7 @@ mkdocs build --strict # broken links fail the build
 | [Use Case Diagram](docs/use-case-diagram.md) | Actors, use cases, implemented vs. planned |
 | [Tech Stack](docs/tech-stack.md) | Per-layer breakdown, built vs. planned |
 | [Datasets](docs/datasets.md) | Open datasets for development, golden tests and training |
+| [Archive: local NER model](docs/archive/ner-model.md) | The offline NER parser for engineering resumes, why it was replaced by Gemini, how to bring it back |
 
 ## Tech stack (at a glance)
 
@@ -134,7 +126,7 @@ mkdocs build --strict # broken links fail the build
 |---|---|---|
 | Frontend | HTML5, one hand-written CSS file (light and dark themes, no CSS framework), vanilla JavaScript (ES modules, no build step); tests via `node --test` | Integrated — `frontend/` |
 | Backend | Java 21, Spring Boot 3.x, Spring Security (JWT), PostgreSQL, Flyway | Integrated — `backend/` |
-| ML service | Python 3.12, FastAPI, `sentence-transformers` (`all-MiniLM-L6-v2`), Gemini on Vertex AI via ADC (Premium paths only; Groq optional) | Integrated — `ml-service/` |
+| ML service | Python 3.12, FastAPI, `sentence-transformers` (`all-MiniLM-L6-v2`), Gemini on Vertex AI via ADC (reads every resume, writes the coaching narrative; Groq optional) | Integrated — `ml-service/` |
 | Docs | MkDocs + Material, `docs/` + root `mkdocs.yml`, `mkdocs build --strict` | Done |
 
 ## License

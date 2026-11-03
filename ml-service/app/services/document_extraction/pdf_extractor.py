@@ -2,8 +2,7 @@
 (PdfTextExtractor.extract, which does real file I/O via pdfplumber) and a
 pure layer (_reorder_words_into_text and its helpers), so the actual
 layout-awareness logic can be tested with hand-built word lists -- no real
-PDF file needed -- mirroring the impure/pure split already used in
-local_ner_parser.py.
+PDF file needed.
 """
 
 import io

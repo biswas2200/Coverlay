@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, UploadFile
 
-from app.models.schemas import AnalyzeResponse, ParseResponse, Tier
+from app.models.schemas import AnalyzeResponse, ParseResponse
 from app.services import pipeline
 from app.services.document_extraction.base import ExtractedText, UnsupportedDocumentTypeError
 from app.services.document_extraction.registry import get_extractor_for_filename
@@ -45,28 +45,22 @@ def _extension(filename: str | None) -> str:
 async def parse_file(file: UploadFile) -> ParseResponse:
     """Extract text from an uploaded resume file (see
     document_extraction/registry.py for what's supported) and run it
-    through the existing parse_resume() pipeline unchanged.
+    through parse_resume() (the AI engine; 503 when it is not configured).
     """
     extracted = await _extract_text(file)
     return ParseResponse(profile=parse_resume(extracted.text))
 
 
 @router.post("/analyze-file", responses={415: {"description": "Unsupported file type"}})
-async def analyze_file(
-    file: UploadFile, top_n: int = 3, tier: Tier = "free", llm_allowed: bool = False
-) -> AnalyzeResponse:
+async def analyze_file(file: UploadFile, top_n: int = 5) -> AnalyzeResponse:
     """File-upload counterpart to POST /analyze: extract text the same way
     parse_file() does, then run the exact same pipeline (services/
     pipeline.py) as analyze.py's analyze(), so a caller that only has the
     raw file (e.g. the backend, which never sees resume text) gets one round
-    trip instead of extracting text itself. `tier` and `llm_allowed` mirror
-    AnalyzeRequest's fields for JSON callers -- the backend passes the
-    caller's tier (free for USER, premium for PREMIUM_USER/ADMIN, FR-12.2)
-    and whether a free account still has an AI analysis left this month --
-    since a file upload has no JSON body to carry them in.
+    trip instead of extracting text itself. `top_n` is a query parameter,
+    since a file upload has no JSON body to carry it in.
     """
     extracted = await _extract_text(file)
     return pipeline.analyze_text(
-        extracted.text, top_n=top_n, tier=tier, llm_allowed=llm_allowed,
-        hidden_word_count=extracted.hidden_word_count,
+        extracted.text, top_n=top_n, hidden_word_count=extracted.hidden_word_count
     )

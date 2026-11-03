@@ -27,17 +27,15 @@ export function getParsedProfile(resumeId) {
 }
 
 /**
- * Re-runs the analysis of an existing resume version at the user's current tier — how a
- * freshly upgraded account unlocks recommendations a Premium-only domain withheld at upload
- * time. Nothing is re-uploaded.
+ * Re-runs the analysis of an existing resume version — how a result that was locked because
+ * the AI engine could not run gets its recommendations later. Nothing is re-uploaded.
  */
 export function reanalyze(resumeId) {
   return post(`/resumes/${encodeURIComponent(resumeId)}/reanalyze`);
 }
 
 /**
- * Premium: scores a resume version against a pasted job description (FR-8.1/8.2). A free
- * account gets 403; the dashboard hides the form from them instead. Resolves to a
+ * Scores a resume version against a pasted job description (FR-8.1/8.2). Resolves to a
  * `JdMatchResponse`: `{ resumeId, score, coverage, similarity, jdSkills[], matchedSkills[],
  * missingSkills[], closestRole | null, explanation }`.
  */

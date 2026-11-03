@@ -71,9 +71,9 @@ public class ResumeController {
     }
 
     /**
-     * Re-analyses one of the signed-in user's resume versions at their current
-     * tier -- the way a freshly upgraded account unlocks recommendations a
-     * Premium-only domain withheld at upload time. Nothing is re-uploaded; the
+     * Re-analyses one of the signed-in user's resume versions -- the way a
+     * result that was locked because the AI engine could not run gets its
+     * recommendations once the engine is back. Nothing is re-uploaded; the
      * stored file is re-read.
      *
      * @return 200 OK with the (unchanged) resume version whose analysis was replaced
@@ -84,12 +84,9 @@ public class ResumeController {
     }
 
     /**
-     * Premium (FR-8.1/8.2, FR-12.2): scores one of the signed-in user's resume
-     * versions against a pasted job description -- matched and missing JD
-     * skills plus the closest catalogue role. Free accounts get 403 from
-     * {@link ResumeService#matchJobDescription} (not a role check here, so
-     * preview mode can open it to everyone); the dashboard shows them an
-     * upgrade prompt instead of the form.
+     * FR-8.1/8.2: scores one of the signed-in user's resume versions against a
+     * pasted job description -- matched and missing JD skills plus the closest
+     * catalogue role. Open to every account.
      */
     @PostMapping("/{id}/jd-match")
     public JdMatchResponse matchJobDescription(

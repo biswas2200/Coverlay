@@ -12,12 +12,10 @@ import java.util.UUID;
  * responses (e.g. as part of {@link com.resumeanalyser.auth.dto.AuthResponse}).
  * Deliberately excludes the password hash — that field must never leave the server.
  *
- * @param id          the account's database identifier
- * @param email       the account's login email
- * @param role        the account's access level (USER / PREMIUM_USER / ADMIN)
- * @param createdAt   when the account was created
- * @param aiAllowance this month's free AI-analysis allowance, or null for a
- *                    Premium/admin account (which is not metered)
+ * @param id        the account's database identifier
+ * @param email     the account's login email
+ * @param role      the account's access level (USER / ADMIN)
+ * @param createdAt when the account was created
  */
 public record UserDto(
         UUID id,
@@ -29,7 +27,5 @@ public record UserDto(
 
         UserRole role,
 
-        Instant createdAt,
-
-        AiAllowanceDto aiAllowance
+        Instant createdAt
 ) {}
