@@ -123,11 +123,11 @@ def test_groq_requires_its_key(monkeypatch):
         llm_client.get_llm_client()
 
 
-def test_provider_none_is_the_community_edition_and_builds_nothing(monkeypatch):
+def test_provider_none_disables_the_ai_engine_and_builds_nothing(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "none")
 
     assert llm_client.llm_available() is False
-    with pytest.raises(llm_client.LLMUnavailableError, match="Community Edition"):
+    with pytest.raises(llm_client.LLMUnavailableError, match="LLM_PROVIDER=none"):
         llm_client.get_llm_client()
     assert llm_client._default_client is None
 

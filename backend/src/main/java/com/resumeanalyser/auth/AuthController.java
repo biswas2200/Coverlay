@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * The two public, unauthenticated entry points into the app -- creating an
  * account and logging into one, both permitted through {@link SecurityConfig}
  * without a token -- plus {@code GET /auth/me}, which does require one and
- * tells the client who it is (and, after an admin promotion, what tier).
+ * tells the client who it is (and, after an admin promotion, what role).
  */
 @RestController
 @RequestMapping("/auth")
@@ -69,8 +69,9 @@ public class AuthController {
 
     /**
      * The signed-in account's current identity and role, read fresh from the
-     * database -- the value the frontend should trust for tier-dependent UI,
-     * since the role inside a JWT issued before an upgrade is stale.
+     * database -- the value the frontend should trust for role-dependent UI
+     * (the admin pages), since the role inside a JWT issued before a change
+     * is stale.
      */
     @GetMapping("/me")
     public UserDto me(Authentication authentication) {

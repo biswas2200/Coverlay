@@ -60,8 +60,8 @@ bash deploy/setup.sh env ADMIN_EMAIL   # writes deploy/.env with fresh secrets
 bash deploy/setup.sh up
 ```
 
-The first start downloads the NER model from the bucket (about a minute)
-before the ML service answers. The site is then at
+The first analysis downloads the small embedding model (about 90 MB) into
+the `hf-models` volume. The site is then at
 `https://<ip-with-dashes>.sslip.io` (see `SITE_ADDRESS` in `deploy/.env`).
 
 Update: `git pull && bash deploy/setup.sh up`. Logs:

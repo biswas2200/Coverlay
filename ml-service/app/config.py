@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     # Which LLM provider llm_client.get_llm_client() should build: "gemini"
     # (default -- Gemini on Vertex AI, authenticated with Google Application
     # Default Credentials, no API key), "groq" (optional, needs
-    # GROQ_API_KEY), or "none" -- the Community Edition setting: no provider
-    # is ever built, and domains served by the AI engine come back locked
-    # with lock_reason "community_edition" instead of failing. Kept as a
+    # GROQ_API_KEY), or "none": no provider is ever built, and every
+    # analysis comes back locked with lock_reason "ai_unavailable" (ATS score
+    # and a rules-only profile card, no role matches) instead of failing. Kept as a
     # plain string rather than an enum so a new provider only needs a new
     # branch in get_llm_client(), not a schema change here.
     llm_provider: str = "gemini"
@@ -32,30 +32,8 @@ class Settings(BaseSettings):
     # logs/ml-service.log. Empty: console only.
     log_file: str = ""
 
-    # Which backend parser.parse_resume() should use: "local" (default --
-    # runs a resume-NER model fully offline, no credentials or network
-    # needed) or "llm" (routes through llm_provider; opt-in, since it costs
-    # money and needs outbound network access).
-    parser_backend: str = "local"
-    # The local NER model: a Hugging Face model id, or a directory holding a
-    # saved model (a relative path is resolved against ml-service/). Default:
-    # run 1's teacher, yashpwr/resume-ner-bert fine-tuned on our resumes --
-    # 84 % field F1 on DataTurks test and 90 % on unseen LiveCareer, against
-    # 76 % / 64 % for the untouched yashpwr model (training/RESULTS.md).
-    # Fetch it with scripts/fetch_ner_models.sh. The smaller distilled
-    # student (65M parameters, 81 % / 90 %) sits next to it in
-    # models/ner/student-run1; switch with NER_MODEL_NAME and
-    # NER_MODEL_REVISION. To go back to the upstream model, set
-    # NER_MODEL_NAME=yashpwr/resume-ner-bert and
-    # NER_MODEL_REVISION=3ea6ecf44274c0947b6e627bd36c32ec0e8c3eb8.
-    ner_model_name: str = "models/ner/teacher-run1"
-    # The bucket folder holding that model, e.g.
-    # gs://smart-resume-analyzer-a7x2-data/runs/teacher. When set and the
-    # local folder is missing, the service downloads it at start-up with ADC
-    # and checks it against NER_MODEL_REVISION before use
-    # (local_ner_parser.ensure_local_model). Empty: the folder must already
-    # exist (scripts/fetch_ner_models.sh).
-    ner_model_gcs_uri: str = ""
+    # Resume parsing is always the LLM (parser.py). The local NER model and
+    # its NER_MODEL_* settings are archived: archive/ner_model/README.md.
 
     # Gemini runs on Vertex AI and authenticates with Application Default
     # Credentials (ADC): `gcloud auth application-default login` on a dev
@@ -101,7 +79,7 @@ class Settings(BaseSettings):
     llm_extract_max_output_tokens: int = 3072
     llm_narrate_max_output_tokens: int = 600
     # In-process cache of completions keyed by (provider, model, prompts):
-    # re-analysing an unchanged resume on the Premium tier costs nothing.
+    # re-analysing an unchanged resume costs nothing.
     # 0 disables it.
     llm_cache_size: int = 256
     # List prices the usage ledger (llm_client.UsageLedger) uses to turn
@@ -111,38 +89,28 @@ class Settings(BaseSettings):
     # estimates, not billing.
     llm_input_usd_per_1m: float = 0.10
     llm_output_usd_per_1m: float = 0.40
-    # Soft guard on what the *free* tier may spend on AI extraction per UTC
-    # day, in the same estimated dollars the ledger reports. Once the day's
-    # estimated spend passes it, free-tier requests that would have used the
-    # AI engine come back locked ("ai_budget_exhausted") instead; Premium is
-    # never affected. In-process only (resets with the process), so it is a
-    # brake against a runaway, not billing enforcement. 0 disables it.
+    # Soft guard on what the service may spend on the AI engine per UTC day,
+    # in the same estimated dollars the ledger reports. Once the day's
+    # estimated spend passes it, analyses come back locked
+    # ("ai_budget_exhausted") until the next UTC day. In-process only
+    # (resets with the process), so it is a brake against a runaway, not
+    # billing enforcement. 0 disables it.
     llm_daily_budget_usd: float = 0.0
 
-    # Which explainer.py backend explain_results() uses: "template" (default
-    # -- deterministic, no network call, FR-5.4) or "llm" (Premium / opt-in
-    # coaching narrative, routes through llm_provider). Mirrors
-    # parser_backend's shape: a plain string, not a code change to add a
-    # backend, and always overridable per-request via AnalyzeRequest.explainer.
+    # Which explainer.py backend explain_results() uses when the caller does
+    # not say: "template" (deterministic, no network call, FR-5.4) or "llm"
+    # (coaching narrative, routes through llm_provider). The analysis
+    # pipeline always asks for "llm" and falls back to the template if it
+    # fails.
     explainer_backend: str = "template"
 
     # Engine version stamped into every engine_fingerprint (FR-11.2, see
     # fingerprint.py) -- bumped on any release that changes scoring behavior,
     # so two deployments can prove they're running the same core engine.
-    engine_version: str = "0.5.5"
+    engine_version: str = "0.6.0"
 
-    # Revision/commit pins for the two models fingerprint.py hashes into
-    # engine_fingerprint.ner_model_sha / embed_model_sha. Real content-hash
-    # pinning of the downloaded model weights themselves (rather than their
-    # configured identifier) is a further step -- ONNX export and baking the
-    # model into the release image, see docs/editions-and-parity.md -- that
-    # this fingerprint mechanism doesn't depend on to exist.
-    # The NER pin is a Hugging Face commit for a hub model, or the SHA-256 of
-    # model.safetensors for a local directory; the loader refuses a local
-    # model whose weights do not match it.
-    ner_model_revision: str = "ab0fd6ea92dee31fed5e3f56a278197e8c55a358df19328a79981b00912fe189"
-    # The embedding pin is the all-MiniLM-L6-v2 commit the role vectors and
-    # domain scores were measured with.
+    # The all-MiniLM-L6-v2 commit the role vectors and domain scores were
+    # measured with, hashed into engine_fingerprint.embed_model_sha.
     embedding_model_revision: str = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
 
 

@@ -15,7 +15,7 @@ def _get_model():
 
     settings = get_settings()
     # revision= loads exactly the commit engine_fingerprint() hashes
-    # (fingerprint.py), the same way local_ner_parser.py loads the NER model.
+    # (fingerprint.py).
     return SentenceTransformer(settings.embedding_model, revision=settings.embedding_model_revision)
 
 

@@ -8,51 +8,34 @@ import {
   demandChipLabel,
   demandFor,
   demandHeading,
+  isBudgetExhausted,
   isLlmExplanation,
-  resetDate,
-  showsAllowance,
-  tierLabel,
+  isLocked,
+  roleLabel,
 } from '../src/js/pages/dashboard-rules.js';
 
-const allowance = (used, quota = 3) => ({ used, quota, resetsOn: '2026-10-01' });
 const locked = (overrides) => ({
   resumeId: 'r1',
   recommendationsLocked: true,
-  lockReason: 'ai_engine_required',
-  userTier: 'free',
-  aiAllowance: allowance(3),
+  lockReason: 'ai_unavailable',
   ...overrides,
 });
 
 test('canUnlock: nothing to unlock when not locked or no resume', () => {
-  assert.equal(canUnlock(locked({ recommendationsLocked: false, userTier: 'premium' })), false);
-  assert.equal(canUnlock(locked({ resumeId: undefined, userTier: 'premium' })), false);
+  assert.equal(canUnlock(locked({ recommendationsLocked: false })), false);
+  assert.equal(canUnlock(locked({ resumeId: undefined })), false);
 });
 
-test('canUnlock: Premium always can, except in the Community Edition', () => {
-  assert.equal(canUnlock(locked({ userTier: 'premium', aiAllowance: null })), true);
-  assert.equal(canUnlock(locked({ userTier: 'premium', lockReason: 'ai_budget_exhausted' })), true);
-  assert.equal(canUnlock(locked({ userTier: 'premium', lockReason: 'community_edition' })), false);
+test('canUnlock: any locked result can be re-analysed, whatever the reason', () => {
+  assert.equal(canUnlock(locked()), true);
+  assert.equal(canUnlock(locked({ lockReason: 'ai_budget_exhausted' })), true);
 });
 
-test('canUnlock: free account only when its allowance has something left', () => {
-  assert.equal(canUnlock(locked({ aiAllowance: allowance(3) })), false);
-  assert.equal(canUnlock(locked({ aiAllowance: allowance(2) })), true);
-  assert.equal(canUnlock(locked({ aiAllowance: null })), false);
-  assert.equal(canUnlock(locked({ aiAllowance: allowance(0), lockReason: 'ai_budget_exhausted' })), false);
-});
-
-test('showsAllowance: free account on an AI-engine domain with an allowance', () => {
-  const base = { userTier: 'free', domain: { engine: 'llm' }, aiAllowance: allowance(1) };
-  assert.equal(showsAllowance(base), true);
-  assert.equal(showsAllowance({ ...base, userTier: 'premium' }), false);
-  assert.equal(showsAllowance({ ...base, domain: { engine: 'local' } }), false);
-  assert.equal(showsAllowance({ ...base, aiAllowance: null }), false);
-});
-
-test('resetDate formats the ISO date in UTC', () => {
-  assert.equal(resetDate({ aiAllowance: allowance(0) }), '1 October 2026');
-  assert.equal(resetDate({ aiAllowance: null }), '');
+test('isLocked and isBudgetExhausted follow the dashboard body', () => {
+  assert.equal(isLocked(locked()), true);
+  assert.equal(isLocked({}), false);
+  assert.equal(isBudgetExhausted(locked({ lockReason: 'ai_budget_exhausted' })), true);
+  assert.equal(isBudgetExhausted(locked()), false);
 });
 
 test('isLlmExplanation treats a missing source as the template', () => {
@@ -61,18 +44,15 @@ test('isLlmExplanation treats a missing source as the template', () => {
   assert.equal(isLlmExplanation({}), false);
 });
 
-test('canMatchJd needs Premium and an analysed resume', () => {
-  assert.equal(canMatchJd({ userTier: 'premium', resumeId: 'r1' }), true);
-  assert.equal(canMatchJd({ userTier: 'free', resumeId: 'r1' }), false);
-  assert.equal(canMatchJd({ userTier: 'premium' }), false);
+test('canMatchJd only needs an analysed resume', () => {
+  assert.equal(canMatchJd({ resumeId: 'r1' }), true);
+  assert.equal(canMatchJd({}), false);
 });
 
-test('tierLabel and asPercent', () => {
-  assert.equal(tierLabel('USER'), 'Free');
-  assert.equal(tierLabel('PREMIUM_USER'), 'Premium');
-  assert.equal(tierLabel('ADMIN'), 'Admin');
-  assert.equal(tierLabel('USER', true), 'Premium', 'preview mode gives a free account Premium');
-  assert.equal(tierLabel('ADMIN', true), 'Admin');
+test('roleLabel badges administrators only, and asPercent rounds', () => {
+  assert.equal(roleLabel('ADMIN'), 'Admin');
+  assert.equal(roleLabel('USER'), '');
+  assert.equal(roleLabel(undefined), '');
   assert.equal(asPercent(0.876), 88);
 });
 

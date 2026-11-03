@@ -56,18 +56,15 @@ class ParseResponse(BaseModel):
 
 
 class DomainDetection(BaseModel):
-    """Which job domain a resume belongs to, decided deterministically by
-    domain_classifier.py (no LLM), plus how data/domains.json says it is
-    served: `engine` is what decides whether an analysis needs the AI engine
-    (and so the free tier's monthly allowance); `tier` is the tier on which
-    the domain is *unlimited* -- informational for the UI, not a gate.
+    """Which job domain a resume belongs to (an entry of data/domains.json),
+    decided deterministically by domain_classifier.py (no LLM). Every domain
+    is read by the same AI engine; the domain picks the role catalogue and
+    the vocabulary the extraction prompt is given.
     """
 
     domain: str
     name: str
     confidence: float
-    engine: Literal["local", "llm"]
-    tier: Literal["free", "premium"]
 
 
 class MatchRequest(BaseModel):
@@ -90,13 +87,13 @@ class RoleMatch(BaseModel):
 
 class EngineFingerprint(BaseModel):
     """Identifies exactly which core-engine artifact produced a response
-    (FR-11.2): a Community user can compare this against the same field from
-    a web deployment's GET /health to prove they're running the same engine
-    (see docs/editions-and-parity.md).
+    (FR-11.2): compare it against a deployment's GET /health to tell whether
+    a result came from the engine that deployment runs now (see
+    docs/editions-and-parity.md).
     """
 
     engine_version: str
-    ner_model_sha: str
+    extraction_model_sha: str
     embed_model_sha: str
     taxonomy_sha: str
     weights_snapshot_id: str
@@ -134,8 +131,7 @@ class GapAnalysis(BaseModel):
     missing_skills: list[str]
 
 
-Tier = Literal["free", "premium"]
-LockReason = Literal["ai_engine_required", "community_edition", "ai_budget_exhausted"]
+LockReason = Literal["ai_unavailable", "ai_budget_exhausted"]
 
 
 class JdMatchRequest(BaseModel):
@@ -166,17 +162,7 @@ class JdMatchResponse(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     resume_text: str
-    top_n: int = 3
-    # The requesting user's tier (the backend maps USER -> free,
-    # PREMIUM_USER/ADMIN -> premium). Together with the detected domain's
-    # engine this decides whether recommendations are unlocked and which
-    # explainer runs -- see services/pipeline.py.
-    tier: Tier = "free"
-    # Whether this free-tier request may spend one AI extraction (the
-    # backend sets it while the account's monthly allowance lasts). Ignored
-    # for premium, which is always allowed. Defaults to false so a raw
-    # caller never triggers a paid call by accident.
-    llm_allowed: bool = False
+    top_n: int = 5
 
 
 class LLMCallUsage(BaseModel):
@@ -232,21 +218,17 @@ class AnalyzeResponse(BaseModel):
     ats_score: AtsScoreResponse
     matches: list[RoleMatch]
     gaps: list[GapAnalysis]
-    # True when the domain needs the AI engine and this request could not
-    # use it: matches/gaps are then empty and lock_reason says why --
-    # "ai_engine_required" (free tier, allowance spent), "community_edition"
-    # (no LLM provider in this deployment), or "ai_budget_exhausted" (the
-    # free tier's daily budget guard). See services/pipeline.py.
+    # True when this request could not use the AI engine: matches/gaps are
+    # then empty and lock_reason says why -- "ai_unavailable" (no LLM
+    # provider in this deployment) or "ai_budget_exhausted" (the operator's
+    # daily budget brake). See services/pipeline.py.
     recommendations_locked: bool = False
     lock_reason: LockReason | None = None
     explanation: str
     explanation_source: Literal["template", "llm"]
     engine_fingerprint: EngineFingerprint
-    # True only when a paid (non-cached) AI extraction ran for this request
-    # -- what the backend counts against a free account's allowance.
-    ai_extraction_used: bool = False
-    # What this analysis spent on LLM calls: None when it made none (every
-    # free-tier result); a cache hit is listed as a call at zero cost.
+    # What this analysis spent on LLM calls: None when it made none (a
+    # locked result); a cache hit is listed as a call at zero cost.
     llm_usage: LLMUsageSummary | None = None
 
 

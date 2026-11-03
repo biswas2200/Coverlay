@@ -1,6 +1,6 @@
 """Tests the file-upload endpoints (routers/upload.py). The document
 extractor and the pipeline are faked, so no real PDF file, NER model or
-LLM is involved -- the pipeline itself is covered by test_pipeline_tiers.py.
+LLM is involved -- the pipeline itself is covered by test_pipeline_routing.py.
 """
 
 import io
@@ -64,7 +64,7 @@ def _sentinel_analysis() -> "AnalyzeResponse":
     return AnalyzeResponse(
         profile=ResumeProfile(name="Jane Doe", skills=["Python"]),
         domain=DomainDetection(domain="engineering", name="Engineering & Technology",
-                               confidence=0.9, engine="local", tier="free"),
+                               confidence=0.9),
         ats_score=AtsScoreResponse(
             score=50, max_score=70, checks=[AtsCheck(name="contact_email", passed=False, detail="none")]
         ),
@@ -72,26 +72,24 @@ def _sentinel_analysis() -> "AnalyzeResponse":
         gaps=[GapAnalysis(role="Backend Software Engineer", missing_skills=[])],
         explanation="You're a strong match.",
         explanation_source="template",
-        engine_fingerprint=EngineFingerprint(engine_version="0.3.0", ner_model_sha="a", embed_model_sha="b",
+        engine_fingerprint=EngineFingerprint(engine_version="0.3.0", extraction_model_sha="a", embed_model_sha="b",
                                              taxonomy_sha="c", weights_snapshot_id="uniform"),
     )
 
 
-def test_analyze_file_runs_the_pipeline_on_extracted_text_with_the_caller_tier(monkeypatch):
+def test_analyze_file_runs_the_pipeline_on_extracted_text(monkeypatch):
     fake_extractor = _FakeExtractor("Jane Doe, Python developer", hidden_word_count=7)
     calls: list[dict] = []
 
-    def fake_analyze_text(resume_text: str, top_n: int = 3, tier: str = "free", llm_allowed: bool = False,
-                          hidden_word_count: int = 0):
-        calls.append({"resume_text": resume_text, "top_n": top_n, "tier": tier, "llm_allowed": llm_allowed,
-                      "hidden_word_count": hidden_word_count})
+    def fake_analyze_text(resume_text: str, top_n: int = 5, hidden_word_count: int = 0):
+        calls.append({"resume_text": resume_text, "top_n": top_n, "hidden_word_count": hidden_word_count})
         return _sentinel_analysis()
 
     monkeypatch.setattr(upload, "get_extractor_for_filename", lambda filename: fake_extractor)
     monkeypatch.setattr(upload.pipeline, "analyze_text", fake_analyze_text)
 
     response = client.post(
-        "/analyze-file?tier=premium&top_n=2&llm_allowed=true",
+        "/analyze-file?top_n=2",
         files={"file": ("resume.pdf", io.BytesIO(b"fake pdf bytes"), "application/pdf")},
     )
 
@@ -104,49 +102,36 @@ def test_analyze_file_runs_the_pipeline_on_extracted_text_with_the_caller_tier(m
     assert body["explanation"] == "You're a strong match."
     assert body["engine_fingerprint"]["engine_version"] == "0.3.0"
     assert fake_extractor.received_bytes == b"fake pdf bytes"
-    assert calls == [{"resume_text": "Jane Doe, Python developer", "top_n": 2, "tier": "premium",
-                      "llm_allowed": True, "hidden_word_count": 7}]
-    assert body["ai_extraction_used"] is False
+    assert calls == [{"resume_text": "Jane Doe, Python developer", "top_n": 2, "hidden_word_count": 7}]
+    assert "tier" not in body["domain"] and "ai_extraction_used" not in body
 
 
-def test_analyze_file_defaults_to_the_free_tier_with_no_ai_allowance(monkeypatch):
+def test_analyze_file_shows_five_roles_by_default(monkeypatch):
     fake_extractor = _FakeExtractor("text")
-    seen: list[tuple] = []
+    seen: list[int] = []
 
-    def fake_analyze_text(resume_text: str, top_n: int = 3, tier: str = "free", llm_allowed: bool = False,
-                          hidden_word_count: int = 0):
-        seen.append((tier, llm_allowed))
+    def fake_analyze_text(resume_text: str, top_n: int = 5, hidden_word_count: int = 0):
+        seen.append(top_n)
         return _sentinel_analysis()
 
     monkeypatch.setattr(upload, "get_extractor_for_filename", lambda filename: fake_extractor)
     monkeypatch.setattr(upload.pipeline, "analyze_text", fake_analyze_text)
 
     assert client.post("/analyze-file", files={"file": ("r.pdf", io.BytesIO(b"x"), "application/pdf")}).status_code == 200
-    assert seen == [("free", False)]
+    assert seen == [5]
 
 
-def test_analyze_file_rejects_an_unknown_tier(monkeypatch):
-    monkeypatch.setattr(upload, "get_extractor_for_filename", lambda filename: _FakeExtractor("text"))
-
-    response = client.post(
-        "/analyze-file?tier=gold", files={"file": ("r.pdf", io.BytesIO(b"x"), "application/pdf")}
-    )
-
-    assert response.status_code == 422
-
-
-def test_llm_unavailable_on_the_premium_path_is_a_503(monkeypatch):
+def test_llm_unavailable_during_extraction_is_a_503(monkeypatch):
     from app.services.llm_client import LLMUnavailableError
 
-    def unavailable(resume_text: str, top_n: int = 3, tier: str = "free", llm_allowed: bool = False,
-                    hidden_word_count: int = 0):
+    def unavailable(resume_text: str, top_n: int = 5, hidden_word_count: int = 0):
         raise LLMUnavailableError("GOOGLE_CLOUD_PROJECT is not set")
 
     monkeypatch.setattr(upload, "get_extractor_for_filename", lambda filename: _FakeExtractor("text"))
     monkeypatch.setattr(upload.pipeline, "analyze_text", unavailable)
 
     response = client.post(
-        "/analyze-file?tier=premium", files={"file": ("r.pdf", io.BytesIO(b"x"), "application/pdf")}
+        "/analyze-file", files={"file": ("r.pdf", io.BytesIO(b"x"), "application/pdf")}
     )
 
     assert response.status_code == 503

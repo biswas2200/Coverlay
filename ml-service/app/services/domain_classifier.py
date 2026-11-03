@@ -1,9 +1,9 @@
 """Deterministic job-domain detection for a resume (no LLM, no network):
 which entry of data/domains.json the resume belongs to, and therefore which
-engine (local / llm) and tier (free / premium) serves it.
+role catalogue it is matched against and which vocabulary the extraction
+prompt is given.
 
-Runs for every upload, free or premium, so it must be cheap and must never
-call out. Two signals, both already available offline:
+Runs for every upload, so it must be cheap and must never call out. Two signals, both already available offline:
 
 1. Dictionary evidence -- canonical skills found in the text against the
    engineering taxonomy (skill_taxonomy.json) and the all-domain one
@@ -11,7 +11,7 @@ call out. Two signals, both already available offline:
    roles list them. A resume with at least ENGINEERING_MIN_SKILLS engineering
    skills, and no other domain with more dictionary evidence, is engineering
    regardless of the embedding: that guarantees an engineering resume never
-   leaves the local, free path because of a noisy embedding, without letting
+   leaves the engineering catalogue because of a noisy embedding, without letting
    the business tools the engineering taxonomy also lists (Excel, Power BI,
    budgeting) pull an accountant's resume onto it.
 2. Embedding evidence -- cosine similarity between the resume's opening
@@ -130,6 +130,4 @@ def detect_domain(resume_text: str) -> DomainDetection:
         domain=domain["id"],
         name=domain["name"],
         confidence=confidence,
-        engine=domain["engine"],
-        tier=domain["tier"],
     )

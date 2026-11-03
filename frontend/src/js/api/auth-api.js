@@ -23,8 +23,8 @@ export async function login(email, password) {
 
 /**
  * Re-reads the signed-in account from `GET /auth/me` and updates the stored user. The role
- * inside a stored session goes stale the moment an admin upgrades the account, so pages whose
- * UI depends on tier call this on load.
+ * inside a stored session goes stale the moment an admin changes it, so pages whose UI depends
+ * on the role (the admin links) call this on load.
  */
 export async function refreshCurrentUser() {
   const user = await get('/auth/me');

@@ -1,35 +1,26 @@
 """The one analysis pipeline both routers run (POST /analyze with text,
-POST /analyze-file with a file): detect the domain, score ATS, then parse,
-match, find gaps and explain -- or lock the recommendations -- according to
-the detected domain's engine (data/domains.json), the caller's tier, and
-whether the caller may spend an AI extraction on this request.
+POST /analyze-file with a file): detect the domain, score ATS, then have
+Gemini read the resume, match roles, find gaps and write the coaching
+narrative -- the same for every domain and every account.
 
-Who gets what:
+  AI engine available? | what happens
+  ---------------------+---------------------------------------------------
+  yes                  | Gemini extraction -> match -> gaps -> Gemini narrative
+  no                   | rules-only profile card, ATS, locked (lock_reason says why)
 
-  domain engine | tier    | llm_allowed | what happens
-  --------------+---------+-------------+--------------------------------------
-  local         | free    | (ignored)   | local parse -> match -> gaps -> template
-  local         | premium | (ignored)   | same, but an LLM coaching narrative
-  llm           | premium | (always)    | LLM extraction -> match -> gaps -> LLM narrative
-  llm           | free    | true        | LLM extraction -> match -> gaps -> *template*
-  llm           | free    | false       | local profile card, ATS, locked ("ai_engine_required")
-
-The backend sets llm_allowed while a free account's monthly allowance lasts
-and counts a credit only when the response says ai_extraction_used -- so a
-cache hit (same resume again) is free for the user as it is for us. Two
-deployment-level locks come before any of that: LLM_PROVIDER=none (the
-Community Edition -- "community_edition") and the free tier's daily budget
-guard ("ai_budget_exhausted", never applied to premium). ATS scoring and
-domain detection are deterministic and run for everyone; the free tier
-never pays for a narrative. `engine` is read from the domain entry, so
-moving a domain onto the local pipeline later is a data change.
+The AI engine is unavailable for a request in two cases, both set by the
+operator, never by the user: LLM_PROVIDER=none ("ai_unavailable"), and the
+daily budget brake LLM_DAILY_BUDGET_USD ("ai_budget_exhausted"). ATS scoring
+and domain detection are deterministic and always run. The narrative falls
+back to the template on its own if Gemini fails (explainer.py).
 """
 
 import logging
 import time
 
-from app.models.schemas import AnalyzeResponse, DomainDetection, LockReason, ResumeProfile, Tier
+from app.models.schemas import AnalyzeResponse, DomainDetection, LockReason, ResumeProfile
 from app.services import ats_score, gap_analysis, matcher
+from app.services.basic_profile import basic_profile, extract_email, extract_name, extract_phone
 from app.services.dictionary_skills import GENERAL_TAXONOMY_PATH, find_skills
 from app.services.domain_classifier import ENGINEERING_DOMAIN, detect_domain
 from app.services.explainer import explain_results
@@ -38,97 +29,69 @@ from app.services.llm_client import ledger, llm_available, usage_summary
 from app.services.normalizer import normalize_skills
 from app.services.parser import parse_resume
 
-LOCK_REASON_AI_ENGINE_REQUIRED: LockReason = "ai_engine_required"
-LOCK_REASON_COMMUNITY_EDITION: LockReason = "community_edition"
+LOCK_REASON_AI_UNAVAILABLE: LockReason = "ai_unavailable"
 LOCK_REASON_AI_BUDGET_EXHAUSTED: LockReason = "ai_budget_exhausted"
 
 log = logging.getLogger(__name__)
 
 
-def _parse_for_domain(resume_text: str, domain: DomainDetection) -> ResumeProfile:
-    """Profile extraction for one domain: the local NER path for local-engine
-    domains, the LLM extractor otherwise. Outside engineering the all-domain
-    dictionary hits are merged in and everything is normalized against both
-    taxonomies -- the same recall trick local_ner_parser.py uses with the
-    engineering dictionary, and what makes the locked profile card useful.
+def _extract_profile(resume_text: str, domain: DomainDetection) -> ResumeProfile:
+    """Gemini reads the resume; the skill dictionary for the domain is merged
+    in for recall (a skill the model skipped still reaches matching), and the
+    contact rules fill any contact field the model left empty.
     """
-    if domain.engine == "llm":
-        profile = parse_resume(resume_text, backend="llm", domain_name=domain.name)
+    profile = parse_resume(resume_text, domain_name=domain.name)
+    if domain.domain == ENGINEERING_DOMAIN:
+        profile.skills = normalize_skills([*find_skills(resume_text), *profile.skills])
     else:
-        profile = parse_resume(resume_text)
-
-    if domain.domain != ENGINEERING_DOMAIN:
         profile.skills = normalize_skills(
             [*find_skills(resume_text, GENERAL_TAXONOMY_PATH), *profile.skills], include_general=True
         )
+    profile.name = profile.name or extract_name(resume_text)
+    profile.email = profile.email or extract_email(resume_text)
+    profile.phone = profile.phone or extract_phone(resume_text)
     return profile
 
 
-def _lock_reason(domain: DomainDetection, premium: bool, llm_allowed: bool) -> LockReason | None:
-    """Why this request cannot use the AI engine, or None if it can (or
-    does not need to). Checked in order of who is responsible: the
-    deployment, then the caller's tier/allowance, then the operator's budget.
-    """
-    if domain.engine != "llm":
-        return None
+def _lock_reason() -> LockReason | None:
+    """Why this request cannot use the AI engine, or None if it can."""
     if not llm_available():
-        return LOCK_REASON_COMMUNITY_EDITION
-    if premium:
-        return None
-    if not llm_allowed:
-        return LOCK_REASON_AI_ENGINE_REQUIRED
+        return LOCK_REASON_AI_UNAVAILABLE
     if ledger.over_daily_budget():
         return LOCK_REASON_AI_BUDGET_EXHAUSTED
     return None
 
 
-def analyze_text(
-    resume_text: str,
-    top_n: int = 3,
-    tier: Tier = "free",
-    llm_allowed: bool = False,
-    hidden_word_count: int = 0,
-) -> AnalyzeResponse:
+def analyze_text(resume_text: str, top_n: int = 5, hidden_word_count: int = 0) -> AnalyzeResponse:
     """Run the pipeline and, when it made any LLM calls, attach what they
-    cost (AnalyzeResponse.llm_usage) and whether a paid extraction ran
-    (ai_extraction_used) -- the latter is what the backend charges a free
-    account's allowance for. `hidden_word_count` comes from the file
-    extractor and only feeds the ATS "no_hidden_text" check."""
+    cost (AnalyzeResponse.llm_usage). `hidden_word_count` comes from the
+    file extractor and only feeds the ATS "no_hidden_text" check."""
     start = time.perf_counter()
     with ledger.request_scope() as llm_calls:
-        response = _analyze(resume_text, top_n, tier, llm_allowed, hidden_word_count)
+        response = _analyze(resume_text, top_n, hidden_word_count)
     if llm_calls:
         response.llm_usage = usage_summary(llm_calls)
-        response.ai_extraction_used = any(
-            c.purpose == "extract" and not c.cache_hit for c in llm_calls
-        )
     # Outcome only -- never the resume text or anything parsed out of it.
     log.info(
-        "analysis tier=%s domain=%s engine=%s confidence=%.2f ats=%.0f matches=%d locked=%s "
-        "explanation=%s llm_calls=%d ai_extraction=%s chars=%d hidden_words=%d in %.0fms",
-        tier, response.domain.domain, response.domain.engine, response.domain.confidence,
+        "analysis domain=%s confidence=%.2f ats=%.0f matches=%d locked=%s "
+        "explanation=%s llm_calls=%d chars=%d hidden_words=%d in %.0fms",
+        response.domain.domain, response.domain.confidence,
         response.ats_score.score, len(response.matches), response.lock_reason or False,
-        response.explanation_source, len(llm_calls), response.ai_extraction_used,
+        response.explanation_source, len(llm_calls),
         len(resume_text), hidden_word_count, (time.perf_counter() - start) * 1000,
     )
     return response
 
 
-def _analyze(
-    resume_text: str, top_n: int, tier: Tier, llm_allowed: bool, hidden_word_count: int = 0
-) -> AnalyzeResponse:
+def _analyze(resume_text: str, top_n: int, hidden_word_count: int = 0) -> AnalyzeResponse:
     domain = detect_domain(resume_text)
     ats = ats_score.score_resume(resume_text, hidden_word_count=hidden_word_count)
-    premium = tier == "premium"
-    lock_reason = _lock_reason(domain, premium, llm_allowed)
+    lock_reason = _lock_reason()
 
     if lock_reason is not None:
-        # The profile card still comes from the local extractor (never the
-        # LLM on a locked result); recommendations stay empty by design.
-        profile = parse_resume(resume_text)
-        profile.skills = normalize_skills(
-            [*find_skills(resume_text, GENERAL_TAXONOMY_PATH), *profile.skills], include_general=True
-        )
+        # The profile card comes from the rules (never the LLM on a locked
+        # result); recommendations stay empty by design.
+        profile = basic_profile(resume_text)
         explanation = explain_results(
             profile, ats, [], [], backend="template", domain=domain, locked=True, lock_reason=lock_reason
         )
@@ -146,7 +109,7 @@ def _analyze(
         )
 
     t = time.perf_counter()
-    profile = _parse_for_domain(resume_text, domain)
+    profile = _extract_profile(resume_text, domain)
     parsed_ms = (time.perf_counter() - t) * 1000
     t = time.perf_counter()
     matches = matcher.match_roles(profile.skills, top_n=top_n, domain=domain.domain)
@@ -156,11 +119,7 @@ def _analyze(
         parsed_ms, len(profile.skills), len(profile.experience), len(profile.education),
         (time.perf_counter() - t) * 1000,
     )
-    # Only Premium pays for a narrative; a free AI analysis gets the
-    # deterministic template over the AI-extracted profile.
-    explanation = explain_results(
-        profile, ats, matches, gaps, backend="llm" if premium else "template", domain=domain
-    )
+    explanation = explain_results(profile, ats, matches, gaps, backend="llm", domain=domain)
     return AnalyzeResponse(
         profile=profile,
         domain=domain,

@@ -30,7 +30,7 @@
       <nav class="tabs" aria-label="Dashboard sections">
         <a class="tab" href="#overview" data-tab="overview">Overview</a>
         <a class="tab" href="#matches" data-tab="matches">Role matches <span class="count" id="matches-count"></span></a>
-        <a class="tab" href="#jd" data-tab="jd">JD match <span class="badge badge-violet">Premium</span></a>
+        <a class="tab" href="#jd" data-tab="jd">JD match</a>
       </nav>
 
       <div class="content">
@@ -70,10 +70,8 @@
               <p class="stat-title" id="domain-name"></p>
               <div class="row">
                 <span class="badge badge-blue" id="domain-confidence"></span>
-                <span class="badge" id="domain-engine"></span>
               </div>
               <p class="muted" id="domain-note"></p>
-              <p class="muted" id="ai-allowance" hidden></p>
             </article>
 
             <article class="card stat">
@@ -102,7 +100,6 @@
                 <span class="badge" id="coaching-badge"></span>
               </div>
               <div class="prose" id="explanation"></div>
-              <p class="hint" id="coaching-upgrade-hint" hidden>On Premium, these suggestions are written for you by AI, based on your whole resume.</p>
               <div class="next-steps">
                 <h3>Next steps</h3>
                 <ol id="next-steps"></ol>
@@ -117,25 +114,18 @@
             <span class="lock-icon"><i data-icon="lock"></i></span>
             <h2>Role matches for <span data-field="domain-name"></span> are locked</h2>
             <p id="locked-default">
-              Resumes in <span data-field="domain-name"></span> are analysed by the AI engine. Engineering &amp;
-              Technology is analysed in full on our own engine; other fields get <span id="locked-quota"></span>
-              free AI analyses a month, unlimited on Premium.
+              Role matches and skill gaps come from the AI engine, which was not available when this resume
+              was analysed. Your ATS score and the basics of your profile are already here.
             </p>
             <p id="locked-budget" hidden>
-              AI analyses for <span data-field="domain-name"></span> are paused until tomorrow. Premium analyses
-              are back after the daily reset.
+              AI analyses for <span data-field="domain-name"></span> are paused until tomorrow: the AI engine
+              reached today's limit.
             </p>
-            <p id="locked-community" hidden>
-              This edition runs without the AI engine, so role matches for <span data-field="domain-name"></span>
-              are not available here.
-            </p>
-            <p class="muted" id="locked-allowance" hidden></p>
             <div id="unlock-section" hidden>
-              <p id="unlock-message" style="margin-bottom: 10px"></p>
+              <p id="unlock-message" style="margin-bottom: 10px">Re-run the analysis to get your role matches once the AI engine is back.</p>
               <button class="btn btn-primary" id="reanalyze-button" type="button"><i data-icon="refresh"></i>Re-analyse</button>
             </div>
             <p class="alert alert-error" id="reanalyze-error" role="alert" hidden></p>
-            <p class="hint" id="locked-upgrade-hint" hidden>Upgrade to Premium for unlimited AI analyses, AI-written suggestions and five role matches.</p>
           </article>
 
           <div id="recommendations-section" hidden>
@@ -151,12 +141,6 @@
 
         <!-- JD match -->
         <section id="panel-jd" aria-label="Job description match" hidden>
-          <article class="card locked" id="jd-upgrade-hint" hidden>
-            <span class="lock-icon"><i data-icon="lock"></i></span>
-            <h2>JD match is a Premium feature</h2>
-            <p>Paste any job description and see how much of it your resume covers, which skills you have, which to add, and the closest role.</p>
-          </article>
-
           <div class="grid-jd" id="jd-section" hidden>
             <form class="card jd-form" id="jd-form">
               <div class="card-head" style="margin-bottom: 0"><h2>Match a job description</h2></div>

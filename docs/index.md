@@ -6,6 +6,14 @@ The product is a hosted cloud platform on Google Cloud Platform (GCP) with two t
 
 These docs live under `docs/` and are built with MkDocs (see the last section).
 
+!!! note "Changed in November 2026: no tiers, Gemini for every domain"
+    The Free / Premium tiers have been removed: every account gets the whole product
+    (all 23 domains, five role matches, AI-written suggestions, JD match, every version
+    kept). The local NER model is archived and Gemini now reads every resume, in every
+    domain. The design documents below still describe the earlier tiers and the local
+    engine in places; where they disagree with the code and the READMEs, the code and
+    the READMEs are current. See [Archive: local NER model](archive/ner-model.md).
+
 ## Where to start
 
 If you're new to the project, read in this order:

@@ -111,7 +111,7 @@ async function onUpload(fileInput, submitButton) {
     submitButton.disabled = true;
   } catch (error) {
     // The backend's message is specific where it matters -- an unsupported file format (415)
-    // or the AI engine being unavailable for a Premium analysis (503) -- so prefer it.
+    // or the AI engine being unavailable (503) -- so prefer it.
     showError(extractApiErrorMessage(error, 'Could not upload the resume. Please try again.'));
   } finally {
     setBusy(submitButton, false);

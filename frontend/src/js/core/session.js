@@ -9,7 +9,7 @@ export function getToken() {
 }
 
 /**
- * The signed-in user (`account.dto.UserDto`: `{ id, email, role, createdAt, aiAllowance }`),
+ * The signed-in user (`account.dto.UserDto`: `{ id, email, role, createdAt }`),
  * or null when no one is signed in.
  */
 export function getUser() {

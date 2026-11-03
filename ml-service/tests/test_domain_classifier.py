@@ -58,22 +58,18 @@ def _stub_embeddings(monkeypatch):
     domain_classifier._description_vectors.cache_clear()
 
 
-def test_engineering_resume_is_engineering_free_local():
+def test_engineering_resume_is_engineering():
     detection = domain_classifier.detect_domain(ENGINEERING_RESUME)
 
     assert detection.domain == "engineering"
-    assert detection.engine == "local"
-    assert detection.tier == "free"
     assert 0.5 <= detection.confidence <= 1.0
 
 
-def test_nursing_resume_is_healthcare_premium_llm():
+def test_nursing_resume_is_healthcare():
     detection = domain_classifier.detect_domain(NURSING_RESUME)
 
     assert detection.domain == "healthcare"
     assert detection.name == "Healthcare & Life Sciences"
-    assert detection.engine == "llm"
-    assert detection.tier == "premium"
 
 
 def test_accounting_resume_is_finance():
@@ -116,16 +112,16 @@ def test_empty_text_still_returns_a_domain_with_zero_confidence():
     assert detection.confidence == 0.0
 
 
-def test_every_domain_has_engine_and_tier():
-    for domain in domain_classifier.load_domains():
-        assert domain["engine"] in {"local", "llm"}
-        assert domain["tier"] in {"free", "premium"}
-    engineering = domain_classifier.domain_by_id()["engineering"]
-    assert (engineering["engine"], engineering["tier"]) == ("local", "free")
+def test_every_domain_has_an_id_name_and_description_and_no_tier_or_engine():
+    domains = domain_classifier.load_domains()
+    assert len(domains) == 23
+    for domain in domains:
+        assert domain["id"] and domain["name"] and domain["description"]
+        assert "tier" not in domain and "engine" not in domain
 
 
 # ---------------------------------------------------------------------------
-# The ten Premium domains added 2026-09-14 -- above all, non-IT engineers must
+# The ten domains added 2026-09-14 -- above all, non-IT engineers must
 # never land on the software pipeline (or in construction trades / design).
 # ---------------------------------------------------------------------------
 
@@ -160,7 +156,6 @@ def test_non_it_engineers_are_core_engineering_not_software(resume):
     detection = domain_classifier.detect_domain(resume)
 
     assert detection.domain == "core_engineering"
-    assert (detection.engine, detection.tier) == ("llm", "premium")
 
 
 @pytest.mark.parametrize("resume, expected", [
@@ -183,13 +178,12 @@ def test_non_it_engineers_are_core_engineering_not_software(resume):
     ("Dr. Karan Bose -- Research Scientist.\nSkills: Molecular Biology, Biochemistry, Cell Culture, Flow Cytometry, HPLC, ELISA, Immunology\n"
      "Experience\nResearch Associate, NCBS, 2017-2024", "science_research"),
 ])
-def test_each_new_premium_domain_wins_its_own_resume(resume, expected):
+def test_each_new_domain_wins_its_own_resume(resume, expected):
     assert domain_classifier.detect_domain(resume).domain == expected
 
 
-def test_the_catalogue_covers_every_llm_domain():
+def test_the_catalogue_covers_every_domain():
     from app.services import matcher
 
     for domain in domain_classifier.load_domains():
-        if domain["engine"] == "llm":
-            assert len(matcher._roles_in(domain["id"])) >= 8, domain["id"]
+        assert len(matcher._roles_in(domain["id"])) >= 8, domain["id"]

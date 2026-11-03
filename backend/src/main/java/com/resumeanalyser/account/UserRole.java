@@ -11,9 +11,6 @@ public enum UserRole {
     /** Default role for every newly registered account. */
     USER,
 
-    /** A user who has upgraded their account for extra privileges. */
-    PREMIUM_USER,
-
     /** Full administrative access. */
     ADMIN
 }

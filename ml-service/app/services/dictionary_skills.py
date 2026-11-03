@@ -3,9 +3,10 @@
 is tokenized once, then found by sliding a window over the resume text's own
 token stream, longest phrase first. This finds every dictionary skill
 mentioned anywhere in the resume -- not just inside a "Skills" section -- and
-its results are merged with the NER model's own "Skills" entity spans in
-local_ner_parser.py for recall (a phrase this taxonomy hasn't been curated
-for yet still comes through via NER).
+services/pipeline.py merges its results with the skills Gemini extracts, for
+recall both ways (a skill the model skipped still reaches matching, and a
+phrase this taxonomy hasn't been curated for yet still comes through via the
+model).
 
 Token-level matching (not raw character/substring matching) is what makes
 this safe from the "java" vs "javascript" trap: two different variant tokens

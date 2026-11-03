@@ -1,19 +1,18 @@
 """Computes the engine_fingerprint every analysis response and GET /health
-include (SRS FR-11.2): {engine_version, ner_model_sha, embed_model_sha,
-taxonomy_sha, weights_snapshot_id} -- the tuple that lets a Community user
-prove, without trusting anyone's word for it, that they're running the same
-core engine as a given web deployment (see docs/editions-and-parity.md).
+include (SRS FR-11.2): {engine_version, extraction_model_sha,
+embed_model_sha, taxonomy_sha, weights_snapshot_id} -- the tuple that says
+exactly which engine produced a result, so two deployments (or a result and
+its re-analysis) can be compared without trusting anyone's word for it (see
+docs/editions-and-parity.md).
 
 taxonomy_sha is a real content hash of every bundled data file that shapes a
 result -- both skill taxonomies, both role catalogues and domains.json -- so
-it changes automatically whenever any of them is edited. ner_model_sha and
-embed_model_sha are hashes of the *configured model identifier* (name +
-pinned revision), not of the downloaded model weights themselves -- real
-content-hash pinning of the weights is a further step (ONNX export baked
-into the release image, see docs/editions-and-parity.md's implementation
-order) that this fingerprint mechanism doesn't depend on to exist. Until
-then, these hashes still change whenever the configured model or its pinned
-revision changes, which is what actually matters for detecting a mismatch.
+it changes automatically whenever any of them is edited.
+extraction_model_sha hashes the LLM provider and model that read the resume
+(e.g. "gemini:gemini-2.5-flash-lite"); embed_model_sha hashes the embedding
+model's name and pinned revision. Both are hashes of the *configured
+identifier*, not of weights, so they change whenever the configured model
+changes -- which is what matters for detecting a mismatch.
 """
 
 import hashlib
@@ -46,12 +45,19 @@ def _sha256_files(paths) -> str:
     return digest.hexdigest()
 
 
+def _extraction_model(settings) -> str:
+    """"provider:model" for the LLM that extracts profiles ("none" when off)."""
+    provider = settings.llm_provider.strip().lower()
+    model = {"gemini": settings.gemini_model, "groq": settings.groq_model}.get(provider, "")
+    return f"{provider}:{model}" if model else provider
+
+
 @lru_cache
 def engine_fingerprint() -> EngineFingerprint:
     settings = get_settings()
     return EngineFingerprint(
         engine_version=settings.engine_version,
-        ner_model_sha=_sha256_text(f"{settings.ner_model_name}@{settings.ner_model_revision}"),
+        extraction_model_sha=_sha256_text(_extraction_model(settings)),
         embed_model_sha=_sha256_text(f"{settings.embedding_model}@{settings.embedding_model_revision}"),
         taxonomy_sha=_sha256_files(DATA_FILES),
         weights_snapshot_id=snapshot_id(),

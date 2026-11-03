@@ -1,6 +1,5 @@
 package com.resumeanalyser.auth;
 
-import com.resumeanalyser.account.AiAllowanceService;
 import com.resumeanalyser.account.User;
 import com.resumeanalyser.account.UserRepository;
 import com.resumeanalyser.account.UserRole;
@@ -33,7 +32,6 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final AiAllowanceService aiAllowanceService;
     private final List<String> adminEmails;
 
     public AuthService(
@@ -42,7 +40,6 @@ public class AuthService {
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             UserDetailsService userDetailsService,
-            AiAllowanceService aiAllowanceService,
             @Value("${app.admin.emails:}") List<String> adminEmails
     ) {
         this.userRepository = userRepository;
@@ -50,7 +47,6 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
-        this.aiAllowanceService = aiAllowanceService;
         this.adminEmails = adminEmails.stream()
                 .map(e -> e.trim().toLowerCase(Locale.ROOT))
                 .filter(e -> !e.isEmpty())
@@ -146,13 +142,8 @@ public class AuthService {
         return AuthResponse.bearer(token, jwtService.extractExpiration(token), toDto(user));
     }
 
-    /**
-     * The client's view of an account, including this month's AI allowance
-     * for a free account (null for Premium/admin) so the UI can show
-     * "AI analyses: 1 of 3 used" without a second request.
-     */
+    /** The client's view of an account. */
     UserDto toDto(User user) {
-        return new UserDto(user.getId(), user.getEmail(), user.getRole(), user.getCreatedAt(),
-                aiAllowanceService.status(user));
+        return new UserDto(user.getId(), user.getEmail(), user.getRole(), user.getCreatedAt());
     }
 }

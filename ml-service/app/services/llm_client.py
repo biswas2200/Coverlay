@@ -6,10 +6,9 @@ touching the two files that actually use one.
 
 Every real provider client shares one provider-agnostic layer
 (_ProviderClient): a completion cache, so an unchanged resume analysed
-twice on the Premium tier is paid for once, and a usage ledger that reads
-each response's token counts and prices them with the list prices in
-Settings -- the only way to check what a premium analysis actually costs
-against what was assumed. The SDK-specific half (_generate) is all a
+twice is paid for once, and a usage ledger that reads each response's token
+counts and prices them with the list prices in Settings -- the only way to
+check what an analysis actually costs against what was assumed. The SDK-specific half (_generate) is all a
 provider has to implement.
 """
 
@@ -133,7 +132,7 @@ class UsageLedger:
             self.cached_tokens = 0
             self.estimated_cost_usd = 0.0
             self._recent.clear()
-            # Spend in the current UTC day, for the free-tier budget guard.
+            # Spend in the current UTC day, for the daily budget brake.
             self._day = _utc_day()
             self.day_cost_usd = 0.0
 
@@ -157,8 +156,8 @@ class UsageLedger:
     def over_daily_budget(self) -> bool:
         """True once today's estimated spend has reached
         Settings.llm_daily_budget_usd (0 = no budget). services/pipeline.py
-        consults this before letting a *free-tier* request use the AI
-        engine; Premium never asks. Process-local: a soft brake, not a bill.
+        consults this before letting an analysis use the AI engine.
+        Process-local: a soft brake, not a bill.
         """
         budget = get_settings().llm_daily_budget_usd
         if budget <= 0:
@@ -445,8 +444,7 @@ def get_llm_client() -> LLMClient:
             _default_client = GroqLLMClient()
         elif provider == "none":
             raise LLMUnavailableError(
-                "The AI engine is disabled in this deployment (LLM_PROVIDER=none, "
-                "Community Edition)."
+                "The AI engine is disabled in this deployment (LLM_PROVIDER=none)."
             )
         else:
             raise LLMUnavailableError(

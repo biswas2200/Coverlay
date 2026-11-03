@@ -45,8 +45,8 @@ def normalize_skill(raw_skill: str, include_general: bool = False) -> str:
 def normalize_skills(raw_skills: list[str], include_general: bool = False) -> list[str]:
     """Normalize a list of raw skill strings, de-duplicating while
     preserving first-seen order. `include_general=True` also canonicalizes
-    against the all-domain taxonomy -- used only on the non-engineering
-    (Premium) path, so the engineering path's output is unchanged.
+    against the all-domain taxonomy -- used only outside engineering, so the
+    engineering path's output is unchanged.
     """
     seen: set[str] = set()
     result: list[str] = []

@@ -1,6 +1,5 @@
 import logging
 import time
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -14,20 +13,10 @@ from app.routers.llm_usage import router as llm_usage_router
 from app.routers.upload import router as upload_router
 from app.services.fingerprint import engine_fingerprint
 from app.services.llm_client import LLMUnavailableError
-from app.services.local_ner_parser import ensure_local_model
 
 _settings = get_settings()
 configure_logging(_settings.log_level, _settings.log_file)
 log = logging.getLogger(__name__)
-
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    """Before serving: fetch the NER model from the bucket if it is missing
-    (NER_MODEL_GCS_URI). A failed download stops the service, so it never
-    starts without its model."""
-    ensure_local_model(_settings)
-    yield
 
 
 app = FastAPI(
@@ -36,7 +25,6 @@ app = FastAPI(
         "Resume parsing, skill normalization, embedding-based role matching, "
         "ATS scoring, gap analysis, and explanation generation."
     ),
-    lifespan=lifespan,
 )
 
 @app.middleware("http")
@@ -78,9 +66,11 @@ app.include_router(llm_usage_router)
 
 @app.exception_handler(LLMUnavailableError)
 def llm_unavailable(_: Request, exc: LLMUnavailableError) -> JSONResponse:
-    """Only the Premium extraction path can surface this (the explainer
-    falls back to the template on its own): a 503 with the reason, so the
-    backend can tell the user "try again later" rather than a generic 502.
+    """Only extraction can surface this (the pipeline locks the result
+    before it gets that far, and the explainer falls back to the template on
+    its own), e.g. POST /parse with no provider configured: a 503 with the
+    reason, so the backend can tell the user "try again later" rather than
+    a generic 502.
     """
     log.warning("AI engine unavailable: %s", exc)
     return JSONResponse(status_code=503, content={"detail": str(exc)})
@@ -89,7 +79,6 @@ def llm_unavailable(_: Request, exc: LLMUnavailableError) -> JSONResponse:
 @app.get("/health")
 def health() -> HealthResponse:
     """Liveness probe that also reports engine_fingerprint (FR-11.2) -- the
-    value a Community user compares against a web deployment's to prove
-    they're running the same core engine.
+    value that says exactly which engine this deployment runs.
     """
     return HealthResponse(status="ok", engine_fingerprint=engine_fingerprint())

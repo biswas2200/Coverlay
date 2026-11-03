@@ -30,14 +30,14 @@ public class AdminController {
         this.adminService = adminService;
     }
 
-    /** Finds an account by email -- the first step of "make this person Premium". */
+    /** Finds an account by email -- the first step of changing its access level. */
     @GetMapping("/users")
     public UserDto findUser(@RequestParam String email) {
         return adminService.findByEmail(email);
     }
 
     /**
-     * Changes an account's access level (USER / PREMIUM_USER / ADMIN). The
+     * Changes an account's access level (USER / ADMIN). The
      * change is effective on the account's next request ({@code GET /auth/me}
      * reads the role from the database, not the token).
      */

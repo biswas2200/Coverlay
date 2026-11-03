@@ -62,6 +62,9 @@ MIN_SKILLS_PER_ROLE = 6
 MIN_SKILL_SHARE = 0.08  # a skill must appear in >= 8% of a title's postings
 
 # Titles matching this are engineering/technology and are excluded here.
+# The one domain whose catalogue is curated by hand (role_skills.json), not built here.
+ENGINEERING_DOMAIN = "engineering"
+
 ENGINEERING_PATTERN = re.compile(
     r"\b(software|developer|programmer|engineer|engineering|devops|sre|"
     r"data scientist|data analyst|data engineer|machine learning|\bml\b|"
@@ -411,8 +414,9 @@ def read_postings(input_dir: Path, limit: int | None = None) -> Iterator[tuple[s
 
 
 def build(postings: Iterable[tuple[str, list[str]]], domains: dict[str, dict]) -> tuple[list[dict], dict[str, list[str]]]:
-    """The role catalogue and skill taxonomy for every non-local domain."""
-    general_domains = [d["id"] for d in domains.values() if d["engine"] != "local"]
+    """The role catalogue and skill taxonomy for every domain except
+    engineering, whose catalogue (role_skills.json) is curated by hand."""
+    general_domains = [d["id"] for d in domains.values() if d["id"] != ENGINEERING_DOMAIN]
 
     # Postings -> skill counts per (domain, normalised title), and each
     # skill's document frequency over all assigned postings.
@@ -507,7 +511,7 @@ def main() -> None:
     taxonomy_path.write_text(json.dumps(taxonomy, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     per_domain = Counter(r["domain"] for r in roles_out)
-    for domain_id in (d["id"] for d in domains.values() if d["engine"] != "local"):
+    for domain_id in (d["id"] for d in domains.values() if d["id"] != ENGINEERING_DOMAIN):
         print(f"{domain_id:30s} {per_domain[domain_id]:3d} roles", file=sys.stderr)
     print(f"wrote {len(roles_out)} roles -> {roles_path}, {len(taxonomy)} skills -> {taxonomy_path}", file=sys.stderr)
 

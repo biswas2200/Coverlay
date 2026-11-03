@@ -32,8 +32,8 @@ public class User {
     private String passwordHash;
 
     /**
-     * The user's access level (USER / PREMIUM_USER / ADMIN), used for role-based access control.
-     * Every new account starts as USER; upgrading to PREMIUM_USER happens later, not at sign-up.
+     * The user's access level (USER / ADMIN), used for role-based access control.
+     * Every new account starts as USER.
      */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -42,16 +42,4 @@ public class User {
     /** When this account was created. Set once and never changed afterward. */
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
-
-    /**
-     * The calendar month ({@code "YYYY-MM"}, UTC) that {@link #aiAnalysesUsed}
-     * counts; empty until the account first spends an AI analysis. See
-     * {@link AiAllowanceService}.
-     */
-    @Column(name = "ai_period", nullable = false, length = 7)
-    private String aiPeriod = "";
-
-    /** Free-tier AI extractions spent in {@link #aiPeriod}. Premium never increments it. */
-    @Column(name = "ai_analyses_used", nullable = false)
-    private int aiAnalysesUsed = 0;
 }

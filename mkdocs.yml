@@ -52,4 +52,6 @@ nav:
   - Entities & Fields: entities-and-fields.md
   - Tech Stack: tech-stack.md
   - Datasets: datasets.md
-  - Archive: archive/community-edition.md
+  - Archive:
+      - Community Edition: archive/community-edition.md
+      - Local NER model: archive/ner-model.md

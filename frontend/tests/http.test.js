@@ -49,11 +49,10 @@ test('never sends the token to login/register', async () => {
   assert.equal(calls[0].init.body, '{"email":"a@b.c","password":"x"}');
 });
 
-test('never sends the token to the public /tiers, so an expired one cannot sign the visitor out', async () => {
-  respondWith(200, { previewMode: true });
-  assert.deepEqual(await get('/tiers'), { previewMode: true });
+test('never sends the token to register either', async () => {
+  respondWith(200, { token: 't' });
+  await post('/auth/register', { json: { email: 'a@b.c', password: 'x' } });
   assert.equal(calls[0].init.headers.Authorization, undefined);
-  assert.equal(getToken(), 'jwt-123');
 });
 
 test('204 No Content resolves to null', async () => {
@@ -62,11 +61,11 @@ test('204 No Content resolves to null', async () => {
 });
 
 test('a failed request rejects with ApiError carrying the error body', async () => {
-  respondWith(403, { status: 403, message: 'Premium only', fieldErrors: null });
-  await assert.rejects(post('/resumes/r1/jd-match', { json: { jdText: 'x' } }), (error) => {
+  respondWith(403, { status: 403, message: 'Admins only', fieldErrors: null });
+  await assert.rejects(post('/admin/bug-reports/b1/approve', { json: {} }), (error) => {
     assert.ok(error instanceof ApiError);
     assert.equal(error.status, 403);
-    assert.equal(error.body.message, 'Premium only');
+    assert.equal(error.body.message, 'Admins only');
     return true;
   });
   assert.equal(getToken(), 'jwt-123', 'a 403 must not end the session');

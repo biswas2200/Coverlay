@@ -132,17 +132,16 @@ def test_locked_template_names_the_domain_and_skips_role_lines():
     from app.models.schemas import DomainDetection
     from app.services.explainer import explain_results as _explain
 
-    domain = DomainDetection(domain="healthcare", name="Healthcare & Life Sciences",
-                             confidence=0.8, engine="llm", tier="premium")
+    domain = DomainDetection(domain="healthcare", name="Healthcare & Life Sciences", confidence=0.8)
     profile = ResumeProfile(name="Sam")
     ats = AtsScoreResponse(score=60, max_score=80, checks=[])
 
     explanation = _explain(profile, ats, [], [], backend="llm", domain=domain, locked=True,
-                           lock_reason="ai_engine_required")
+                           lock_reason="ai_unavailable")
 
     assert explanation.source == "template"
     assert "Healthcare & Life Sciences" in explanation.text
-    assert "free AI analyses are used up" in explanation.text and "Premium" in explanation.text
+    assert "not available right now" in explanation.text
     assert "recommended role" not in explanation.text
 
 
@@ -150,16 +149,17 @@ def test_locked_template_wording_follows_the_lock_reason():
     from app.models.schemas import DomainDetection
     from app.services.explainer import render_template
 
-    domain = DomainDetection(domain="healthcare", name="Healthcare & Life Sciences",
-                             confidence=0.8, engine="llm", tier="premium")
+    domain = DomainDetection(domain="healthcare", name="Healthcare & Life Sciences", confidence=0.8)
     profile = ResumeProfile(name="Sam")
     ats = AtsScoreResponse(score=60, max_score=80, checks=[])
 
-    community = render_template(profile, ats, [], [], domain, locked=True, lock_reason="community_edition")
+    unavailable = render_template(profile, ats, [], [], domain, locked=True, lock_reason="ai_unavailable")
     budget = render_template(profile, ats, [], [], domain, locked=True, lock_reason="ai_budget_exhausted")
     unknown = render_template(profile, ats, [], [], domain, locked=True, lock_reason="something_new")
 
-    assert "Community Edition" in community and "upgrade" not in community.lower()
+    for text in (unavailable, budget, unknown):
+        assert "premium" not in text.lower() and "upgrade" not in text.lower()
+    assert "again later" in unavailable
     assert "today's budget" in budget
     assert "not available on this analysis" in unknown
 

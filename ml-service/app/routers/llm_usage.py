@@ -1,7 +1,7 @@
 """LLM spend since the process started: GET /llm-usage reads the ledger
 llm_client.py keeps of every provider call (token counts straight from the
 responses, priced with the list prices in Settings), POST /llm-usage/reset
-zeroes it. This is how a premium run's real cost is checked against the
+zeroes it. This is how an analysis's real cost is checked against the
 assumptions in ml-service/README.md -- the per-request figures are on
 AnalyzeResponse.llm_usage, this is the running total.
 """

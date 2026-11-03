@@ -1,10 +1,9 @@
 import { refreshCurrentUser } from '../api/auth-api.js';
 import { listVersions } from '../api/resume-api.js';
-import { getTierInfo } from '../api/tier-api.js';
 import { el, setText } from '../core/dom.js';
 import { clearSession, getUser } from '../core/session.js';
 import { initials, shortDate } from '../pages/insights.js';
-import { PREVIEW_MESSAGE, tierLabel } from '../pages/dashboard-rules.js';
+import { roleLabel } from '../pages/dashboard-rules.js';
 import { openBugReport } from './bug-report.js';
 import { hydrateIcons, icon } from './icons.js';
 
@@ -32,15 +31,14 @@ export function renderShell(active) {
   const sidebar = document.getElementById('sidebar');
   const user = getUser();
 
-  const tier = el('span', { class: 'badge' });
+  const roleBadge = el('span', { class: 'badge badge-blue' });
   let role = user?.role;
-  let previewMode = false;
-  const paintTier = () => {
-    const label = tierLabel(role, previewMode);
-    setText(tier, label);
-    tier.className = `badge ${label === 'Free' ? '' : 'badge-blue'}`.trim();
+  const paintRole = () => {
+    const label = roleLabel(role);
+    setText(roleBadge, label);
+    roleBadge.hidden = !label;
   };
-  paintTier();
+  paintRole();
 
   const nav = el(
     'nav',
@@ -81,7 +79,7 @@ export function renderShell(active) {
       'div',
       { class: 'sb-user' },
       el('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(user?.email)),
-      el('div', {}, el('p', { class: 'sb-email', title: user?.email ?? '' }, user?.email ?? ''), tier),
+      el('div', {}, el('p', { class: 'sb-email', title: user?.email ?? '' }, user?.email ?? ''), roleBadge),
     ),
     el('p', { class: 'sb-label' }, 'General'),
     nav,
@@ -104,22 +102,12 @@ export function renderShell(active) {
   nav.addEventListener('click', () => setDrawer(false));
   hydrateIcons();
 
-  // The stored role goes stale after an admin upgrade; refresh it quietly.
+  // The stored role goes stale after an admin changes it; refresh it quietly.
   refreshCurrentUser().then(
     (fresh) => {
       role = fresh.role;
-      paintTier();
+      paintRole();
       paintAdmin();
-    },
-    () => undefined,
-  );
-  getTierInfo().then(
-    (info) => {
-      previewMode = info?.previewMode === true;
-      paintTier();
-      if (previewMode) {
-        showPreviewBanner();
-      }
     },
     () => undefined,
   );
@@ -203,12 +191,3 @@ export const BRAND_SVG =
   '<path d="M11 7.5h7.2l4.3 4.3V24a1 1 0 0 1-1 1H11a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1z" fill="#fff"/>' +
   '<path d="M18.2 7.5v4.3h4.3z" fill="#c7d2fe"/>' +
   '<path d="M13 15.5h6.5M13 19h4.5" stroke="#3b5bdb" stroke-width="1.7" stroke-linecap="round"/></svg>';
-
-/** The "Preview" strip above the page header (once per page). */
-function showPreviewBanner() {
-  const main = document.querySelector('.main');
-  if (!main || main.querySelector('.preview-banner')) {
-    return;
-  }
-  main.prepend(el('p', { class: 'alert alert-info preview-banner', role: 'status' }, icon('sparkle'), PREVIEW_MESSAGE));
-}

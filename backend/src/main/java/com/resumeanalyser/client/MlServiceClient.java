@@ -23,7 +23,7 @@ import org.springframework.web.client.RestClientException;
  * (see {@code ml-service/app/routers/upload.py}) -- a single round trip
  * covering parsing, ATS scoring, role matching, gap analysis, and explanation
  * for an uploaded resume file -- and {@code /match-jd}
- * ({@code routers/analyze.py}), the Premium JD-targeted match over an
+ * ({@code routers/analyze.py}), the JD-targeted match over an
  * already-extracted skill set; and the job recommendation pair
  * {@code /extract-job-skills} and {@code /rank-jobs} ({@code routers/jobs.py}).
  */
@@ -44,18 +44,6 @@ public class MlServiceClient {
      *                  text extractor by extension (PDF today; see
      *                  {@code document_extraction/registry.py})
      * @param topN      how many top-matched roles to return
-     * @param tier      the requesting user's tier, {@code "free"} or
-     *                  {@code "premium"} (FR-12.2); the ML service combines it
-     *                  with the detected domain's engine to decide whether
-     *                  recommendations are unlocked and which explainer runs.
-     *                  The caller decides this per the uploading user's role,
-     *                  not this client
-     * @param llmAllowed whether this request may spend one paid AI extraction
-     *                  (true for Premium, and for a free account with an
-     *                  allowance left this month -- see
-     *                  {@link com.resumeanalyser.account.AiAllowanceService});
-     *                  the response's {@code ai_extraction_used} says whether
-     *                  it actually did
      * @return the parsed profile, detected domain, ATS score, role matches, skill gaps, and explanation
      * @throws MlServiceException if the ML service is unreachable, or rejects the
      *                            request (e.g. an unsupported file format --
@@ -63,8 +51,7 @@ public class MlServiceClient {
      *                            or its LLM provider is unavailable --
      *                            see {@link MlServiceException#isLlmUnavailable()})
      */
-    public AnalyzeResponseDto analyzeFile(
-            byte[] fileBytes, String filename, int topN, String tier, boolean llmAllowed) {
+    public AnalyzeResponseDto analyzeFile(byte[] fileBytes, String filename, int topN) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new ByteArrayResource(fileBytes) {
             @Override
@@ -77,8 +64,6 @@ public class MlServiceClient {
             return restClient.post()
                     .uri(uriBuilder -> uriBuilder.path("/analyze-file")
                             .queryParam("top_n", topN)
-                            .queryParam("tier", tier)
-                            .queryParam("llm_allowed", llmAllowed)
                             .build())
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .body(builder.build())
