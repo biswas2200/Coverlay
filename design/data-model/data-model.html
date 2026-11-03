@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Coverlay Data Model</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: Coverlay's own look (app.css tokens). Sticky contents on the left, one reading column on the right;
+   every step pairs a hotel note with the technical answer, side by side on wide screens. */
+:root {
+  --bg: #f4f4f6;
+  --surface: #ffffff;
+  --surface-2: #f8f8fa;
+  --border: #e4e4e9;
+  --border-strong: #d2d2da;
+  --text: #15171c;
+  --muted: #5c6270;
+  --faint: #7b8190;
+  --accent: #3b5bdb;
+  --accent-soft: #e8edff;
+  --green: #18794e;
+  --green-soft: #e3f5ea;
+  --amber: #a14d07;
+  --amber-soft: #fff1dd;
+  --red: #c4302b;
+  --red-soft: #fde8e7;
+  --lay: #6d3fd6;
+  --lay-soft: #efe9ff;
+  --hotel: #0f6b5c;
+  --hotel-soft: #e4f3ef;
+  --code-bg: #f1f2f6;
+  --shadow: 0 1px 2px rgb(16 18 27 / 0.04), 0 8px 24px rgb(16 18 27 / 0.06);
+  --font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --surface: #171a20; --surface-2: #1d2128; --border: #2a2f38; --border-strong: #3a404b;
+    --text: #eceef2; --muted: #a6acb8; --faint: #8d93a0; --accent: #8ea2ff; --accent-soft: #1f2747;
+    --green: #5fd398; --green-soft: #15301f; --amber: #f3b06b; --amber-soft: #3a2810; --red: #ff8a84; --red-soft: #3d1a19;
+    --lay: #b69cff; --lay-soft: #2a2140; --hotel: #6fd6c2; --hotel-soft: #123a34; --code-bg: #1b1f27;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a20; --surface-2: #1d2128; --border: #2a2f38; --border-strong: #3a404b;
+  --text: #eceef2; --muted: #a6acb8; --faint: #8d93a0; --accent: #8ea2ff; --accent-soft: #1f2747;
+  --green: #5fd398; --green-soft: #15301f; --amber: #f3b06b; --amber-soft: #3a2810; --red: #ff8a84; --red-soft: #3d1a19;
+  --lay: #b69cff; --lay-soft: #2a2140; --hotel: #6fd6c2; --hotel-soft: #123a34; --code-bg: #1b1f27;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font: 400 15.5px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+h1, h2, h3, p, ul, ol, figure { margin: 0; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.015em; text-wrap: balance; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+:not(pre) > code { padding: 1px 5px; border-radius: 5px; background: var(--code-bg); }
+strong { font-weight: 700; }
+
+.wrap {
+  max-width: 1180px; margin: 0 auto; display: grid; gap: 28px;
+  padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page-head { display: grid; gap: 14px; max-width: 820px; }
+.eyebrow { font: 500 12px/1.4 var(--mono); letter-spacing: 0.09em; text-transform: uppercase; color: var(--faint); }
+h1 { font-size: clamp(30px, 5vw, 42px); font-weight: 800; letter-spacing: -0.03em; }
+.lead { font-size: 17px; color: var(--muted); max-width: 68ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font: 500 12px/1.6 var(--mono); border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+.chip.amber { background: var(--amber-soft); color: var(--amber); border-color: transparent; }
+
+.layout { display: grid; gap: 28px; }
+@media (min-width: 1060px) { .layout { grid-template-columns: 210px minmax(0, 1fr); align-items: start; } }
+.toc { display: none; }
+@media (min-width: 1060px) {
+  .toc { display: grid; gap: 2px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+}
+.toc p { padding: 4px 8px 6px; font: 500 11px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.toc a { display: block; padding: 6px 8px; border-radius: 8px; color: var(--muted); font-size: 13.5px; font-weight: 500; text-decoration: none; }
+.toc a:hover { background: var(--surface-2); color: var(--text); }
+main { display: grid; gap: 56px; min-width: 0; }
+
+section { display: grid; gap: 18px; min-width: 0; scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.step-no { font: 600 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+h2 { font-size: clamp(23px, 3.4vw, 28px); font-weight: 800; letter-spacing: -0.025em; }
+h3 { font-size: 17px; font-weight: 700; }
+.prose { display: grid; gap: 12px; max-width: 72ch; }
+.prose p, .prose li { color: var(--text); }
+.muted { color: var(--muted); }
+.list { display: grid; gap: 8px; padding-left: 20px; }
+.list li::marker { color: var(--faint); }
+
+/* problem list */
+.gaps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.gap { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 4px; }
+.gap h3 { font-size: 15px; }
+.gap p { font-size: 14px; color: var(--muted); }
+.goal { padding: 14px 16px; border-radius: 12px; background: var(--accent-soft); color: var(--text); max-width: 72ch; }
+.goal strong { color: var(--accent); }
+
+/* hotel note + technical answer */
+.pair { display: grid; gap: 14px; }
+@media (min-width: 820px) { .pair { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
+.pair > div { display: grid; gap: 10px; align-content: start; padding: 16px 18px; border-radius: 12px; min-width: 0; }
+.hotel { background: var(--hotel-soft); }
+.tech { background: var(--surface); border: 1px solid var(--border); }
+.label { font: 600 11px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.hotel .label { color: var(--hotel); }
+.tech .label { color: var(--accent); }
+.hotel p { color: var(--text); }
+
+/* tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 10px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+th { font: 600 11.5px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); background: var(--surface-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; }
+.tbl-wide { min-width: 860px; }
+.tbl-mid { min-width: 640px; }
+.tag { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 5px; font: 600 10.5px/1.7 var(--mono); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; white-space: nowrap; }
+.tag.new { background: var(--green-soft); color: var(--green); }
+.tag.changed { background: var(--accent-soft); color: var(--accent); }
+.tag.exists { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.prop { padding: 0 5px; border-radius: 5px; background: var(--amber-soft); color: var(--amber); font-weight: 600; white-space: nowrap; }
+
+.never { display: grid; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
+.never ul { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+.never li { padding: 4px 10px; border-radius: 8px; background: var(--red-soft); color: var(--red); font-size: 13.5px; font-weight: 500; }
+.note { padding: 12px 14px; border-left: 3px solid var(--border-strong); color: var(--muted); font-size: 14px; max-width: 72ch; }
+
+/* diagrams */
+figure.diagram { display: grid; gap: 12px; padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); min-width: 0; }
+figcaption { font-size: 13.5px; color: var(--muted); }
+.d-title { font: 600 11.5px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.hotel-word { display: block; font-size: 12.5px; font-style: italic; color: var(--hotel); }
+.hotel-word.inline { display: inline; }
+
+/* life cycle */
+.lc { display: grid; gap: 16px; overflow-x: auto; padding-bottom: 4px; }
+.lc-row { display: flex; align-items: stretch; gap: 0; min-width: 760px; }
+.state { flex: 1 1 0; display: grid; gap: 4px; align-content: start; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: var(--surface-2); min-width: 0; }
+.state b { font: 600 12.5px/1.4 var(--mono); }
+.state span { font-size: 13px; color: var(--muted); }
+.state.ok { border-color: var(--green); background: var(--green-soft); }
+.state.warn { border-color: var(--amber); background: var(--amber-soft); }
+.state.gone { border-color: var(--red); background: var(--red-soft); }
+.arrow { flex: 0 0 104px; display: grid; place-items: center; align-content: center; gap: 2px; padding: 0 6px; text-align: center; font-size: 12px; color: var(--muted); }
+.arrow::after { content: "\2192"; display: block; font-size: 20px; line-height: 1; color: var(--faint); }
+.arrow i { font-style: normal; font-weight: 600; color: var(--text); }
+.back { font-size: 13px; color: var(--green); font-weight: 600; }
+
+/* purge steps */
+.purge { display: grid; gap: 10px; counter-reset: purge; padding: 0; list-style: none; }
+.purge li { counter-increment: purge; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.purge li::before { content: counter(purge); display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--red-soft); color: var(--red); font: 700 13px/1 var(--mono); }
+.purge p { font-size: 14.5px; }
+.purge .fix { color: var(--amber); font-weight: 600; }
+.keeps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.keep { padding: 12px 14px; border-radius: 12px; background: var(--green-soft); }
+.keep h3 { font-size: 14.5px; color: var(--green); }
+.keep p { font-size: 13.5px; color: var(--text); }
+
+/* application status flow */
+.flow-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.flow-chips .s { padding: 5px 11px; border-radius: 8px; font: 600 12.5px/1.4 var(--mono); background: var(--surface-2); border: 1px solid var(--border-strong); }
+.flow-chips .s.first { background: var(--lay-soft); border-color: var(--lay); color: var(--lay); }
+.flow-chips .s.win { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.flow-chips .s.lose { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+.flow-chips .to { color: var(--faint); font-weight: 700; }
+
+/* analytics pipeline */
+.pipe { display: grid; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.pipe-row { display: flex; align-items: center; min-width: 820px; }
+.node { flex: 1 1 0; display: grid; gap: 4px; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: var(--surface-2); min-width: 0; }
+.node b { font-size: 14px; }
+.node span { font-size: 12.5px; color: var(--muted); }
+.node.key { border-color: var(--lay); background: var(--lay-soft); }
+.node.store { border-color: var(--accent); background: var(--accent-soft); }
+.link-arrow { flex: 0 0 34px; text-align: center; color: var(--faint); font-weight: 700; }
+.vault { display: flex; align-items: center; gap: 12px; min-width: 820px; padding: 10px 12px; border: 1.5px dashed var(--red); border-radius: 10px; background: var(--red-soft); font-size: 13px; }
+.vault b { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+
+/* data map */
+.bands { display: grid; gap: 10px; }
+@media (min-width: 980px) { .bands { grid-template-columns: 3fr 1fr; } }
+.band { padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.band span { font-weight: 500; color: var(--muted); font-size: 12.5px; }
+.band.del { background: var(--red-soft); color: var(--red); }
+.band.anon { background: var(--green-soft); color: var(--green); }
+.map { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+@media (min-width: 980px) { .map { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.col { display: grid; gap: 8px; align-content: start; padding: 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); min-width: 0; }
+.col.anon { background: var(--green-soft); border-color: transparent; }
+.col h3 { font-size: 14px; }
+.tbl { display: grid; gap: 2px; padding: 9px 10px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); min-width: 0; }
+.tbl .n { font: 600 12.5px/1.4 var(--mono); overflow-wrap: break-word; }
+.tbl .c { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.tbl.cut { border: 1.5px dashed var(--red); }
+.tbl.cut .n { color: var(--red); }
+.shared { padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border-strong); font-size: 13px; color: var(--muted); }
+
+/* events */
+.cat { font: 600 11px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lay); background: var(--lay-soft); }
+.cat td { color: var(--lay); font-weight: 600; padding-block: 6px; }
+.metrics { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
+.metric { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 4px; }
+.metric h3 { font-size: 14.5px; }
+.metric p { font-size: 13.5px; color: var(--muted); }
+
+/* duties */
+.duties { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.duty { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); display: grid; gap: 8px; align-content: start; }
+.duty h3 { font-size: 15px; }
+.duty ul { display: grid; gap: 6px; padding-left: 18px; font-size: 14px; }
+.duty.flag { border-color: var(--amber); background: var(--amber-soft); }
+
+/* code */
+.code-block { display: grid; gap: 8px; min-width: 0; }
+pre { margin: 0; overflow-x: auto; padding: 14px 16px; border-radius: 12px; background: var(--code-bg); border: 1px solid var(--border); font: 400 13px/1.6 var(--mono); }
+pre .cm { color: var(--faint); }
+pre .kw { color: var(--accent); font-weight: 600; }
+pre .st { color: var(--green); }
+
+.next { padding: 16px 18px; border-radius: 12px; background: var(--accent-soft); max-width: 72ch; }
+
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+  <header class="page-head">
+    <p class="eyebrow">Coverlay · Phase B (feature F5) · Proposal for review · 3 Nov 2026</p>
+    <h1>Coverlay data model</h1>
+    <p class="lead">What we store about each person and why, how long we keep it, what happens when someone goes quiet or deletes their account, how we track where people apply, and how analytics shows us what to improve without pointing back to anyone.</p>
+    <div class="chips">
+      <span class="chip">Nothing here is built yet</span>
+      <span class="chip amber">Numbers in amber are proposals for you to decide</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <p>Contents</p>
+      <a href="#problem">The problem</a>
+      <a href="#hotel">The idea: a hotel</a>
+      <a href="#store">1. What we store</a>
+      <a href="#lifecycle">2. Active and inactive accounts</a>
+      <a href="#delete">3. Deleted accounts</a>
+      <a href="#apply">4. Where people apply</a>
+      <a href="#analytics">5. Analytics</a>
+      <a href="#duties">6. Our duties to users</a>
+      <a href="#map">The whole picture</a>
+      <a href="#code">What the code looks like</a>
+      <a href="#decisions">Decisions for you</a>
+    </nav>
+
+    <main>
+      <!-- ============ PROBLEM ============ -->
+      <section id="problem" aria-labelledby="problem-title">
+        <p class="step-no">Start here</p>
+        <h2 id="problem-title">The problem</h2>
+        <div class="prose">
+          <p>Coverlay has 13 tables today. They were built for one job: analyse a resume, then suggest roles and jobs. The next features keep far more about each person, and some basics are missing.</p>
+        </div>
+        <div class="gaps">
+          <div class="gap"><h3>No way to leave</h3><p>There is no "Delete my account" button. If we delete a user by hand, the database removes their rows (every table cascades from <code>users</code>), but their uploaded resume files stay in storage.</p></div>
+          <div class="gap"><h3>No record of agreement</h3><p>We don't store which Terms or privacy policy a person accepted, or when.</p></div>
+          <div class="gap"><h3>No idea who has gone quiet</h3><p>We never record when someone last used Coverlay, so a two-year-old account is treated like yesterday's.</p></div>
+          <div class="gap"><h3>Applications hide inside saved jobs</h3><p>A saved job has a status (Saved, Applied, Interview, Offer, Rejected) but no portal, no application id, no dates and no link to the resume that was sent.</p></div>
+          <div class="gap"><h3>No analytics</h3><p>We can't see where people get stuck, which Lay AI requests fail, or which templates they pick.</p></div>
+          <div class="gap"><h3>More personal data is coming</h3><p>The Resume Builder keeps every version and every Lay AI chat. The Lay AI agent will know where people apply.</p></div>
+        </div>
+        <div class="prose">
+          <p>The law asks for this too. India's Digital Personal Data Protection Act 2023 (DPDP), the EU's GDPR and California's CCPA all give people the right to see their data, correct it and have it erased, and they expect a company to report data breaches. Coverlay is meant for all three regions.</p>
+        </div>
+        <p class="goal"><strong>The goal:</strong> a clear list of what we keep and why, a life cycle for every account, a deletion that removes everything personal, and analytics that never point back to a person.</p>
+      </section>
+
+      <!-- ============ HOTEL ============ -->
+      <section id="hotel" aria-labelledby="hotel-title">
+        <p class="step-no">The idea</p>
+        <h2 id="hotel-title">Think of Coverlay as a hotel</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>A good hotel knows exactly what it holds for each guest. At check-in the guest is written in the register and signs the house rules. Their things go in a locker in their room. Letters they send go through the front desk, which keeps a mail log.</p>
+            <p>The manager keeps a tally book of what happens in the hotel, but writes ticket numbers in it, never names. The list that matches tickets to rooms sits in a sealed envelope.</p>
+            <p>When a guest checks out for good, the room is cleared, their page is torn out of the register and the envelope is burned. The tallies stay, and nobody can tell whose they were.</p>
+          </div>
+          <div class="tech">
+            <p class="label">How to read this page</p>
+            <p>Each step below shows the hotel first, then what Coverlay actually does. The diagrams are the only place where both appear side by side.</p>
+            <p>Numbers in <span class="prop">amber</span> are proposals. The last section collects them so you can decide each one.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 1. STORE ============ -->
+      <section id="store" aria-labelledby="store-title">
+        <p class="step-no">Step 1</p>
+        <h2 id="store-title">What we store, and why</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>At check-in the front desk writes down only what it needs to look after the guest: a name to call them by and a key that opens their door. The guest's things stay in their own locker.</p>
+            <p>The desk never keeps a copy of the guest's bank card, never reads their letters and never sells the guest list. Everything the hotel holds has a reason to be there and a day it leaves.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>We keep only what a feature needs, and every kind of data has a purpose, a place and a time limit. Passwords are stored as bcrypt hashes: a one-way scramble that can be checked but never read back.</p>
+            <p>Uploaded files live in object storage (MinIO, bucket <code>resumes</code>), filed under the user's id. Everything else lives in PostgreSQL.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="tbl-wide">
+            <thead><tr><th>Data</th><th>What it holds</th><th>Why we need it</th><th>Stored in</th><th>Kept until</th></tr></thead>
+            <tbody>
+              <tr><td>Account</td><td>Email, password hash, role, sign-up date, last active date, account status</td><td>Signing in; the account life cycle</td><td><code>users</code> <span class="tag changed">changed</span></td><td>Account deleted</td></tr>
+              <tr><td>Agreements</td><td>Which Terms and privacy version was accepted, the analytics and email choices, and when</td><td>Proof of consent; respecting each choice</td><td><code>user_consents</code> <span class="tag new">new</span></td><td>Account deleted</td></tr>
+              <tr><td>Uploaded resumes</td><td>The PDF or DOCX files</td><td>Analysis; showing the original file</td><td>Object storage, <code>&lt;userId&gt;/…</code> <span class="tag exists">exists</span></td><td>That version or the account deleted</td></tr>
+              <tr><td>Parsed profile</td><td>Name, email, phone, skills, experience, education, ATS score, domain</td><td>Showing results; matching roles and jobs</td><td><code>parsed_profiles</code> <span class="tag exists">exists</span></td><td>That version or the account deleted</td></tr>
+              <tr><td>Matches and feedback</td><td>Matched roles and scores; "helpful" or "not helpful"</td><td>Showing matches; tuning skill weights</td><td><code>recommendations</code>, <code>feedback</code> <span class="tag exists">exists</span></td><td>Account deleted</td></tr>
+              <tr><td>Builder resumes</td><td>Each resume made in the Builder and every version of it, with who made the change (you, Lay AI, template, restore)</td><td>Editing, View and Restore</td><td><code>resume_documents</code>, <code>resume_document_versions</code> <span class="tag new">new</span></td><td>Deleted by the user, or the account deleted</td></tr>
+              <tr><td>Lay AI chats</td><td>What the user asked and what Lay AI answered</td><td>Continuing the conversation</td><td><code>chat_sessions</code>, <code>chat_messages</code> <span class="tag new">new</span></td><td>Cleared by the user, or the account deleted</td></tr>
+              <tr><td>Jobs and applications</td><td>Saved jobs, watched companies, applications (company, role, portal, application id, status, dates) and reminders</td><td>Tracking applications; one reminder</td><td><code>saved_jobs</code>, <code>watched_companies</code> <span class="tag exists">exists</span><br><code>job_applications</code>, <code>reminders</code> <span class="tag new">new</span></td><td>Account deleted</td></tr>
+              <tr><td>Bug reports</td><td>What went wrong, the page, the browser</td><td>Fixing bugs</td><td><code>bug_reports</code> <span class="tag exists">exists</span></td><td>Account deleted</td></tr>
+              <tr><td>Usage events</td><td>A random id, an event name and a few allowed details. Never a name, email or any text the user wrote</td><td>Seeing what to improve</td><td><code>analytics.events</code> <span class="tag new">new</span></td><td><span class="prop">13 months</span>, then daily totals only</td></tr>
+              <tr><td>Server logs</td><td>Request id, user id, path, status code, time</td><td>Finding errors; spotting abuse</td><td>Log files</td><td><span class="prop">30 days</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="never">
+          <h3>What we never store</h3>
+          <ul>
+            <li>Plain-text passwords</li>
+            <li>Payment card details (Coverlay has no payments)</li>
+            <li>Passwords for LinkedIn, Naukri or any other site</li>
+            <li>Resume text, chat text, names, emails or phone numbers in usage events</li>
+            <li>Keystrokes, mouse paths or screen recordings</li>
+            <li>Precise location</li>
+          </ul>
+        </div>
+        <p class="note">Resume text and chat messages are sent to Gemini on Google's Vertex AI to do the work. Our ML service keeps the last 256 AI answers in memory so it doesn't pay twice for the same resume. That memory is cleared on every restart and never written to disk.</p>
+      </section>
+
+      <!-- ============ 2. LIFECYCLE ============ -->
+      <section id="lifecycle" aria-labelledby="lifecycle-title">
+        <p class="step-no">Step 2</p>
+        <h2 id="lifecycle-title">Active and inactive accounts</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>The front desk notes the last day it saw each guest. A guest who hasn't been around for a while keeps their room and their things, but the hotel stops slipping notes under their door.</p>
+            <p>If a room has stood unused for a very long time, the hotel writes to the guest's home address: "Your room will be cleared in 30 days unless you drop by." If the guest turns up, everything carries on. If not, the room is cleared exactly as at a final check-out.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>Each account gets a <code>status</code> and a <code>last_active_at</code> date, updated at most once a day when the user signs in or uses the app.</p>
+            <ul class="list">
+              <li>After <span class="prop">90 days</span> without use the account becomes <code>INACTIVE</code>. Data stays; reminders and Lay AI nudges stop.</li>
+              <li>At <span class="prop">18 months</span> it becomes <code>DORMANT_NOTICE</code> and we email the user a deletion date <span class="prop">30 days</span> away.</li>
+              <li>Any sign-in moves it back to <code>ACTIVE</code>. If nothing happens, the nightly job deletes it the same way as a deletion the user asked for (Step 3).</li>
+            </ul>
+          </div>
+        </div>
+
+        <figure class="diagram">
+          <p class="d-title">Account life cycle</p>
+          <div class="lc" role="img" aria-label="Active becomes Inactive after 90 days without use, Notice sent at 18 months, Deleted 30 days later. Separately, Delete my account leads to Deletion pending, then Deleted after 14 days. Signing in returns any state except Deleted to Active.">
+            <div class="lc-row">
+              <div class="state ok"><b>ACTIVE</b><span>Used in the last 90 days</span><span class="hotel-word">guest seen recently</span></div>
+              <div class="arrow"><i>90 days</i>no use</div>
+              <div class="state"><b>INACTIVE</b><span>Data kept; no reminders</span><span class="hotel-word">no notes under the door</span></div>
+              <div class="arrow"><i>18 months</i>no use</div>
+              <div class="state warn"><b>DORMANT_NOTICE</b><span>Email with a deletion date</span><span class="hotel-word">letter to the home address</span></div>
+              <div class="arrow"><i>30 days</i>no sign-in</div>
+              <div class="state gone"><b>Deleted</b><span>Same purge as Step 3</span><span class="hotel-word">room cleared</span></div>
+            </div>
+            <div class="lc-row">
+              <div class="state ok"><b>ACTIVE</b><span>The user clicks "Delete my account"</span><span class="hotel-word">guest asks to leave</span></div>
+              <div class="arrow"><i>at once</i>signed out everywhere</div>
+              <div class="state warn"><b>DELETION_PENDING</b><span>Can still be undone</span><span class="hotel-word">luggage held at the desk</span></div>
+              <div class="arrow"><i>14 days</i>no undo</div>
+              <div class="state gone"><b>Deleted</b><span>Nightly purge job</span><span class="hotel-word">final check-out</span></div>
+            </div>
+          </div>
+          <p class="back">Signing in moves any state except Deleted back to ACTIVE (from DELETION_PENDING, only after the user picks "Keep my account").</p>
+          <figcaption>Why delete unused accounts at all? Data nobody uses only adds risk, and both DPDP and GDPR expect personal data to be erased once its purpose is over.</figcaption>
+        </figure>
+      </section>
+
+      <!-- ============ 3. DELETE ============ -->
+      <section id="delete" aria-labelledby="delete-title">
+        <p class="step-no">Step 3</p>
+        <h2 id="delete-title">Deleted accounts</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>A guest who wants to leave for good tells the front desk. The desk first offers a copy of everything in their locker to take home. Their key stops working at once, and the hotel holds their things for 14 days in case they change their mind.</p>
+            <p>After that the locker is emptied and shredded, their page is torn out of the register, and the sealed envelope with their ticket number is burned. The copies of the register kept in the safe are shredded within a month. The check-out ledger records only that a guest left that day.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>Settings get two buttons: <strong>Export my data</strong> (a ZIP with every record as JSON, plus the uploaded files) and <strong>Delete my account</strong> (confirmed with the password).</p>
+            <p>Deleting sets <code>status = DELETION_PENDING</code> and increases <code>token_version</code>, which makes every existing JWT invalid, so every device is signed out. Signing in within <span class="prop">14 days</span> offers "Keep my account". After that, the nightly purge job runs these steps:</p>
+          </div>
+        </div>
+
+        <ol class="purge">
+          <li><p><strong>Delete the files.</strong> Remove everything under <code>&lt;userId&gt;/</code> in object storage. <span class="fix">Today this step is missing</span>: the cascade below doesn't reach storage.</p></li>
+          <li><p><strong>Delete the <code>users</code> row.</strong> Every table that points to <code>users</code> is set to <code>ON DELETE CASCADE</code>, so resumes, profiles, matches, feedback, saved jobs, the watchlist, Builder versions, chats, applications, reminders, consents and bug reports go with it.</p></li>
+          <li><p><strong>Cut the analytics link.</strong> The <code>user_analytics_link</code> row goes in the same cascade. Old usage events stay, but their <code>subject_id</code> no longer leads to anyone.</p></li>
+          <li><p><strong>Record the deletion.</strong> Write one row to <code>deleted_accounts</code>: a random id, the date and the reason (user request, inactivity or admin). No email, no user id.</p></li>
+          <li><p><strong>Let backups expire.</strong> Database backups are kept for <span class="prop">30 days</span>, so the last copy of the account is gone within 30 days.</p></li>
+        </ol>
+
+        <h3>What stays after an account is deleted</h3>
+        <div class="keeps">
+          <div class="keep"><h3>Totals and anonymous events</h3><p>"312 resumes analysed on 3 Nov", and events whose random id now points nowhere.</p></div>
+          <div class="keep"><h3>Learned skill weights</h3><p>Numbers about roles that feedback helped tune. They describe roles, not people.</p></div>
+          <div class="keep"><h3>Public GitHub issues</h3><p>Issues made from approved bug reports. They never contained the reporter's email.</p></div>
+        </div>
+        <p class="note">Deleting a single resume version works the same way on a small scale: the file in storage and its rows go together.</p>
+      </section>
+
+      <!-- ============ 4. APPLY ============ -->
+      <section id="apply" aria-labelledby="apply-title">
+        <p class="step-no">Step 4</p>
+        <h2 id="apply-title">Where people apply</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>When a guest wants to send a letter, the concierge can write the draft, address the envelope and leave it on the desk, ready to go. Only the guest drops it in the post box.</p>
+            <p>The front desk keeps a mail log: who each letter went to, the date, and the reference number on any reply. If a ready letter has sat on the desk for a few days, the concierge slips one note under the door, once, and only if the letter still hasn't been posted.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>A new <code>job_applications</code> table tracks each application from preparation to result. Lay AI may prepare one (a tailored resume version and the link to the portal) but never submits it: the user applies on the company's site, then marks it as applied.</p>
+            <p><code>saved_jobs</code> stays as the bookmark list. Starting an application from a saved job creates a <code>job_applications</code> row.</p>
+          </div>
+        </div>
+
+        <figure class="diagram">
+          <p class="d-title">Application status</p>
+          <div class="flow-chips">
+            <span class="s first">PREPARED</span><span class="to" aria-hidden="true">→</span>
+            <span class="s">APPLIED</span><span class="to" aria-hidden="true">→</span>
+            <span class="s">IN_REVIEW</span><span class="to" aria-hidden="true">→</span>
+            <span class="s">INTERVIEW</span><span class="to" aria-hidden="true">→</span>
+            <span class="s win">OFFER</span><span class="to">or</span><span class="s lose">REJECTED</span>
+          </div>
+          <figcaption>PREPARED means Lay AI got it ready (<span class="hotel-word inline">the letter waiting on the desk</span>). The user can set <code>WITHDRAWN</code> at any point.</figcaption>
+        </figure>
+
+        <div class="table-wrap">
+          <table class="tbl-mid">
+            <thead><tr><th>Column</th><th>What it holds</th></tr></thead>
+            <tbody>
+              <tr><td><code>company_name</code>, <code>role_title</code></td><td>Where and for what</td></tr>
+              <tr><td><code>job_posting_id</code></td><td>The job in our feeds, when it came from there (empty for jobs found elsewhere)</td></tr>
+              <tr><td><code>portal</code></td><td><code>COMPANY_SITE</code>, <code>LINKEDIN</code>, <code>NAUKRI</code> or <code>OTHER</code></td></tr>
+              <tr><td><code>external_application_id</code></td><td>The reference the portal gave, typed by the user (read from an email later, only with permission)</td></tr>
+              <tr><td><code>resume_version_id</code></td><td>The exact resume version that was sent</td></tr>
+              <tr><td><code>status</code>, <code>prepared_at</code>, <code>applied_at</code>, <code>status_changed_at</code></td><td>Progress and its dates</td></tr>
+              <tr><td><code>notes</code></td><td>The user's own notes</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="prose">
+          <h3>The one reminder</h3>
+          <p>The <code>reminders</code> table holds at most one <code>FORGOT_TO_APPLY</code> reminder per prepared application, due <span class="prop">3 days</span> after it was prepared. It shows inside the app the next time the user opens it. It never goes out by email or phone notification unless the user turned that on, and it is dropped as soon as the application is marked applied. Columns: <code>application_id</code>, <code>kind</code>, <code>due_at</code>, <code>shown_at</code>, <code>acted_at</code>, <code>dismissed_at</code>.</p>
+        </div>
+      </section>
+
+      <!-- ============ 5. ANALYTICS ============ -->
+      <section id="analytics" aria-labelledby="analytics-title">
+        <p class="step-no">Step 5</p>
+        <h2 id="analytics-title">How analytics works</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>The manager wants to know which parts of the hotel guests enjoy and where they get lost. Each guest gets a ticket number at check-in, picked at random. The tally book only ever says things like "ticket 4821 used the gym" or "ticket 4821 asked the concierge for directions".</p>
+            <p>The list matching tickets to rooms sits in a sealed envelope that only the front desk can open. Guests who would rather not be counted tick a box, and their ticket is never written down. Each night the manager adds up the day's marks. Old marks are thrown out after a year; the nightly totals are kept.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>Each account gets a random <code>subject_id</code> at sign-up. It is generated, not derived from the email or user id: a hash of an email can be reversed by guessing emails.</p>
+            <p>The only link between the two is the <code>user_analytics_link</code> table, which only the backend's analytics writer reads. Events go to a separate <code>analytics</code> schema with its own database role that cannot read <code>users</code>.</p>
+            <p>Each event name has an allowlist of details; anything else is dropped, and no event carries free text. A nightly job rolls events up into <code>daily_metrics</code>. Users can switch analytics off in Settings.</p>
+          </div>
+        </div>
+
+        <figure class="diagram">
+          <p class="d-title">How one event travels</p>
+          <div class="pipe" role="img" aria-label="Browser or phone, to the backend which checks the user's choice and swaps the user id for the random subject id, to analytics.events, to the nightly roll-up into daily_metrics, to the team dashboard. The user_analytics_link table holds the only link and is deleted with the account.">
+            <div class="pipe-row">
+              <div class="node"><b>Browser or phone</b><span>Something happens, e.g. Lay AI applies a change</span></div>
+              <span class="link-arrow" aria-hidden="true">→</span>
+              <div class="node key"><b>Backend</b><span>Checks the analytics choice, swaps user id for <code>subject_id</code>, keeps allowed details only</span><span class="hotel-word">the front desk writes a ticket number</span></div>
+              <span class="link-arrow" aria-hidden="true">→</span>
+              <div class="node store"><b>analytics.events</b><span>Raw events, kept 13 months</span><span class="hotel-word">tally book</span></div>
+              <span class="link-arrow" aria-hidden="true">→</span>
+              <div class="node store"><b>daily_metrics</b><span>Nightly totals, kept</span><span class="hotel-word">the nightly sums</span></div>
+              <span class="link-arrow" aria-hidden="true">→</span>
+              <div class="node"><b>Team dashboard</b><span>Funnels, success rates, trends</span></div>
+            </div>
+            <div class="vault"><b>user_analytics_link</b><span>user_id ↔ subject_id. The only way back to a person; deleted with the account.</span><span class="hotel-word">the sealed envelope, burned at check-out</span></div>
+          </div>
+          <figcaption>Start in PostgreSQL. If the volume grows, the <code>analytics</code> schema can move to BigQuery on the same Google Cloud project without changing what we record.</figcaption>
+        </figure>
+
+        <div class="prose">
+          <h3>The most common Lay AI requests, without reading anyone's chat</h3>
+          <p>Chat text stays in the user's own chat history. For analytics we record only Lay AI's own decision about what the request was (its intent: <code>add_skill</code>, <code>remove_skill</code>, <code>shorten_summary</code>, <code>rewrite_summary</code> or <code>unknown</code>) and the domain. <code>prompt_stats</code> counts these per day. The <code>unknown</code> count shows what Lay AI should learn to do next.</p>
+          <h3>What we track, and what each event teaches us</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl-wide">
+            <thead><tr><th>Event</th><th>When</th><th>Details kept</th><th>What it helps us improve</th></tr></thead>
+            <tbody>
+              <tr class="cat"><td colspan="4">Getting started</td></tr>
+              <tr><td><code>signed_up</code></td><td>Account created</td><td>Client (web or phone)</td><td>Whether sign-up works</td></tr>
+              <tr><td><code>active_day</code></td><td>First use on a given day</td><td>Client</td><td>Daily and weekly active users; who is going quiet</td></tr>
+              <tr class="cat"><td colspan="4">Resume analysis</td></tr>
+              <tr><td><code>resume_uploaded</code></td><td>Upload finished</td><td>File type, size band, domain</td><td>Which formats cause trouble; which fields people come from</td></tr>
+              <tr><td><code>analysis_completed</code></td><td>Results ready</td><td>Domain, ATS score band, locked or not, time taken</td><td>Speed; how often the AI engine was unavailable</td></tr>
+              <tr><td><code>analysis_failed</code></td><td>An upload or analysis failed</td><td>Error kind (unsupported file, AI unavailable, timeout)</td><td>What breaks most often</td></tr>
+              <tr class="cat"><td colspan="4">Resume Builder and Lay AI</td></tr>
+              <tr><td><code>builder_started</code></td><td>Start questions answered</td><td>Level, style, length, started from an upload or not</td><td>What people want from a resume</td></tr>
+              <tr><td><code>template_chosen</code></td><td>"Use this" clicked</td><td>Template, whether it was the best match</td><td>Whether our suggestions are right</td></tr>
+              <tr><td><code>field_edited</code></td><td>A typed change saved</td><td>Section (Summary, Skills…)</td><td>Which parts people fix by hand, so Lay AI can help there</td></tr>
+              <tr><td><code>lay_message_sent</code></td><td>A chat message sent</td><td>Intent, domain</td><td>The most common requests</td></tr>
+              <tr><td><code>lay_change_applied</code></td><td>Lay AI changed the resume</td><td>Intent, time taken</td><td>Lay AI's success rate</td></tr>
+              <tr><td><code>version_restored</code></td><td>An older version restored</td><td>How many versions back; whether it undid a Lay AI change</td><td>Which AI changes people reject</td></tr>
+              <tr><td><code>resume_exported</code></td><td>Download clicked</td><td>Format (PDF or DOCX)</td><td>How many people finish a resume</td></tr>
+              <tr class="cat"><td colspan="4">Jobs and applications</td></tr>
+              <tr><td><code>job_opened</code></td><td>A job opened</td><td>Match band, position in the list</td><td>Whether top-ranked jobs are the ones people open</td></tr>
+              <tr><td><code>application_prepared</code></td><td>Lay AI prepared an application</td><td>Portal</td><td>How useful the agent is</td></tr>
+              <tr><td><code>application_status_changed</code></td><td>Status moves</td><td>From, to, days since applied</td><td>The applied → interview → offer funnel</td></tr>
+              <tr><td><code>reminder_shown</code>, <code>reminder_acted</code></td><td>The one nudge</td><td>Acted or dismissed</td><td>Whether the reminder helps or annoys</td></tr>
+              <tr class="cat"><td colspan="4">Feedback</td></tr>
+              <tr><td><code>match_feedback</code></td><td>"Helpful" or "not helpful" on a role</td><td>Helpful or not, domain</td><td>Role match quality (already tunes skill weights)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>What the dashboard shows</h3>
+        <div class="metrics">
+          <div class="metric"><h3>Getting-started funnel</h3><p>Sign-up → first analysis → first Builder resume → first download → first application. Where the biggest drop is.</p></div>
+          <div class="metric"><h3>Lay AI success rate</h3><p>Changes applied ÷ requests sent, by intent and domain, plus the <code>unknown</code> share.</p></div>
+          <div class="metric"><h3>Undo rate</h3><p>Lay AI changes later restored away. A high rate means the change wasn't what people wanted.</p></div>
+          <div class="metric"><h3>Speed</h3><p>Typical and slowest time from upload to results, and for a Lay AI reply.</p></div>
+          <div class="metric"><h3>Returning users</h3><p>Share of people active again within 4 weeks of their first visit.</p></div>
+          <div class="metric"><h3>Application funnel</h3><p>Prepared → applied → interview → offer, and the days between each.</p></div>
+        </div>
+        <div class="never">
+          <h3>Never tracked</h3>
+          <ul>
+            <li>Resume or chat text</li>
+            <li>Names, emails, phone numbers</li>
+            <li>Keystrokes or caret position (the Lay AI pointer runs in the browser only)</li>
+            <li>Mouse movement or screen recordings</li>
+            <li>Other websites visited</li>
+            <li>Precise location</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ 6. DUTIES ============ -->
+      <section id="duties" aria-labelledby="duties-title">
+        <p class="step-no">Step 6</p>
+        <h2 id="duties-title">Our duties to users</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>A hotel owes its guests more than a bed. The doors lock and the safe is a real safe. Staff use a guest's things only to serve that guest, never read their letters and never sell the guest list.</p>
+            <p>A guest can ask to see what the hotel holds about them, fix a mistake, or take everything and leave. The house rules are written plainly and signed at check-in. A named person at the desk handles complaints. After a break-in, the hotel tells its guests and the police straight away. Children check in only with a parent.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>These duties come from DPDP, GDPR and CCPA, and from what users would expect of a careers app. Each one below is a feature or a rule we have to build and keep.</p>
+          </div>
+        </div>
+        <div class="duties">
+          <div class="duty"><h3>Keep it safe</h3><ul>
+            <li>bcrypt password hashes; HTTPS only (Caddy in front)</li>
+            <li>Disks and backups encrypted at rest (Google Cloud does this by default)</li>
+            <li>Least-privilege service accounts: the app account can only call Vertex AI and read models</li>
+            <li>Secrets in <code>deploy/.env</code>, never in git</li>
+            <li>Production data reached only by named admins, and every admin action logged</li>
+          </ul></div>
+          <div class="duty"><h3>Use data only for what we said</h3><ul>
+            <li>Resume and chat data used only to analyse, build, match and track for that user</li>
+            <li>Never sold</li>
+            <li>Never shared with employers or recruiters unless the user sends it</li>
+            <li>Not used to train our own models without a separate opt-in</li>
+          </ul></div>
+          <div class="duty"><h3>Be clear about AI</h3><ul>
+            <li>Gemini on Vertex AI reads resume text and chat messages to do the task</li>
+            <li>Google Cloud's terms say this data isn't used to train Google's models; check the current Vertex AI data-governance terms before launch</li>
+            <li>Lay AI never applies, never contacts recruiters, and reads only the signed-in user's own data</li>
+          </ul></div>
+          <div class="duty"><h3>Give users control</h3><ul>
+            <li>See and export everything</li>
+            <li>Correct anything</li>
+            <li>Delete any version, any chat, or the whole account</li>
+            <li>Change any consent at any time; switch analytics off</li>
+          </ul></div>
+          <div class="duty"><h3>Tell the truth</h3><ul>
+            <li>A plain-language privacy notice and Terms; the accepted version stored</li>
+            <li>Notice before either changes</li>
+            <li>After a breach, tell the affected users and the regulators quickly (GDPR: the authority within 72 hours; India: the Data Protection Board and the users)</li>
+          </ul></div>
+          <div class="duty"><h3>Answer complaints</h3><ul>
+            <li>A named privacy contact and email address, shown in the privacy notice (DPDP asks for a grievance contact)</li>
+            <li>A reply within a stated time</li>
+          </ul></div>
+          <div class="duty flag"><h3>Protect children</h3><ul>
+            <li>DPDP requires verifiable parental consent for anyone under 18, and many students are under 18</li>
+            <li>Proposal: sign-up asks users to confirm they are <span class="prop">18 or older</span>; a parental-consent flow comes later</li>
+          </ul></div>
+        </div>
+        <p class="note">This is a product design, not legal advice. Have a lawyer review the privacy notice, the Terms and these retention numbers before real users sign up.</p>
+      </section>
+
+      <!-- ============ MAP ============ -->
+      <section id="map" aria-labelledby="map-title">
+        <p class="step-no">Diagram</p>
+        <h2 id="map-title">The whole picture</h2>
+        <figure class="diagram">
+          <div class="bands">
+            <div class="band del">Deleted with the account <span>everything that points to users, plus the files</span></div>
+            <div class="band anon">Kept, but anonymous <span>no way back to a person</span></div>
+          </div>
+          <div class="map">
+            <div class="col">
+              <h3>Who you are <span class="hotel-word">the register</span></h3>
+              <div class="tbl"><span class="n">users <span class="tag changed">changed</span></span><span class="c">email, password_hash, role, status, last_active_at, deletion_requested_at, token_version</span><span class="hotel-word">page in the register</span></div>
+              <div class="tbl"><span class="n">user_consents <span class="tag new">new</span></span><span class="c">kind, version, granted, decided_at</span><span class="hotel-word">signed house rules</span></div>
+              <div class="tbl cut"><span class="n">user_analytics_<wbr>link <span class="tag new">new</span></span><span class="c">user_id ↔ subject_id. Cut on deletion</span><span class="hotel-word">the sealed envelope</span></div>
+            </div>
+            <div class="col">
+              <h3>What you make <span class="hotel-word">the locker</span></h3>
+              <div class="tbl"><span class="n">resumes + files <span class="tag exists">exists</span></span><span class="c">version, file_ref → object storage</span></div>
+              <div class="tbl"><span class="n">parsed_profiles <span class="tag exists">exists</span></span><span class="c">profile, ATS checks, domain</span></div>
+              <div class="tbl"><span class="n">recommendations, feedback <span class="tag exists">exists</span></span><span class="c">matched roles, helpful or not</span></div>
+              <div class="tbl"><span class="n">resume_documents <span class="tag new">new</span></span><span class="c">title, template, current version</span><span class="hotel-word">drafts in the desk drawer</span></div>
+              <div class="tbl"><span class="n">resume_document_<wbr>versions <span class="tag new">new</span></span><span class="c">number, content (JSON), source, summary</span></div>
+              <div class="tbl"><span class="n">chat_sessions, <wbr>chat_messages <span class="tag new">new</span></span><span class="c">who said what, intent</span><span class="hotel-word">notes with the concierge</span></div>
+            </div>
+            <div class="col">
+              <h3>Where you apply <span class="hotel-word">the mail log</span></h3>
+              <div class="tbl"><span class="n">saved_jobs <span class="tag exists">exists</span></span><span class="c">bookmarks</span></div>
+              <div class="tbl"><span class="n">watched_companies <span class="tag exists">exists</span></span><span class="c">companies to follow</span></div>
+              <div class="tbl"><span class="n">job_applications <span class="tag new">new</span></span><span class="c">portal, external id, status, dates, resume version</span><span class="hotel-word">the mail log</span></div>
+              <div class="tbl"><span class="n">reminders <span class="tag new">new</span></span><span class="c">one FORGOT_TO_APPLY nudge</span><span class="hotel-word">one note under the door</span></div>
+              <div class="tbl"><span class="n">bug_reports <span class="tag exists">exists</span></span><span class="c">what went wrong</span></div>
+            </div>
+            <div class="col anon">
+              <h3>What we learn <span class="hotel-word">the tally book</span></h3>
+              <div class="tbl"><span class="n">analytics.<wbr>events <span class="tag new">new</span></span><span class="c">subject_id, name, allowed details, 13 months</span><span class="hotel-word">ticket-number marks</span></div>
+              <div class="tbl"><span class="n">analytics.<wbr>daily_metrics <span class="tag new">new</span></span><span class="c">nightly totals</span></div>
+              <div class="tbl"><span class="n">analytics.<wbr>prompt_stats <span class="tag new">new</span></span><span class="c">day, intent, domain, count</span></div>
+              <div class="tbl"><span class="n">deleted_accounts <span class="tag new">new</span></span><span class="c">random id, date, reason</span><span class="hotel-word">check-out ledger</span></div>
+            </div>
+          </div>
+          <p class="shared"><strong>Shared, not personal:</strong> <code>companies</code>, <code>job_postings</code>, <code>roles</code>, <code>skill_vectors</code>, <code>market_skill_demand</code>. They describe jobs and roles, not people, and are untouched by deletions.</p>
+          <figcaption>Everything under the red band is wiped by the purge in Step 3. Cutting the dashed red link is what turns the green column anonymous.</figcaption>
+        </figure>
+      </section>
+
+      <!-- ============ CODE ============ -->
+      <section id="code" aria-labelledby="code-title">
+        <p class="step-no">Code</p>
+        <h2 id="code-title">What the code looks like</h2>
+        <div class="code-block">
+          <h3>Database: part of the next migration (V11)</h3>
+<pre><code><span class="cm">-- V11__accounts_consent_applications_analytics.sql (proposal, excerpt)</span>
+<span class="kw">ALTER TABLE</span> users
+    <span class="kw">ADD COLUMN</span> status                VARCHAR(20) <span class="kw">NOT NULL DEFAULT</span> <span class="st">'ACTIVE'</span>, <span class="cm">-- ACTIVE, INACTIVE, DORMANT_NOTICE, DELETION_PENDING</span>
+    <span class="kw">ADD COLUMN</span> last_active_at        TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now(),
+    <span class="kw">ADD COLUMN</span> deletion_requested_at TIMESTAMPTZ,
+    <span class="kw">ADD COLUMN</span> token_version         INTEGER     <span class="kw">NOT NULL DEFAULT</span> 0;       <span class="cm">-- +1 signs out every device</span>
+
+<span class="kw">CREATE TABLE</span> user_consents (
+    id         UUID PRIMARY KEY <span class="kw">DEFAULT</span> gen_random_uuid(),
+    user_id    UUID <span class="kw">NOT NULL REFERENCES</span> users(id) <span class="kw">ON DELETE CASCADE</span>,
+    kind       VARCHAR(30) <span class="kw">NOT NULL</span>,   <span class="cm">-- TERMS, PRIVACY, ANALYTICS, EMAIL_REMINDERS</span>
+    version    VARCHAR(20) <span class="kw">NOT NULL</span>,   <span class="cm">-- e.g. '2026-11'</span>
+    granted    BOOLEAN     <span class="kw">NOT NULL</span>,
+    decided_at TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now()
+);
+
+<span class="kw">CREATE TABLE</span> job_applications (
+    id                      UUID PRIMARY KEY <span class="kw">DEFAULT</span> gen_random_uuid(),
+    user_id                 UUID <span class="kw">NOT NULL REFERENCES</span> users(id) <span class="kw">ON DELETE CASCADE</span>,
+    job_posting_id          UUID <span class="kw">REFERENCES</span> job_postings(id) <span class="kw">ON DELETE SET NULL</span>,
+    company_name            VARCHAR(255) <span class="kw">NOT NULL</span>,
+    role_title              VARCHAR(255) <span class="kw">NOT NULL</span>,
+    portal                  VARCHAR(20)  <span class="kw">NOT NULL</span>,          <span class="cm">-- COMPANY_SITE, LINKEDIN, NAUKRI, OTHER</span>
+    external_application_id VARCHAR(120),
+    resume_version_id       UUID,                          <span class="cm">-- -> resume_document_versions(id)</span>
+    status                  VARCHAR(20)  <span class="kw">NOT NULL DEFAULT</span> <span class="st">'PREPARED'</span>,
+    prepared_at             TIMESTAMPTZ  <span class="kw">NOT NULL DEFAULT</span> now(),
+    applied_at              TIMESTAMPTZ,
+    status_changed_at       TIMESTAMPTZ  <span class="kw">NOT NULL DEFAULT</span> now(),
+    notes                   TEXT
+);
+
+<span class="kw">CREATE TABLE</span> user_analytics_link (
+    user_id    UUID PRIMARY KEY <span class="kw">REFERENCES</span> users(id) <span class="kw">ON DELETE CASCADE</span>,
+    subject_id UUID <span class="kw">NOT NULL UNIQUE</span>                 <span class="cm">-- random, made at sign-up</span>
+);
+
+<span class="kw">CREATE SCHEMA</span> analytics;
+<span class="kw">CREATE TABLE</span> analytics.events (
+    id          BIGSERIAL PRIMARY KEY,
+    subject_id  UUID        <span class="kw">NOT NULL</span>,                 <span class="cm">-- no foreign key to users, on purpose</span>
+    name        VARCHAR(60) <span class="kw">NOT NULL</span>,
+    properties  JSONB       <span class="kw">NOT NULL DEFAULT</span> <span class="st">'{}'</span>,     <span class="cm">-- allowlisted keys only, no free text</span>
+    client      VARCHAR(10) <span class="kw">NOT NULL</span>,                 <span class="cm">-- web, phone</span>
+    occurred_at TIMESTAMPTZ <span class="kw">NOT NULL DEFAULT</span> now()
+);</code></pre>
+        </div>
+        <div class="code-block">
+          <h3>One usage event as stored (JSON)</h3>
+<pre><code>{
+  <span class="st">"subject_id"</span>: <span class="st">"7f3c1e9a-5b2d-4f0e-9c41-2a6d8e0b1f53"</span>,
+  <span class="st">"name"</span>: <span class="st">"lay_change_applied"</span>,
+  <span class="st">"properties"</span>: { <span class="st">"intent"</span>: <span class="st">"add_skill"</span>, <span class="st">"domain"</span>: <span class="st">"engineering"</span>, <span class="st">"latency_ms"</span>: 840 },
+  <span class="st">"client"</span>: <span class="st">"web"</span>,
+  <span class="st">"occurred_at"</span>: <span class="st">"2026-11-03T14:05:12Z"</span>
+}</code></pre>
+          <p class="muted">No name, no email, no resume text: only a random id, what happened, and three allowed details.</p>
+        </div>
+        <div class="code-block">
+          <h3>Spring Boot: the nightly purge and the event recorder</h3>
+<pre><code><span class="kw">@Component</span>
+<span class="kw">public class</span> AccountPurgeJob {
+
+    <span class="kw">private static final</span> Duration GRACE = Duration.ofDays(14);
+
+    <span class="cm">// Every night at 03:15 India time.</span>
+    <span class="kw">@Scheduled</span>(cron = <span class="st">"0 15 3 * * *"</span>, zone = <span class="st">"Asia/Kolkata"</span>)
+    <span class="kw">@Transactional</span>
+    <span class="kw">public void</span> purge() {
+        Instant cutoff = clock.instant().minus(GRACE);
+        <span class="kw">for</span> (User user : users.findByStatusAndDeletionRequestedAtBefore(UserStatus.DELETION_PENDING, cutoff)) {
+            storage.deleteAllFor(user.getId());                  <span class="cm">// files under "&lt;userId&gt;/"</span>
+            users.delete(user);                                   <span class="cm">// cascades, incl. user_analytics_link</span>
+            deletedAccounts.save(DeletedAccount.of(Reason.USER_REQUEST, clock)); <span class="cm">// no email, no user id</span>
+        }
+    }
+}
+
+<span class="kw">@Service</span>
+<span class="kw">public class</span> AnalyticsService {
+
+    <span class="kw">public void</span> record(User user, String event, Map&lt;String, Object&gt; details, Client client) {
+        <span class="kw">if</span> (!consents.allowsAnalytics(user)) {
+            <span class="kw">return</span>;                                               <span class="cm">// switched off: nothing is written</span>
+        }
+        Map&lt;String, Object&gt; safe = catalogue.allowedDetails(event, details); <span class="cm">// unknown keys dropped</span>
+        UUID subject = links.subjectFor(user);                    <span class="cm">// the random id from sign-up</span>
+        events.insert(subject, event, safe, client);
+    }
+}</code></pre>
+        </div>
+      </section>
+
+      <!-- ============ DECISIONS ============ -->
+      <section id="decisions" aria-labelledby="decisions-title">
+        <p class="step-no">Your call</p>
+        <h2 id="decisions-title">Decisions for you</h2>
+        <div class="table-wrap">
+          <table class="tbl-mid">
+            <thead><tr><th>Question</th><th>Proposal</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td>Time to undo "Delete my account"</td><td><span class="prop">14 days</span></td><td>Enough to undo a mistake, short enough to honour the request</td></tr>
+              <tr><td>When an account counts as inactive</td><td><span class="prop">90 days</span> without use</td><td>Stops reminders for people who have moved on</td></tr>
+              <tr><td>When we send the deletion notice</td><td><span class="prop">18 months</span> without use</td><td>Job seekers often come back between job searches</td></tr>
+              <tr><td>Notice before an inactive account is deleted</td><td><span class="prop">30 days</span></td><td>Time to sign in and keep it</td></tr>
+              <tr><td>How long raw usage events are kept</td><td><span class="prop">13 months</span>, then daily totals</td><td>Allows comparing a month with the same month last year</td></tr>
+              <tr><td>Server logs and backups</td><td><span class="prop">30 days</span></td><td>Enough to debug and recover</td></tr>
+              <tr><td>Asking about analytics</td><td>An unticked box at sign-up for EU and UK users; a switch in Settings for everyone</td><td>GDPR expects consent for non-essential tracking. Check with a lawyer</td></tr>
+              <tr><td>Minimum age</td><td><span class="prop">18+</span> for now</td><td>DPDP needs verifiable parental consent below 18; that flow comes later</td></tr>
+              <tr><td>Saved jobs and applications</td><td>Keep both: saved jobs are bookmarks, applications are the tracking</td><td>Less to migrate; each table has one job</td></tr>
+              <tr><td>When the one reminder is due</td><td><span class="prop">3 days</span> after preparing</td><td>Soon enough to matter, rare enough not to nag</td></tr>
+              <tr><td>Lay AI chats</td><td>Kept until the user clears them or deletes the account</td><td>The other option is to delete chats older than 12 months automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="next">Once you agree on these, the next step is writing the V11 migrations and entities and checking them on a real PostgreSQL, the same way V10 was checked.</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+</body>
+</html>
