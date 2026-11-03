@@ -14,6 +14,7 @@ Small tasks saved for later. Nothing here is worked on until the owner says so.
 
 | ID | Added | Task | Notes |
 |---|---|---|---|
+| Q1 | 2026-11-03 | Rewrite the design docs in `docs/` | Match the code after commit 51fa31f: no Free/Premium tiers, Gemini reads every domain, NER archived. About 300 mentions across `srs.md`, `architecture.md`, `hld.md`, `lld.md`, `editions-and-parity.md`, `use-case-diagram.md` and others. Remove the "Changed in November 2026" note from `docs/index.md` when done; `mkdocs build --strict` must pass. |
 
 ## Done
 
