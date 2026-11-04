@@ -40,10 +40,14 @@ services:
       LLM_PROVIDER: gemini
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:?set in deploy/.env}
       GOOGLE_CLOUD_LOCATION: global
-      GEMINI_MODEL: gemini-2.5-flash-lite
+      # One model per task tier (ml-service/app/config.py): resumes and Lay AI
+      # chat on Flash-Lite, recruiter-facing documents on 3.8 Flash. Prices
+      # and thinking levels per model: ml-service/app/services/model_catalog.py.
+      GEMINI_MODEL: gemini-3.5-flash-lite
+      GEMINI_MODEL_EXTRACT: gemini-3.5-flash-lite
+      GEMINI_MODEL_CHAT: gemini-3.5-flash-lite
+      GEMINI_MODEL_WRITE: gemini-3.8-flash
       GEMINI_THINKING_BUDGET: 0
-      LLM_INPUT_USD_PER_1M: 0.10
-      LLM_OUTPUT_USD_PER_1M: 0.40
       LOG_LEVEL: INFO
     volumes:
       - hf-models:/models

@@ -45,18 +45,33 @@ class Settings(BaseSettings):
     # "global" is Vertex AI's multi-region Gemini endpoint; a regional id
     # (e.g. "asia-south1") pins traffic to one region.
     google_cloud_location: str = "global"
-    # gemini-2.5-flash-lite: measured on the sample resumes in
-    # scripts/samples/ it extracts the same profile as gemini-2.5-flash
-    # (22 skills, identical experience/education) at ~1/5 the price and
-    # lower latency. Set gemini-2.5-flash for a slightly warmer narrative.
-    gemini_model: str = "gemini-2.5-flash-lite"
-    # Thinking budget sent with every Gemini call. 0 (default) switches
-    # thinking off: both tasks here -- copying fields out of a resume into
-    # JSON, and turning pre-computed scores into three short paragraphs --
-    # are shallow, and thinking tokens are billed at the output rate (the
-    # expensive side), typically 2-4x the visible answer. -1 sends no
-    # thinking config and leaves the model's dynamic default in place (use
-    # that for models that refuse a zero budget, e.g. gemini-2.5-pro).
+    # Which Gemini model runs each kind of task (gemini_model_for below):
+    #   extract -- reading a resume into JSON (parser.py)
+    #   chat    -- Lay AI messages and the analysis narrative (explainer.py)
+    #   write   -- what a recruiter reads: tailored resumes, cover letters,
+    #              cold emails (no caller yet; the Builder and Letters
+    #              backends will use it)
+    # An empty tier runs on gemini_model, so a deployment that sets only
+    # GEMINI_MODEL runs every task on that one model. Retiring or upgrading
+    # a model is a config change: model_catalog.py has the prices and
+    # thinking settings. gemini-2.5-flash-lite (the old default) was retired
+    # on Vertex AI in October 2026; gemini-3.5-flash-lite is Google's named
+    # replacement, and measured 97% macro F1 labelling resumes (docs/srs.md
+    # v2.6). gemini-3.8-flash writes the documents (owner's decision,
+    # 2026-11-04): about 3x the cost per journey of Flash-Lite, spent where
+    # quality shows.
+    gemini_model: str = "gemini-3.5-flash-lite"
+    gemini_model_extract: str = ""
+    gemini_model_chat: str = ""
+    gemini_model_write: str = "gemini-3.8-flash"
+    # Thinking budget for models that take one (Gemini 2.5). 0 (default)
+    # switches thinking off: copying fields out of a resume into JSON, and
+    # turning pre-computed scores into three short paragraphs, are shallow,
+    # and thinking tokens are billed at the output rate, typically 2-4x the
+    # visible answer. -1 sends no thinking config and leaves the model's
+    # dynamic default in place. Gemini 3.x models take a thinking *level*
+    # instead, set per model in model_catalog.py (MINIMAL, or LOW for
+    # gemini-3.8-flash); this budget doesn't apply to them.
     gemini_thinking_budget: int = 0
 
     # Groq -- optional alternative provider (LLM_PROVIDER=groq). Hosts
@@ -82,13 +97,17 @@ class Settings(BaseSettings):
     # re-analysing an unchanged resume costs nothing.
     # 0 disables it.
     llm_cache_size: int = 256
-    # List prices the usage ledger (llm_client.UsageLedger) uses to turn
-    # token counts into an estimated spend. Defaults are Vertex AI
-    # gemini-2.5-flash-lite (gemini-2.5-flash is 0.30 / 2.50; thinking is
-    # billed as output). Update them when the model changes -- they are
-    # estimates, not billing.
-    llm_input_usd_per_1m: float = 0.10
-    llm_output_usd_per_1m: float = 0.40
+    # Prices the usage ledger (llm_client.UsageLedger) uses to turn token
+    # counts into an estimated spend -- estimates, not billing. Each Gemini
+    # model's list price is in model_catalog.py. LLM_PRICES overrides a
+    # model's price from the environment, as JSON, e.g.
+    #   LLM_PRICES='{"gemini-3.8-flash": [0.75, 3.75]}'
+    # LLM_INPUT_USD_PER_1M / LLM_OUTPUT_USD_PER_1M price any model the
+    # catalog doesn't list (a Groq model, a new Gemini): set them when you
+    # run one. Thinking is billed as output.
+    llm_prices: dict[str, tuple[float, float]] = {}
+    llm_input_usd_per_1m: float = 0.30
+    llm_output_usd_per_1m: float = 2.50
     # Soft guard on what the service may spend on the AI engine per UTC day,
     # in the same estimated dollars the ledger reports. Once the day's
     # estimated spend passes it, analyses come back locked
@@ -107,11 +126,22 @@ class Settings(BaseSettings):
     # Engine version stamped into every engine_fingerprint (FR-11.2, see
     # fingerprint.py) -- bumped on any release that changes scoring behavior,
     # so two deployments can prove they're running the same core engine.
-    engine_version: str = "0.6.0"
+    # 0.7.0: resumes are read by gemini-3.5-flash-lite (was 2.5-flash-lite).
+    engine_version: str = "0.7.0"
 
     # The all-MiniLM-L6-v2 commit the role vectors and domain scores were
     # measured with, hashed into engine_fingerprint.embed_model_sha.
     embedding_model_revision: str = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+
+    def gemini_model_for(self, tier: str) -> str:
+        """The Gemini model for a task tier ("extract", "chat", "write"). An
+        empty or unknown tier runs on gemini_model."""
+        chosen = {
+            "extract": self.gemini_model_extract,
+            "chat": self.gemini_model_chat,
+            "write": self.gemini_model_write,
+        }.get(tier, "")
+        return chosen.strip() or self.gemini_model
 
 
 @lru_cache

@@ -78,7 +78,7 @@ The stack runs on Google Cloud Platform within the user's $300 GCP credit:
 |---|---|---|---|
 | App stack VM (Option A) | Compute Engine `e2-standard-4` (4 vCPU, 16 GB RAM) | ~$48 / month (or `e2-medium` at $24.46 / mo) | Runs Docker Compose: Frontend, Backend, ML Service, PostgreSQL, MinIO |
 | Model training and fine-tuning | Compute Engine / Vertex AI Workbench with NVIDIA T4 GPU | ~$0.35 / hour | Distillation & continue-training runs (e.g. 2 hrs ≈ $0.70) |
-| Google Vertex AI (`gemini-2.5-flash-lite`) | Cloud API (ADC authentication) | ~$0.00028 per free extraction, ~$0.00037 per Premium analysis | 22 non-engineering domain extractions and narrative coaching |
+| Google Vertex AI (`gemini-3.5-flash-lite`; `gemini-3.8-flash` for documents) | Cloud API (ADC authentication) | ~$0.0013 per analysis before thinking (2026-11 list prices; measure with `scripts/llm_cost_check.py`) | Resume extraction and narrative coaching for every domain |
 | Domain and TLS | Cloud DNS + Let's Encrypt | ~$10 / year, TLS free | Production ingress |
 
 The historical local PC hardware baseline for the offline edition is in [Archived: Community Edition](archive/community-edition.md).

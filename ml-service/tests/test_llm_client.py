@@ -221,8 +221,14 @@ def gemini_client(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
     monkeypatch.setenv("GEMINI_MODEL", "gemini-2.5-flash")
+    # Empty tiers run on GEMINI_MODEL, so every call below uses 2.5-flash
+    # unless a test sets a tier.
+    monkeypatch.setenv("GEMINI_MODEL_EXTRACT", "")
+    monkeypatch.setenv("GEMINI_MODEL_CHAT", "")
+    monkeypatch.setenv("GEMINI_MODEL_WRITE", "")
     monkeypatch.setenv("GEMINI_THINKING_BUDGET", "0")
     monkeypatch.setenv("LLM_CACHE_SIZE", "256")
+    monkeypatch.setenv("LLM_PRICES", "{}")
     monkeypatch.setenv("LLM_INPUT_USD_PER_1M", "0.30")
     monkeypatch.setenv("LLM_OUTPUT_USD_PER_1M", "2.50")
     monkeypatch.setattr("google.genai.Client", _RecordingGeminiSdkClient)
@@ -320,6 +326,95 @@ def test_request_scope_collects_only_its_own_calls(gemini_client):
 
     assert [c for c in calls] and len(calls) == 1
     assert llm_client.ledger.calls == 2
+
+
+def _rebuild_client():
+    get_settings.cache_clear()
+    llm_client._default_client = None
+    return llm_client.get_llm_client()
+
+
+def test_each_purpose_runs_on_its_tier_model(monkeypatch, gemini_client):
+    monkeypatch.setenv("GEMINI_MODEL_EXTRACT", "gemini-3.5-flash-lite")
+    monkeypatch.setenv("GEMINI_MODEL_CHAT", "gemini-3.5-flash")
+    monkeypatch.setenv("GEMINI_MODEL_WRITE", "gemini-3.8-flash")
+    client = _rebuild_client()
+
+    client.complete("sys", "resume", purpose="extract", json_output=True)
+    client.complete("sys", "scores", purpose="narrate")
+    client.complete("sys", "job", purpose="cover_letter")
+    client.complete("sys", "anything", purpose="something-new")
+
+    models = [call["model"] for call in _RecordingGeminiSdkClient.calls]
+    assert models == ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash"], \
+        "an unlisted purpose runs on the chat tier"
+    assert [u.model for u in llm_client.ledger.recent()] == models
+
+
+def test_an_empty_tier_falls_back_to_gemini_model(monkeypatch, gemini_client):
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    monkeypatch.setenv("GEMINI_MODEL_WRITE", "  ")
+    settings = get_settings.__wrapped__()
+
+    assert [settings.gemini_model_for(t) for t in ("extract", "chat", "write", "nope")] == \
+        ["gemini-3.5-flash-lite"] * 4
+
+
+def test_write_defaults_to_gemini_3_8_flash_and_the_rest_to_flash_lite():
+    # The owner's decision (2026-11-04), checked on the field defaults so a
+    # local .env can't make this pass or fail.
+    fields = Settings.model_fields
+    assert fields["gemini_model"].default == "gemini-3.5-flash-lite"
+    assert fields["gemini_model_extract"].default == ""
+    assert fields["gemini_model_chat"].default == ""
+    assert fields["gemini_model_write"].default == "gemini-3.8-flash"
+
+
+def test_gemini_3_models_get_a_thinking_level_not_a_budget(monkeypatch, gemini_client):
+    monkeypatch.setenv("GEMINI_MODEL_EXTRACT", "gemini-3.5-flash-lite")
+    monkeypatch.setenv("GEMINI_MODEL_WRITE", "gemini-3.8-flash")
+    client = _rebuild_client()
+
+    client.complete("sys", "resume", purpose="extract", json_output=True)
+    client.complete("sys", "job", purpose="tailor")
+    client.complete("sys", "scores", purpose="narrate")
+
+    extract, tailor, narrate = (call["config"].thinking_config for call in _RecordingGeminiSdkClient.calls)
+    assert str(extract.thinking_level.value) == "MINIMAL" and extract.thinking_budget is None
+    assert str(tailor.thinking_level.value) == "LOW"
+    assert narrate.thinking_budget == 0 and narrate.thinking_level is None, "2.5 models still take a budget"
+
+
+def test_each_call_is_priced_at_its_own_models_list_price(monkeypatch, gemini_client):
+    monkeypatch.setenv("GEMINI_MODEL_EXTRACT", "gemini-3.5-flash-lite")
+    monkeypatch.setenv("GEMINI_MODEL_WRITE", "gemini-3.8-flash")
+    client = _rebuild_client()
+    _RecordingGeminiSdkClient.response = _FakeGeminiResponse(
+        "ok", _FakeUsageMetadata(prompt=1000, candidates=400, thoughts=100)
+    )
+
+    client.complete("sys", "a", purpose="extract")
+    client.complete("sys", "b", purpose="cold_email")
+
+    extract, write = llm_client.ledger.recent()
+    # 3.5-flash-lite: 1000 * 0.30/1M + 500 * 2.50/1M
+    assert extract.estimated_cost_usd == pytest.approx(0.0003 + 0.00125)
+    # 3.8-flash: 1000 * 1.50/1M + 500 * 7.50/1M
+    assert write.estimated_cost_usd == pytest.approx(0.0015 + 0.00375)
+
+
+def test_llm_prices_override_the_catalog_and_unknown_models_use_the_fallback(monkeypatch):
+    from app.services.model_catalog import prices_for
+
+    monkeypatch.setenv("LLM_PRICES", '{"gemini-3.8-flash": [0.75, 3.75]}')
+    monkeypatch.setenv("LLM_INPUT_USD_PER_1M", "0.59")
+    monkeypatch.setenv("LLM_OUTPUT_USD_PER_1M", "0.79")
+    get_settings.cache_clear()
+
+    assert prices_for("gemini-3.8-flash") == (0.75, 3.75)
+    assert prices_for("gemini-3.5-flash-lite") == (0.30, 2.50)
+    assert prices_for("llama-3.3-70b-versatile") == (0.59, 0.79)
+    assert prices_for(None) == (0.59, 0.79)
 
 
 def test_groq_call_sets_json_mode_and_caps(monkeypatch):

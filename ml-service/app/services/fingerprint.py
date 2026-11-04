@@ -8,8 +8,10 @@ docs/editions-and-parity.md).
 taxonomy_sha is a real content hash of every bundled data file that shapes a
 result -- both skill taxonomies, both role catalogues and domains.json -- so
 it changes automatically whenever any of them is edited.
-extraction_model_sha hashes the LLM provider and model that read the resume
-(e.g. "gemini:gemini-2.5-flash-lite"); embed_model_sha hashes the embedding
+extraction_model_sha hashes the LLM provider and the model that reads the
+resume, the "extract" tier (e.g. "gemini:gemini-3.5-flash-lite"). The chat
+and write tiers only word text (the narrative, letters), never a score, so
+they are deliberately not part of it. embed_model_sha hashes the embedding
 model's name and pinned revision. Both are hashes of the *configured
 identifier*, not of weights, so they change whenever the configured model
 changes -- which is what matters for detecting a mismatch.
@@ -48,7 +50,7 @@ def _sha256_files(paths) -> str:
 def _extraction_model(settings) -> str:
     """"provider:model" for the LLM that extracts profiles ("none" when off)."""
     provider = settings.llm_provider.strip().lower()
-    model = {"gemini": settings.gemini_model, "groq": settings.groq_model}.get(provider, "")
+    model = {"gemini": settings.gemini_model_for("extract"), "groq": settings.groq_model}.get(provider, "")
     return f"{provider}:{model}" if model else provider
 
 

@@ -8,16 +8,20 @@ narrative -- the same for every domain and every account.
   yes                  | Gemini extraction -> match -> gaps -> Gemini narrative
   no                   | rules-only profile card, ATS, locked (lock_reason says why)
 
-The AI engine is unavailable for a request in two cases, both set by the
-operator, never by the user: LLM_PROVIDER=none ("ai_unavailable"), and the
-daily budget brake LLM_DAILY_BUDGET_USD ("ai_budget_exhausted"). ATS scoring
-and domain detection are deterministic and always run. The narrative falls
-back to the template on its own if Gemini fails (explainer.py).
+The AI engine is unavailable for a request in three cases: LLM_PROVIDER=none
+("ai_unavailable"), the daily budget brake LLM_DAILY_BUDGET_USD
+("ai_budget_exhausted"), and Gemini failing while it reads the resume -- a
+retired model, a quota, an outage ("ai_unavailable" again, NFR-3.1: the user
+still gets their score). The last two log an `event=` line the monitoring
+alerts match. ATS scoring and domain detection are deterministic and always
+run. The narrative falls back to the template on its own if Gemini fails
+(explainer.py).
 """
 
 import logging
 import time
 
+from app.config import get_settings
 from app.models.schemas import AnalyzeResponse, DomainDetection, LockReason, ResumeProfile
 from app.services import ats_score, gap_analysis, matcher
 from app.services.basic_profile import basic_profile, extract_email, extract_name, extract_phone
@@ -83,33 +87,62 @@ def analyze_text(resume_text: str, top_n: int = 5, hidden_word_count: int = 0) -
     return response
 
 
+def _locked(resume_text: str, domain: DomainDetection, ats, lock_reason: LockReason) -> AnalyzeResponse:
+    """The result when the AI engine can't be used: the profile card comes
+    from the rules (never the LLM), recommendations stay empty by design."""
+    profile = basic_profile(resume_text)
+    explanation = explain_results(
+        profile, ats, [], [], backend="template", domain=domain, locked=True, lock_reason=lock_reason
+    )
+    return AnalyzeResponse(
+        profile=profile,
+        domain=domain,
+        ats_score=ats,
+        matches=[],
+        gaps=[],
+        recommendations_locked=True,
+        lock_reason=lock_reason,
+        explanation=explanation.text,
+        explanation_source=explanation.source,
+        engine_fingerprint=engine_fingerprint(),
+    )
+
+
+def _error_summary(exc: Exception) -> str:
+    """Class and status code only: an error's message can quote what the
+    model returned, i.e. parts of the resume, which never go in a log."""
+    code = getattr(exc, "code", None)
+    status = getattr(exc, "status", None)
+    parts = [type(exc).__name__]
+    if code is not None:
+        parts.append(f"code={code}")
+    if status:
+        parts.append(f"status={status}")
+    return " ".join(parts)
+
+
 def _analyze(resume_text: str, top_n: int, hidden_word_count: int = 0) -> AnalyzeResponse:
     domain = detect_domain(resume_text)
     ats = ats_score.score_resume(resume_text, hidden_word_count=hidden_word_count)
     lock_reason = _lock_reason()
 
+    if lock_reason == LOCK_REASON_AI_BUDGET_EXHAUSTED:
+        log.warning("event=ai_budget_exhausted")
     if lock_reason is not None:
-        # The profile card comes from the rules (never the LLM on a locked
-        # result); recommendations stay empty by design.
-        profile = basic_profile(resume_text)
-        explanation = explain_results(
-            profile, ats, [], [], backend="template", domain=domain, locked=True, lock_reason=lock_reason
-        )
-        return AnalyzeResponse(
-            profile=profile,
-            domain=domain,
-            ats_score=ats,
-            matches=[],
-            gaps=[],
-            recommendations_locked=True,
-            lock_reason=lock_reason,
-            explanation=explanation.text,
-            explanation_source=explanation.source,
-            engine_fingerprint=engine_fingerprint(),
-        )
+        return _locked(resume_text, domain, ats, lock_reason)
 
     t = time.perf_counter()
-    profile = _extract_profile(resume_text, domain)
+    try:
+        profile = _extract_profile(resume_text, domain)
+    except Exception as exc:
+        # NFR-3.1: Gemini failing (a retired model, a quota, an outage) must
+        # not cost the user their score. The event name is what the
+        # monitoring alert matches, so the first failure pages someone.
+        settings = get_settings()
+        model = settings.gemini_model_for("extract") if settings.llm_provider == "gemini" else settings.groq_model
+        log.warning("event=ai_unavailable stage=extract provider=%s model=%s error=%s",
+                    settings.llm_provider, model, _error_summary(exc))
+        return _locked(resume_text, domain, ats, LOCK_REASON_AI_UNAVAILABLE)
     parsed_ms = (time.perf_counter() - t) * 1000
     t = time.perf_counter()
     matches = matcher.match_roles(profile.skills, top_n=top_n, domain=domain.domain)
