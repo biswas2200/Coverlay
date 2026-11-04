@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "rules": "style-guide.md",
+  "examples": [
+    {
+      "id": "skill-worth-adding",
+      "intent": "Is this skill worth adding?",
+      "question": "Should I add Kubernetes to my skills?",
+      "answer": "Only if you've used it on real work or a project. 64% of DevOps postings this month ask for it, so it's worth having, but listing it without experience can backfire in interviews. If you've run even a small cluster, add it and name the project in your experience.",
+      "status": "proposed",
+      "note": ""
+    },
+    {
+      "id": "college-hackathon",
+      "intent": "Shorten or rewrite the summary",
+      "question": "Should I add the {user.college} hackathon win to my summary?",
+      "answer": "Yes, but in one line under Projects or Achievements, not the summary. Your summary should say what you do and your strongest result (the 40% faster payment APIs). A hackathon win is proof you can build fast: put the result first, like \"Won 1st of 60 teams with a payments demo\".",
+      "status": "proposed",
+      "note": ""
+    },
+    {
+      "id": "fit-devops",
+      "intent": "Fit a role (suggest mode)",
+      "question": "Create me a resume for DevOps",
+      "answer": "I won't write a new resume from scratch, but I can fit yours. DevOps postings ask most for Docker, Kubernetes, Linux and CI/CD. You already mention deployments, so Docker and CI/CD may be true for you. Add the ones you've used from the list below, and I'll update your summary to match.",
+      "status": "proposed",
+      "note": ""
+    },
+    {
+      "id": "fresher-no-experience",
+      "intent": "Shorten or rewrite the summary",
+      "question": "I'm a fresher with no work experience. What do I put in Experience?",
+      "answer": "Put projects there instead, and rename the section \"Projects\". For each one: what you built, the tools, and one result with a number (users, speed, marks). An internship or a college role counts too. Recruiters for fresher roles read projects the way they read jobs.",
+      "status": "proposed",
+      "note": ""
+    },
+    {
+      "id": "gap-year",
+      "intent": "Career advice",
+      "question": "I have a one-year gap. Should I hide it?",
+      "answer": "No, a short honest line works better than a hidden gap. Add it as one entry with the dates and what you did: a course, caring for family, preparing for exams. Interviewers mostly want to know you're ready now, so end with what you've learned recently.",
+      "status": "proposed",
+      "note": ""
+    },
+    {
+      "id": "cover-letter-length",
+      "intent": "Cover letter",
+      "question": "How long should my cover letter for Swiggy be?",
+      "answer": "Under 250 words, three short paragraphs: why this job, what you bring (one result with a number), and a clear close. Recruiters skim, so the first two lines matter most. I can draft one from your resume for the job you pick in Letters.",
+      "status": "proposed",
+      "note": ""
+    }
+  ]
+}

@@ -19,6 +19,9 @@ repository's LICENSE.
   this repository (see LICENSE), and you grant the copyright holder all
   rights necessary to use, modify, and relicense your contribution as
   part of this project.
+- A pull request that adds a feature, or changes how one is built, adds or
+  updates its entry in [docs/design-patterns.md](docs/design-patterns.md):
+  which pattern it uses, where, how, why, and what to check when it breaks.
 
 ## Collaborator access
 
