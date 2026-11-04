@@ -47,8 +47,18 @@ def test_extraction_model_sha_follows_the_configured_llm(monkeypatch):
             get_settings.cache_clear()
             engine_fingerprint.cache_clear()
 
+    monkeypatch.setenv("GEMINI_MODEL_EXTRACT", "")
     lite = fingerprint_with(LLM_PROVIDER="gemini", GEMINI_MODEL="gemini-2.5-flash-lite")
     flash = fingerprint_with(LLM_PROVIDER="gemini", GEMINI_MODEL="gemini-2.5-flash")
     off = fingerprint_with(LLM_PROVIDER="none")
 
     assert len({lite, flash, off}) == 3
+
+    # The extract tier is the model that reads resumes, so it alone moves
+    # the hash; the chat and write tiers only word text, never a score.
+    base = fingerprint_with(LLM_PROVIDER="gemini", GEMINI_MODEL="gemini-3.5-flash-lite",
+                            GEMINI_MODEL_EXTRACT="", GEMINI_MODEL_WRITE="gemini-3.8-flash")
+    other_extract = fingerprint_with(GEMINI_MODEL_EXTRACT="gemini-3.5-flash")
+    other_write = fingerprint_with(GEMINI_MODEL_EXTRACT="", GEMINI_MODEL_WRITE="gemini-3.5-flash")
+    assert other_extract != base
+    assert other_write == base

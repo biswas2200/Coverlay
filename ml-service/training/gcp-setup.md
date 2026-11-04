@@ -177,9 +177,9 @@ build fixes and how to read its report: [data_prep/README.md](data_prep/README.m
 
 The unlabelled resumes are labelled by `gemini-3.5-flash-lite` with prompt v3,
 the model chosen after measuring quality and cost on two check sets
-([data_prep/LABELLING.md](data_prep/LABELLING.md)). The app's own Gemini
-calls (Premium extraction and coaching) are unaffected and stay on
-`gemini-2.5-flash-lite`.
+([data_prep/LABELLING.md](data_prep/LABELLING.md)). Since 2026-11-04 the
+app's own resume extraction runs on the same model (`gemini-2.5-flash-lite`
+was retired; see the model tiers in `ml-service/README.md`).
 
 The cost rule, with the labeller's own checks:
 

@@ -7,19 +7,41 @@ import { roleLabel } from '../pages/dashboard-rules.js';
 import { openBugReport } from './bug-report.js';
 import { hydrateIcons, icon } from './icons.js';
 
-// The app shell shared by the signed-in pages (upload, dashboard, jobs, saved, watchlist): the sidebar with the
-// account, the main navigation and the resume versions, plus the mobile drawer behaviour.
+// The app shell shared by the signed-in pages: the sidebar with the account, the main navigation
+// (grouped), the resume versions, plus the mobile drawer behaviour.
 // The page's HTML holds an empty <aside id="sidebar">, a #scrim and a #menu-button.
 
-const NAV = [
-  { key: 'overview', label: 'Overview', icon: 'home', href: 'dashboard.html#overview' },
-  { key: 'resume', label: 'Resume analyzer', icon: 'file', href: 'upload.html' },
-  { key: 'builder', label: 'Resume Builder', icon: 'sparkle', href: 'resume-builder.html' },
-  { key: 'matches', label: 'Role matches', icon: 'target', href: 'dashboard.html#matches' },
-  { key: 'jd', label: 'JD match', icon: 'briefcase', href: 'dashboard.html#jd' },
-  { key: 'jobs', label: 'Jobs for you', icon: 'search', href: 'jobs.html' },
-  { key: 'saved', label: 'Saved jobs', icon: 'bookmark', href: 'saved.html' },
-  { key: 'watchlist', label: 'Watchlist', icon: 'eye', href: 'watchlist.html' },
+// Grouped so the sidebar stays scannable as features are added. Pages marked `preview` are
+// clickable prototypes with sample data (no backend yet); they say so on the page.
+export const NAV_GROUPS = [
+  {
+    label: 'General',
+    items: [
+      { key: 'overview', label: 'Overview', icon: 'home', href: 'dashboard.html#overview' },
+      { key: 'resume', label: 'Resume analyzer', icon: 'file', href: 'upload.html' },
+      { key: 'builder', label: 'Resume Builder', icon: 'sparkle', href: 'resume-builder.html', preview: true },
+      { key: 'letters', label: 'Letters & emails', icon: 'mail', href: 'letters.html', preview: true },
+      { key: 'matches', label: 'Role matches', icon: 'target', href: 'dashboard.html#matches' },
+      { key: 'jd', label: 'JD match', icon: 'briefcase', href: 'dashboard.html#jd' },
+    ],
+  },
+  {
+    label: 'Jobs',
+    items: [
+      { key: 'jobs', label: 'Jobs for you', icon: 'search', href: 'jobs.html' },
+      { key: 'saved', label: 'Saved jobs', icon: 'bookmark', href: 'saved.html' },
+      { key: 'applications', label: 'Applications', icon: 'kanban', href: 'applications.html', preview: true },
+      { key: 'watchlist', label: 'Watchlist', icon: 'eye', href: 'watchlist.html' },
+      { key: 'community', label: 'Community', icon: 'users', href: 'community.html', preview: true },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { key: 'wallet', label: 'Wallet', icon: 'wallet', href: 'wallet.html', preview: true },
+      { key: 'settings', label: 'Settings & privacy', icon: 'sliders', href: 'settings.html', preview: true },
+    ],
+  },
 ];
 
 let versionList = null;
@@ -44,9 +66,18 @@ export function renderShell(active) {
   const nav = el(
     'nav',
     { class: 'sb-nav', 'aria-label': 'Main' },
-    ...NAV.map((item) =>
-      el('a', { class: 'sb-link', href: item.href, 'data-nav': item.key }, icon(item.icon), item.label),
-    ),
+    ...NAV_GROUPS.flatMap((group) => [
+      el('p', { class: 'sb-label' }, group.label),
+      ...group.items.map((item) =>
+        el(
+          'a',
+          { class: 'sb-link', href: item.href, 'data-nav': item.key },
+          icon(item.icon),
+          item.label,
+          item.preview ? el('span', { class: 'sb-tag', title: 'Clickable preview with sample data' }, 'Preview') : null,
+        ),
+      ),
+    ]),
   );
 
   versionList = el('ul', { class: 'sb-versions' }, el('li', { class: 'sb-empty' }, 'Loading…'));
@@ -57,11 +88,14 @@ export function renderShell(active) {
     openBugReport();
   });
 
-  // Only administrators see the review queue; the backend enforces it either way.
+  // Only administrators see the review queue and the team dashboards; the backend enforces it either way.
+  const insightsLink = el('a', { class: 'sb-link', href: 'admin-insights.html', 'data-nav': 'admin-insights', hidden: true },
+    icon('chart'), 'Team insights', el('span', { class: 'sb-tag' }, 'Preview'));
   const adminLink = el('a', { class: 'sb-link', href: 'admin-bugs.html', 'data-nav': 'admin-bugs', hidden: true },
     icon('check'), 'Bug reports (admin)');
   const paintAdmin = () => {
     adminLink.hidden = role !== 'ADMIN';
+    insightsLink.hidden = role !== 'ADMIN';
   };
   paintAdmin();
 
@@ -82,11 +116,10 @@ export function renderShell(active) {
       el('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(user?.email)),
       el('div', {}, el('p', { class: 'sb-email', title: user?.email ?? '' }, user?.email ?? ''), roleBadge),
     ),
-    el('p', { class: 'sb-label' }, 'General'),
     nav,
     el('p', { class: 'sb-label' }, 'Resume versions'),
     versionList,
-    el('div', { class: 'sb-foot' }, adminLink, reportBug, signOut),
+    el('div', { class: 'sb-foot' }, insightsLink, adminLink, reportBug, signOut),
   );
   setActive(active);
 

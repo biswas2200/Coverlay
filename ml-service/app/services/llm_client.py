@@ -25,8 +25,25 @@ from dataclasses import dataclass
 from typing import Iterator, NamedTuple, Protocol
 
 from app.config import get_settings
+from app.services.model_catalog import model_info, prices_for
 
 log = logging.getLogger(__name__)
+
+# Which task tier (Settings.gemini_model_for) each call purpose runs on. A
+# purpose not listed runs on "chat", the cheaper default.
+TIER_BY_PURPOSE = {
+    "extract": "extract",
+    "narrate": "chat",
+    "chat": "chat",
+    "tailor": "write",
+    "cover_letter": "write",
+    "cold_email": "write",
+}
+
+
+def tier_for(purpose: str) -> str:
+    """The task tier a call purpose runs on ("extract", "chat" or "write")."""
+    return TIER_BY_PURPOSE.get(purpose, "chat")
 
 
 class LLMClient(Protocol):
@@ -95,13 +112,14 @@ class _RawUsage(NamedTuple):
     cached_tokens: int = 0
 
 
-def estimate_cost_usd(prompt_tokens: int, output_tokens: int, thinking_tokens: int = 0) -> float:
-    """Price a call with Settings.llm_input_usd_per_1m / llm_output_usd_per_1m.
+def estimate_cost_usd(
+    prompt_tokens: int, output_tokens: int, thinking_tokens: int = 0, model: str | None = None
+) -> float:
+    """Price a call at the model's list price (model_catalog.prices_for).
     Thinking tokens are billed at the output rate (Gemini's rule)."""
-    settings = get_settings()
+    input_usd_per_1m, output_usd_per_1m = prices_for(model)
     cost = (
-        prompt_tokens * settings.llm_input_usd_per_1m
-        + (output_tokens + thinking_tokens) * settings.llm_output_usd_per_1m
+        prompt_tokens * input_usd_per_1m + (output_tokens + thinking_tokens) * output_usd_per_1m
     ) / 1_000_000
     return round(cost, 8)
 
@@ -231,12 +249,17 @@ def _cache_key(*parts: object) -> str:
 class _ProviderClient:
     """The provider-agnostic half of a real client: cache lookup, usage
     recording and logging around one SDK call. Subclasses set `provider`
-    and `model` and implement _generate(); they never touch the ledger or
-    the cache themselves.
+    and `model` (their default model), override model_for() if they run
+    different models for different tasks, and implement _generate(); they
+    never touch the ledger or the cache themselves.
     """
 
     provider: str = ""
     model: str = ""
+
+    def model_for(self, purpose: str) -> str:
+        """The model a call with this purpose runs on."""
+        return self.model
 
     def __init__(self) -> None:
         self._cache: OrderedDict[str, str] = OrderedDict()
@@ -248,6 +271,7 @@ class _ProviderClient:
         system_prompt: str,
         user_prompt: str,
         *,
+        model: str,
         json_output: bool,
         max_output_tokens: int | None,
     ) -> tuple[str, _RawUsage]:
@@ -262,21 +286,23 @@ class _ProviderClient:
         json_output: bool = False,
         max_output_tokens: int | None = None,
     ) -> str:
-        key = _cache_key(self.provider, self.model, purpose, json_output, max_output_tokens,
+        model = self.model_for(purpose)
+        key = _cache_key(self.provider, model, purpose, json_output, max_output_tokens,
                          system_prompt, user_prompt)
         cached = self._cache_get(key)
         if cached is not None:
-            ledger.record(LLMUsage(self.provider, self.model, purpose, 0, 0, 0, 0, 0.0, True, time.time()))
-            log.info("llm cache hit provider=%s model=%s purpose=%s", self.provider, self.model, purpose)
+            ledger.record(LLMUsage(self.provider, model, purpose, 0, 0, 0, 0, 0.0, True, time.time()))
+            log.info("llm cache hit provider=%s model=%s purpose=%s", self.provider, model, purpose)
             return cached
 
         text, raw = self._generate(
-            system_prompt, user_prompt, json_output=json_output, max_output_tokens=max_output_tokens
+            system_prompt, user_prompt, model=model, json_output=json_output,
+            max_output_tokens=max_output_tokens,
         )
         usage = LLMUsage(
-            self.provider, self.model, purpose,
+            self.provider, model, purpose,
             raw.prompt_tokens, raw.output_tokens, raw.thinking_tokens, raw.cached_tokens,
-            estimate_cost_usd(raw.prompt_tokens, raw.output_tokens, raw.thinking_tokens),
+            estimate_cost_usd(raw.prompt_tokens, raw.output_tokens, raw.thinking_tokens, model),
             False, time.time(),
         )
         ledger.record(usage)
@@ -331,9 +357,9 @@ class GroqLLMClient(_ProviderClient):
         self._client = Groq(api_key=settings.groq_api_key)
         self.model = settings.groq_model
 
-    def _generate(self, system_prompt, user_prompt, *, json_output, max_output_tokens):
+    def _generate(self, system_prompt, user_prompt, *, model, json_output, max_output_tokens):
         kwargs: dict = {
-            "model": self.model,
+            "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -358,7 +384,9 @@ class GeminiLLMClient(_ProviderClient):
     authenticated with Application Default Credentials -- never an API key.
     Shares only the cache/ledger layer with GroqLLMClient; the two SDKs
     have unrelated request/response shapes, so _generate is written
-    separately for each.
+    separately for each. Each call runs on its task tier's model
+    (TIER_BY_PURPOSE, Settings.gemini_model_for): one client, several
+    models.
     """
 
     provider = "gemini"
@@ -394,10 +422,24 @@ class GeminiLLMClient(_ProviderClient):
             ) from exc
         super().__init__()
         self._types = types
+        self._settings = settings
         self.model = settings.gemini_model
         self._thinking_budget = settings.gemini_thinking_budget
 
-    def _generate(self, system_prompt, user_prompt, *, json_output, max_output_tokens):
+    def model_for(self, purpose: str) -> str:
+        return self._settings.gemini_model_for(tier_for(purpose))
+
+    def _thinking_config(self, model: str):
+        """A level for Gemini 3.x models (model_catalog), else the budget
+        (Gemini 2.5); None leaves the model's own default in place."""
+        info = model_info(model)
+        if info is not None and info.thinking_level:
+            return self._types.ThinkingConfig(thinking_level=info.thinking_level)
+        if self._thinking_budget >= 0:
+            return self._types.ThinkingConfig(thinking_budget=self._thinking_budget)
+        return None
+
+    def _generate(self, system_prompt, user_prompt, *, model, json_output, max_output_tokens):
         types = self._types
         config = types.GenerateContentConfig(
             system_instruction=system_prompt,
@@ -407,13 +449,10 @@ class GeminiLLMClient(_ProviderClient):
             temperature=0.0 if json_output else 0.7,
             max_output_tokens=max_output_tokens,
             response_mime_type="application/json" if json_output else None,
-            thinking_config=(
-                types.ThinkingConfig(thinking_budget=self._thinking_budget)
-                if self._thinking_budget >= 0 else None
-            ),
+            thinking_config=self._thinking_config(model),
         )
         response = self._client.models.generate_content(
-            model=self.model, contents=user_prompt, config=config
+            model=model, contents=user_prompt, config=config
         )
         meta = getattr(response, "usage_metadata", None)
         raw = _RawUsage(

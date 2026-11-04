@@ -51,6 +51,7 @@ nav:
   - Class Diagram: class-diagram.md
   - Entities & Fields: entities-and-fields.md
   - Tech Stack: tech-stack.md
+  - Design Patterns: design-patterns.md
   - Datasets: datasets.md
   - Archive:
       - Community Edition: archive/community-edition.md

@@ -102,7 +102,7 @@ A user can:
 | Database | PostgreSQL 15+ |
 | Object storage | MinIO (S3-compatible) for uploaded resume files |
 | Frontend | HTML5, one hand-written CSS file (light and dark themes, no CSS framework), vanilla JavaScript (ES modules, no build step); tests via `node --test` |
-| LLM provider (Premium / opt-in only) | Gemini on Vertex AI (`gemini-2.5-flash-lite` by default; `gemini-2.5-flash` optional) authenticated with Google Application Default Credentials (no API key); Groq (`llama-3.3-70b-versatile`) optional via `LLM_PROVIDER=groq` |
+| LLM provider | Gemini on Vertex AI, one model per task tier: `gemini-3.5-flash-lite` reads resumes and runs the Lay AI chat and narrative, `gemini-3.8-flash` writes tailored resumes, cover letters and cold emails; authenticated with Google Application Default Credentials (no API key); Groq (`llama-3.3-70b-versatile`) optional via `LLM_PROVIDER=groq` |
 | Community Edition packaging | Docker multi-arch image (`linux/amd64`, `linux/arm64`), models and vector tables baked in, no runtime network |
 | Web deployment | Single Linux VM running Docker Compose (ml-service, backend, PostgreSQL, MinIO); demo target Hetzner CX23-class or GCP e2-medium-class |
 
@@ -437,6 +437,7 @@ The System is a student project and does not pursue formal certification. Sectio
 | Version | Date | Author | Description |
 |---|---|---|---|
 | 1.0 | 2026-08-28 | Amitosh Biswas | Initial SRS draft (Word document). |
+| 2.16 | 2026-11-04 | Amitosh Biswas | Engine version 0.7.0: `gemini-2.5-flash-lite` reached its Vertex AI retirement date (October 2026), so each kind of task now has its own model: `gemini-3.5-flash-lite` for extraction and chat (Lay AI, the narrative), `gemini-3.8-flash` for documents a recruiter reads. Prices and thinking levels per model in `ml-service/app/services/model_catalog.py`. A Gemini failure while reading a resume now locks the result with `ai_unavailable` (NFR-3.1) and logs `event=ai_unavailable`, instead of failing the request. |
 | 2.15 | 2026-10-22 | Amitosh Biswas | Engine version 0.5.5: headings the parser doesn't read (Projects, Certifications, Hackathons, ...) end the section above them, Internships count as Experience; each degree is paired with the institution line next to it in the direction the resume uses, with the year from its own line; plural institution keywords; 15 skills added (JUnit, Mockito, Maven, Hibernate, Spring Security, JPA, ...). Scored on GCP: field macro F1 84 % -> 85 % (DataTurks) and 90 % -> 91 % (unseen LiveCareer). |
 | 2.14 | 2026-10-22 | Amitosh Biswas | Engine version 0.5.4: an institution the NER model cut short (e.g. "Pune University" from "Savitribai Phule Pune University") is restored from the Education line it came from. Scored on GCP with the same harness: the served model keeps 84 % (DataTurks) and 90 % (unseen LiveCareer) field macro F1, institution unchanged. |
 | 2.13 | 2026-10-22 | Amitosh Biswas | Engine version 0.5.3: the DOCX extractor also leaves out text a reader cannot see -- runs marked hidden, set under 3 pt, or white with no dark shading or highlight behind them (white text in a dark table cell stays) -- and counts it for the `no_hidden_text` ATS check, as the PDF extractor does (NFR-2.5). |

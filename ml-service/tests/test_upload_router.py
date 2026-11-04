@@ -152,8 +152,12 @@ def test_llm_usage_endpoint_reports_totals_and_pricing(monkeypatch):
     from app.config import get_settings
     from app.services import llm_client
 
-    monkeypatch.setenv("LLM_INPUT_USD_PER_1M", "0.30")
-    monkeypatch.setenv("LLM_OUTPUT_USD_PER_1M", "2.50")
+    monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+    monkeypatch.setenv("GEMINI_MODEL_EXTRACT", "")
+    monkeypatch.setenv("GEMINI_MODEL_CHAT", "")
+    monkeypatch.setenv("GEMINI_MODEL_WRITE", "gemini-3.8-flash")
+    monkeypatch.setenv("LLM_PRICES", "{}")
     get_settings.cache_clear()
     llm_client.ledger.reset()
     llm_client.ledger.record(llm_client.LLMUsage(
@@ -163,7 +167,14 @@ def test_llm_usage_endpoint_reports_totals_and_pricing(monkeypatch):
 
     body = client.get("/llm-usage").json()
 
+    # model/pricing are the extraction model's; tiers lists every task's.
+    assert body["model"] == "gemini-3.5-flash-lite"
     assert body["pricing"] == {"input_usd_per_1m": 0.30, "output_usd_per_1m": 2.50}
+    assert [(t["tier"], t["model"], t["pricing"]["output_usd_per_1m"]) for t in body["tiers"]] == [
+        ("extract", "gemini-3.5-flash-lite", 2.50),
+        ("chat", "gemini-3.5-flash-lite", 2.50),
+        ("write", "gemini-3.8-flash", 7.50),
+    ]
     assert body["totals"]["calls"] == 2 and body["totals"]["cache_hits"] == 1
     assert body["totals"]["prompt_tokens"] == 1500
     assert body["totals"]["estimated_cost_usd"] == 0.0017

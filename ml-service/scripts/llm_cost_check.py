@@ -31,7 +31,8 @@ from app.config import get_settings  # noqa: E402
 from app.services import explainer, parser  # noqa: E402
 from app.services.document_extraction.registry import get_extractor_for_filename  # noqa: E402
 from app.services.domain_classifier import detect_domain  # noqa: E402
-from app.services.llm_client import ledger  # noqa: E402
+from app.services.llm_client import ledger, tier_for  # noqa: E402
+from app.services.model_catalog import prices_for  # noqa: E402
 
 SAMPLES_DIR = ROOT / "scripts" / "samples"
 
@@ -76,9 +77,17 @@ def _pre_call_estimate(resume_text: str, domain_name: str) -> dict[str, dict[str
     }
 
 
-def _price(prompt_tokens: int, output_tokens: int, thinking_tokens: int = 0) -> float:
+def _model_for(purpose: str) -> str:
+    """The model a call with this purpose runs on (its task tier's model)."""
     s = get_settings()
-    return (prompt_tokens * s.llm_input_usd_per_1m + (output_tokens + thinking_tokens) * s.llm_output_usd_per_1m) / 1e6
+    if s.llm_provider == "gemini":
+        return s.gemini_model_for(tier_for(purpose))
+    return s.groq_model
+
+
+def _price(prompt_tokens: int, output_tokens: int, thinking_tokens: int = 0, purpose: str = "extract") -> float:
+    per_in, per_out = prices_for(_model_for(purpose))
+    return (prompt_tokens * per_in + (output_tokens + thinking_tokens) * per_out) / 1e6
 
 
 def _print_row(label: str, prompt: int, output: int, thinking: int, cost: float, note: str = "") -> None:
@@ -102,10 +111,12 @@ def main() -> int:
         print("no input files", file=sys.stderr)
         return 2
 
-    model = settings.gemini_model if settings.llm_provider == "gemini" else settings.groq_model
-    print(f"provider={settings.llm_provider} model={model} thinking_budget={settings.gemini_thinking_budget} "
-          f"price=${settings.llm_input_usd_per_1m}/1M in, ${settings.llm_output_usd_per_1m}/1M out "
-          f"(thinking billed as output)")
+    print(f"provider={settings.llm_provider} (thinking billed as output; Gemini 3.x thinking runs at the "
+          f"catalog level and is not in the assumed rows -- compare with the actual rows)")
+    for purpose in ("extract", "narrate"):
+        model = _model_for(purpose)
+        per_in, per_out = prices_for(model)
+        print(f"  {purpose:<8} tier={tier_for(purpose):<8} model={model} price=${per_in}/1M in, ${per_out}/1M out")
     if settings.llm_provider == "gemini":
         print(f"project={settings.google_cloud_project or '<GOOGLE_CLOUD_PROJECT not set>'} "
               f"location={settings.google_cloud_location}")
@@ -118,14 +129,14 @@ def main() -> int:
         domain = detect_domain(text)
         est = _pre_call_estimate(text, domain.name)
         est_calls = ["extract", "narrate"]
-        est_cost = sum(_price(est[c]["prompt_tokens"], est[c]["output_tokens"]) for c in est_calls)
+        est_cost = sum(_price(est[c]["prompt_tokens"], est[c]["output_tokens"], 0, c) for c in est_calls)
         grand_est += est_cost
 
         print(f"== {path.name}: {len(text)} chars, domain={domain.domain}, confidence={domain.confidence}")
         print(f"  {'call':<26} {'prompt':>8} {'output':>8} {'thinking':>9}   {'est. USD':<10}")
         for call in est_calls:
             _print_row(f"assumed {call}", est[call]["prompt_tokens"], est[call]["output_tokens"], 0,
-                       _price(est[call]["prompt_tokens"], est[call]["output_tokens"]))
+                       _price(est[call]["prompt_tokens"], est[call]["output_tokens"], 0, call))
         print(f"  {'assumed total':<26} {'':>8} {'':>8} {'':>9}   ${est_cost:.6f}")
 
         if args.dry_run:

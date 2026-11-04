@@ -195,20 +195,33 @@ class LLMUsageSummary(BaseModel):
 
 
 class LLMPricing(BaseModel):
-    """The list prices the estimates were computed with (Settings)."""
+    """The list prices the estimates were computed with (model_catalog.py,
+    or LLM_PRICES / LLM_*_USD_PER_1M from Settings)."""
 
     input_usd_per_1m: float
     output_usd_per_1m: float
 
 
+class LLMTier(BaseModel):
+    """One task tier ("extract", "chat", "write"), the model it runs on and
+    the price its calls are estimated at."""
+
+    tier: str
+    model: str
+    pricing: LLMPricing
+
+
 class LLMUsageReport(BaseModel):
     """GET /llm-usage: process totals since start (or the last reset), the
-    pricing assumption behind them, and the most recent calls."""
+    pricing assumption behind them, and the most recent calls. `model` and
+    `pricing` are the extraction model's (the one that reads resumes);
+    `tiers` lists every task tier's model."""
 
     since: str
     provider: str
     model: str
     pricing: LLMPricing
+    tiers: list[LLMTier] = Field(default_factory=list)
     totals: LLMUsageSummary
 
 

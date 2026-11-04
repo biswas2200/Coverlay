@@ -201,3 +201,49 @@ def test_analysis_logs_its_outcome_but_not_the_resume(monkeypatch, calls, caplog
     line = caplog.records[-1].getMessage()
     assert "domain=engineering" in line and "matches=1" in line
     assert "Jane" not in line and "jane@example.com" not in line
+
+
+class _ModelNotFound(Exception):
+    """Shaped like google.genai.errors.ClientError: a code, a status, and a
+    message that quotes the request -- which must never reach a log."""
+
+    code = 404
+    status = "NOT_FOUND"
+
+    def __str__(self) -> str:
+        return "Publisher model gemini-2.5-flash-lite was not found. Request: Jane Doe, jane@example.com"
+
+
+def test_a_failing_ai_engine_locks_the_result_instead_of_failing_it(monkeypatch, calls, caplog):
+    # A retired model, a quota or an outage: the user still gets their ATS
+    # score and a rules-only profile card (NFR-3.1), and the log carries the
+    # event the monitoring alert matches.
+    def retired_model(resume_text, client=None, domain_name=None):
+        raise _ModelNotFound()
+
+    monkeypatch.setattr(pipeline, "parse_resume", retired_model)
+    monkeypatch.setattr(pipeline, "detect_domain", lambda text: ENGINEERING)
+
+    with caplog.at_level("WARNING", logger="app.services.pipeline"):
+        result = pipeline.analyze_text("Jane Doe\njane@example.com\nPython developer")
+
+    assert result.recommendations_locked is True
+    assert result.lock_reason == pipeline.LOCK_REASON_AI_UNAVAILABLE
+    assert result.ats_score == ATS and result.matches == []
+    assert result.profile.email == "jane@example.com"  # the rules-only card
+    (event,) = [r.getMessage() for r in caplog.records if "event=" in r.getMessage()]
+    assert "event=ai_unavailable" in event and "stage=extract" in event
+    assert "_ModelNotFound code=404 status=NOT_FOUND" in event
+    assert "Jane" not in event and "jane@example.com" not in event, "never the error's message"
+
+
+def test_the_budget_brake_logs_its_event(monkeypatch, calls, caplog):
+    from app.services import llm_client
+
+    monkeypatch.setattr(llm_client.ledger, "over_daily_budget", lambda: True)
+    monkeypatch.setattr(pipeline, "detect_domain", lambda text: ENGINEERING)
+
+    with caplog.at_level("WARNING", logger="app.services.pipeline"):
+        pipeline.analyze_text("resume")
+
+    assert any(r.getMessage() == "event=ai_budget_exhausted" for r in caplog.records)

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Coverlay preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+    <style>
+      .hub { max-width: 980px; margin: 0 auto; padding: 40px 16px 64px; display: grid; gap: 22px; }
+      .hub-head { display: grid; gap: 10px; }
+      .hub-head h1 { font-size: clamp(28px, 4vw, 38px); }
+      .hub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .hub-card { display: grid; gap: 6px; align-content: start; color: var(--text); }
+      .hub-card:hover { border-color: var(--accent); color: var(--text); }
+      .hub-card h3 { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+      .hub-card p { font-size: 13.5px; color: var(--muted); }
+      .hub-group { display: grid; gap: 12px; }
+      .hub-group h2 { font-size: 18px; }
+      .hub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      @media (max-width: 800px) { .hub-grid { grid-template-columns: minmax(0, 1fr); } }
+    </style>
+  </head>
+  <body>
+    <main class="hub">
+      <header class="hub-head">
+        <p class="eyebrow">Design review · sample data</p>
+        <h1>Coverlay, every screen</h1>
+        <p class="lead">Click through the whole app before anything is built. Nothing here reaches a backend or an AI, and everything you change stays in this browser. Tell me what you like and what to change.</p>
+        <div class="hub-actions">
+          <button class="btn btn-primary" id="start" type="button">Start the preview</button>
+          <button class="btn btn-ghost" id="reset" type="button">Reset all preview data</button>
+        </div>
+        <p class="alert alert-success" id="started" role="status" hidden>You're signed in as preview@coverlay.app (an admin, so Team insights shows too). Pick a screen.</p>
+      </header>
+
+      <section class="hub-group" aria-labelledby="new-title">
+        <h2 id="new-title">New screens</h2>
+        <div class="hub-grid">
+          <a class="card hub-card" href="letters.html"><h3>Letters &amp; emails <span class="badge badge-violet">New</span></h3><p>Cover letters and cold emails from your resume and a job. "What Gemini sees" shows the placeholders.</p></a>
+          <a class="card hub-card" href="applications.html"><h3>Applications <span class="badge badge-violet">New</span></h3><p>Preparing → Applied → Interview → Offer, reminders, and "Did you hear back?".</p></a>
+          <a class="card hub-card" href="community.html"><h3>Community <span class="badge badge-violet">New</span></h3><p>Anonymous posts under a monthly mask, the identity check before posting, points to wallet.</p></a>
+          <a class="card hub-card" href="wallet.html"><h3>Wallet <span class="badge badge-violet">New</span></h3><p>Pay as you go: ₹60 to ₹2,000, the price of every action, what a full journey costs.</p></a>
+          <a class="card hub-card" href="settings.html"><h3>Settings &amp; privacy <span class="badge badge-violet">New</span></h3><p>Consents (EU/UK opt-in), phone change, export, and the delete-account job step by step.</p></a>
+          <a class="card hub-card" href="admin-insights.html"><h3>Team insights <span class="badge badge-violet">New</span></h3><p>Admin dashboards: funnel, prompts, outcomes, money, health. Groups under 20 hidden.</p></a>
+          <a class="card hub-card" href="signup-preview.html"><h3>Sign-up <span class="badge badge-violet">New</span></h3><p>Email, a verified phone, 18+, privacy choices, and the "being deleted" case.</p></a>
+        </div>
+      </section>
+
+      <section class="hub-group" aria-labelledby="changed-title">
+        <h2 id="changed-title">Changed</h2>
+        <div class="hub-grid">
+          <a class="card hub-card" href="resume-builder.html"><h3>Resume Builder <span class="badge badge-blue">Changed</span></h3><p>Toolbar (fonts, bold, links, bullets, writing style), the Lay AI cursor that watches, suggest mode, the privacy chip, the Classic (LaTeX) template.</p></a>
+        </div>
+      </section>
+
+      <section class="hub-group" aria-labelledby="same-title">
+        <h2 id="same-title">Unchanged (sample answers stand in for the backend)</h2>
+        <div class="hub-grid">
+          <a class="card hub-card" href="dashboard.html"><h3>Overview</h3><p>Shows its "upload your first resume" state here.</p></a>
+          <a class="card hub-card" href="upload.html"><h3>Resume analyzer</h3><p>Uploading needs the real engine, so it explains that.</p></a>
+          <a class="card hub-card" href="jobs.html"><h3>Jobs for you</h3><p>Four sample jobs, newest first.</p></a>
+          <a class="card hub-card" href="saved.html"><h3>Saved jobs</h3><p>Empty in the preview.</p></a>
+          <a class="card hub-card" href="watchlist.html"><h3>Watchlist</h3><p>Empty in the preview.</p></a>
+          <a class="card hub-card" href="index.html"><h3>Home page</h3><p>The public landing page.</p></a>
+        </div>
+      </section>
+    </main>
+    <script type="module">
+      // Signs in a preview user the sample API recognises (frontend/preview/mock-api.mjs).
+      const user = { id: '00000000-0000-4000-8000-000000000001', email: 'preview@coverlay.app', role: 'ADMIN', createdAt: '2026-11-01T09:00:00Z' };
+      const start = () => {
+        try {
+          localStorage.setItem('resumeAnalyser.auth.token', 'preview-token');
+          localStorage.setItem('resumeAnalyser.auth.user', JSON.stringify(user));
+        } catch {
+          // Storage blocked: the pages will ask to sign in.
+        }
+        document.getElementById('started').hidden = false;
+      };
+      document.getElementById('start').addEventListener('click', start);
+      document.getElementById('reset').addEventListener('click', () => {
+        try {
+          for (const key of Object.keys(localStorage)) {
+            if (key.startsWith('coverlay.')) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch {
+          // Nothing stored.
+        }
+        start();
+      });
+      // Links work right away: starting the session on first load saves a click.
+      start();
+    </script>
+  </body>
+</html>

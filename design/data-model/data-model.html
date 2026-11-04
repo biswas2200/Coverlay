@@ -245,12 +245,12 @@ html { scroll-behavior: smooth; }
 
 <div class="wrap">
   <header class="page-head">
-    <p class="eyebrow">Coverlay · Phase B (feature F5) · Proposal for review · 3 Nov 2026</p>
+    <p class="eyebrow">Coverlay · Phase B (feature F5) · Decided 3 and 4 Nov 2026</p>
     <h1>Coverlay data model</h1>
-    <p class="lead">What we store about each person and why, how long we keep it, what happens when someone goes quiet or deletes their account, how we track where people apply, and how analytics shows us what to improve without pointing back to anyone.</p>
+    <p class="lead">What we store about each person and why, how long we keep it, what happens when someone goes quiet or deletes their account, how we track where people apply, and how analytics shows us what to improve without pointing back to anyone. Steps 7 to 14 add the rules agreed on 4 Nov: personal details as placeholders, deletion that reaches every copy, anonymous posts, the wallet, and readiness for a spike.</p>
     <div class="chips">
-      <span class="chip">Nothing here is built yet</span>
-      <span class="chip amber">Numbers in amber are proposals for you to decide</span>
+      <span class="chip">Not built yet: the screens are in the clickable preview</span>
+      <span class="chip amber">Numbers in amber: decided</span>
     </div>
   </header>
 
@@ -265,9 +265,17 @@ html { scroll-behavior: smooth; }
       <a href="#apply">4. Where people apply</a>
       <a href="#analytics">5. Analytics</a>
       <a href="#duties">6. Our duties to users</a>
+      <a href="#keep">7. What we keep, in one store</a>
+      <a href="#guard">8. Placeholders</a>
+      <a href="#failures">9. Failed deletions, ghost users</a>
+      <a href="#posts">10. Anonymous posts</a>
+      <a href="#wallet">11. The wallet</a>
+      <a href="#tools">12. Dashboards and tools</a>
+      <a href="#spike">13. Ready for a spike</a>
+      <a href="#logs">14. Logs and alerts</a>
       <a href="#map">The whole picture</a>
       <a href="#code">What the code looks like</a>
-      <a href="#decisions">Decisions for you</a>
+      <a href="#decisions">Decided</a>
     </nav>
 
     <main>
@@ -420,7 +428,7 @@ html { scroll-behavior: smooth; }
           <div class="tech">
             <p class="label">In Coverlay</p>
             <p>Settings get two buttons: <strong>Export my data</strong> (a ZIP with every record as JSON, plus the uploaded files) and <strong>Delete my account</strong> (confirmed with the password).</p>
-            <p>Deleting sets <code>status = DELETION_PENDING</code> and increases <code>token_version</code>, which makes every existing JWT invalid, so every device is signed out. Signing in within <span class="prop">14 days</span> offers "Keep my account". After that, the nightly purge job runs these steps:</p>
+            <p>Deleting sets <code>status = DELETION_PENDING</code> and increases <code>token_version</code>, which makes every existing JWT invalid, so every device is signed out. Signing in within <span class="prop">14 days</span> offers "Keep my account" (or "Delete now" skips the wait). After that, the purge runs these steps as a durable job, each retried until it succeeds (Step 9):</p>
           </div>
         </div>
 
@@ -428,8 +436,8 @@ html { scroll-behavior: smooth; }
           <li><p><strong>Delete the files.</strong> Remove everything under <code>&lt;userId&gt;/</code> in object storage. <span class="fix">Today this step is missing</span>: the cascade below doesn't reach storage.</p></li>
           <li><p><strong>Delete the <code>users</code> row.</strong> Every table that points to <code>users</code> is set to <code>ON DELETE CASCADE</code>, so resumes, profiles, matches, feedback, saved jobs, the watchlist, Builder versions, chats, applications, reminders, consents and bug reports go with it.</p></li>
           <li><p><strong>Cut the analytics link.</strong> The <code>user_analytics_link</code> row goes in the same cascade. Old usage events stay, but their <code>subject_id</code> no longer leads to anyone.</p></li>
-          <li><p><strong>Record the deletion.</strong> Write one row to <code>deleted_accounts</code>: a random id, the date and the reason (user request, inactivity or admin). No email, no user id.</p></li>
-          <li><p><strong>Let backups expire.</strong> Database backups are kept for <span class="prop">30 days</span>, so the last copy of the account is gone within 30 days.</p></li>
+          <li><p><strong>Write the tombstone.</strong> One row in <code>deleted_accounts</code>: the analytics id (<code>subject_id</code>), the date and the reason (user request, inactivity or admin). No email, no name, no account id.</p></li>
+          <li><p><strong>Let backups expire.</strong> Database backups are kept for <span class="prop">30 days</span>, so the last copy of the account is gone within 30 days; restoring a backup replays the purge list first (Step 9).</p></li>
         </ol>
 
         <h3>What stays after an account is deleted</h3>
@@ -437,6 +445,8 @@ html { scroll-behavior: smooth; }
           <div class="keep"><h3>Totals and anonymous events</h3><p>"312 resumes analysed on 3 Nov", and events whose random id now points nowhere.</p></div>
           <div class="keep"><h3>Learned skill weights</h3><p>Numbers about roles that feedback helped tune. They describe roles, not people.</p></div>
           <div class="keep"><h3>Public GitHub issues</h3><p>Issues made from approved bug reports. They never contained the reporter's email.</p></div>
+          <div class="keep"><h3>What we learned from your resume</h3><p>Skills, roles, experience band and outcomes under the analytics id (Step 7). Never your name or contacts.</p></div>
+          <div class="keep"><h3>Community posts</h3><p>They were never linked to the account (Step 10), unless you ticked "also delete my posts".</p></div>
         </div>
         <p class="note">Deleting a single resume version works the same way on a small scale: the file in storage and its rows go together.</p>
       </section>
@@ -641,6 +651,233 @@ html { scroll-behavior: smooth; }
         <p class="note">This is a product design, not legal advice. Have a lawyer review the privacy notice, the Terms and these retention numbers before real users sign up.</p>
       </section>
 
+      <!-- ============ 7. KEEP ============ -->
+      <section id="keep" aria-labelledby="keep-title">
+        <p class="step-no">Step 7 · decided 4 Nov</p>
+        <h2 id="keep-title">What we keep after deletion, in one store</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>From a guest's first day, the tally book notes their habits under their ticket number: which rooms they asked about, which tours they booked, whether a tour ended in a job offer. Never their name.</p>
+            <p>When the guest leaves, only the sealed envelope that joins the ticket number to the room is burned. The tally book stays exactly as it was. Nothing is copied into a second book, so nothing has to be rebuilt.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>There is <strong>one</strong> analytics store, written once and keyed by <code>subject_id</code> from the user's first day. Deleting an account removes the personal layer and the <code>user_analytics_link</code> row; the tombstone is one row. No second analytics service, no rebuild, no extra cost.</p>
+            <p>Resume features go to <code>analytics.ai_samples</code> while the account is active, with consent (opt-in in the EU and UK): features, not raw text, because exact companies and dates can identify a person.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl-mid">
+            <thead><tr><th>Kept under the analytics id (survives deletion)</th><th>Deleted with the account, never used for AI</th></tr></thead>
+            <tbody>
+              <tr><td>Skills, normalised job title, experience band, degree, graduation-year band</td><td>Name, email, phone number</td></tr>
+              <tr><td>College and company, generalised to "other" below 20 people</td><td>LinkedIn, GitHub and portfolio links, address, photo</td></tr>
+              <tr><td>Roles applied to, and the outcomes users report</td><td>The uploaded file itself</td></tr>
+              <tr><td>Template, font and writing style chosen; Lay AI suggestions added or skipped</td><td>Chats, Builder versions and applications as the account saw them</td></tr>
+              <tr><td>Prompts in placeholder form, and which answer was kept</td><td>The vault that fills the placeholders in</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-block">
+          <h3>One learning-layer row</h3>
+<pre><code>{
+  <span class="st">"subject_id"</span>: <span class="st">"7f3a…"</span>,
+  <span class="st">"kind"</span>: <span class="st">"RESUME_FEATURES"</span>,
+  <span class="st">"features"</span>: {
+    <span class="st">"title"</span>: <span class="st">"backend developer"</span>, <span class="st">"experience_band"</span>: <span class="st">"1-3"</span>,
+    <span class="st">"skills"</span>: [<span class="st">"Java"</span>, <span class="st">"Spring Boot"</span>, <span class="st">"SQL"</span>, <span class="st">"Docker"</span>],
+    <span class="st">"college"</span>: <span class="st">"other"</span>,          <span class="cm">// fewer than 20 people: generalised</span>
+    <span class="st">"degree"</span>: <span class="st">"B.Tech"</span>, <span class="st">"grad_year_band"</span>: <span class="st">"2020-2022"</span>
+  }
+}</code></pre>
+        </div>
+        <p class="note">Two rules keep this legal and safe: rare values are generalised, and an insight is shown only for a group of 20 or more people (Team insights hides smaller cells). Interview outcomes come from "Did you hear back?" on the Applications board; they are a strong hint, not a fact, because users report them.</p>
+      </section>
+
+      <!-- ============ 8. GUARD ============ -->
+      <section id="guard" aria-labelledby="guard-title">
+        <p class="step-no">Step 8 · decided 4 Nov</p>
+        <h2 id="guard-title">Personal details become placeholders</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>A guest tells the concierge: "Book a table for Rahul from IIT Kanpur." Before the note is filed, a clerk swaps the personal bits for labels: "a table for [guest name] from [guest college]".</p>
+            <p>What each label means is kept only in the guest's sealed folder at the desk. Outside helpers only ever see the labelled note, and the clerk fills the real words back in just before the guest reads the reply. When the guest leaves, the folder is burned and the labels point to nothing.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p><strong>Detect</strong> with the account's own known values (name, email, phone, college, company, links), then patterns for other emails, phones and links, then Microsoft Presidio (MIT licence) for other people's names.</p>
+            <p><strong>Replace</strong> with <code>{user.name}</code>, <code>{user.college}</code>, <code>{other.person_1}</code> before anything is stored, logged or sent to Gemini. Gemini answers with the placeholders; only the user's own screen fills them in. The real values live in one place, the account (the vault), so after deletion every placeholder resolves to <code>null</code>.</p>
+          </div>
+        </div>
+        <figure class="diagram">
+          <p class="d-title">One prompt, end to end</p>
+          <div class="pipe">
+            <div class="pipe-row">
+              <div class="node"><b>You type</b><span>"Should I add the IIT Kanpur hackathon to my summary?"</span></div>
+              <span class="link-arrow">→</span>
+              <div class="node key"><b>The guard</b><span>account values, patterns, Presidio</span></div>
+              <span class="link-arrow">→</span>
+              <div class="node store"><b>Stored, logged, sent to Gemini</b><span>"Should I add the {user.college} hackathon to my summary?"</span></div>
+              <span class="link-arrow">→</span>
+              <div class="node"><b>Your screen</b><span>the vault fills in "IIT Kanpur"</span></div>
+            </div>
+            <div class="vault"><b>After deletion</b> the vault is gone: <code>{user.college}</code> resolves to null, and the record still says "7f3a asked about a hackathon; resume v3 got an interview call".</div>
+          </div>
+          <figcaption>The preview shows this in the Resume Builder chat (the lock chip and "What we store") and in Letters ("What Gemini sees").</figcaption>
+        </figure>
+        <p class="note">Limits: a nickname or a misspelling can slip past. Close-match checks, Presidio as a second pass, prompts never written to logs, and the 20-person rule cover that.</p>
+      </section>
+
+      <!-- ============ 9. FAILURES ============ -->
+      <section id="failures" aria-labelledby="failures-title">
+        <p class="step-no">Step 9 · decided 4 Nov</p>
+        <h2 id="failures-title">When a deletion step fails, and ghost users</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>The desk writes a checklist card: empty the locker, tear out the register page, burn the envelope. A porter works down the card. If the locker is jammed, he comes back until it opens, and the manager is called if it's still jammed the next day.</p>
+            <p>The guest hears "checking out…" until every box is ticked. Every night a guard empties any locker that has no guest.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>Not a sync: a durable job. Each deletion is one <code>deletion_jobs</code> row with every step's state. A worker runs the steps, each safe to repeat, and retries a failed one with growing waits (5 min, 30 min, 2 h…), alerting after <span class="prop">24 hours</span> stuck. The screen says "Deleting…" until the last step, and "Deleted" only after. A nightly sweep removes leftovers such as files whose account is gone. Every step logs the job id, step, attempt and result, never an email.</p>
+          </div>
+        </div>
+        <div class="duties">
+          <div class="duty"><h3>No ghost user</h3><ul><li>After the purge the email is free at once: signing up again makes a new account with a new random id, never "email already exists".</li><li>During the 14 days, signing up with that email offers "Restore it, or delete it now and start fresh".</li></ul></div>
+          <div class="duty"><h3>Backups and replicas</h3><ul><li>Replicas receive the delete within seconds.</li><li>Backups are kept 30 days. Restoring one first replays the purge list (account ids deleted since then, kept outside the database, expiring after 31 days), so a deleted account can't come back or clash with a new one.</li></ul></div>
+          <div class="duty"><h3>No other copies</h3><ul><li>Personal data is never synced to analytics, search, logs, BigQuery or the AI-learning data. They hold ids and placeholders only.</li></ul></div>
+        </div>
+      </section>
+
+      <!-- ============ 10. POSTS ============ -->
+      <section id="posts" aria-labelledby="posts-title">
+        <p class="step-no">Step 10 · decided 4 Nov</p>
+        <h2 id="posts-title">Anonymous posts nobody can trace</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>A guest writes a mask number on a card, seals it in a carbon-paper envelope and hands it to the desk. The desk checks the guest has a room and stamps the envelope; the stamp goes through onto the card, but the desk never sees the card.</p>
+            <p>Notes on the lounge board carry only the mask card. The stamp proves "a real guest wrote this", and nobody, not the desk, the manager or the building's owner, can tell which room. One stamp a month per guest; coupons earned by notes are stamped the same blind way.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay</p>
+            <p>The phone or browser makes a key pair; the private key never leaves the device and <code>author_id</code> is the hash of the public key. Logged in, the device sends the public key <em>blinded</em>; Coverlay signs it without seeing it (RSA blind signatures, RFC 9474), once per account per month, and records only "this account got November's pass".</p>
+            <p>The device then posts without the login token, with the signature and a signature on each post. Points build up on <code>author_id</code> and turn into blind-signed tokens of one fixed value, redeemed by the account later in small random batches. If the code, the database, the signing key and Google's access all leaked together, a post still couldn't be traced: the maths prevents it.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl-mid">
+            <thead><tr><th>Open-source part</th><th>What it does</th><th>Note</th></tr></thead>
+            <tbody>
+              <tr><td>Cloudflare privacypass-ts</td><td>Blind RSA tokens in the browser</td><td>Apache-2.0</td></tr>
+              <tr><td>blindrsa-java</td><td>Signing and verifying on the backend</td><td>One maintainer: must pass the RFC 9474 test vectors first</td></tr>
+              <tr><td>Semaphore v4</td><td>Zero-knowledge "I'm a verified member", one identity per month</td><td>Audited; heavier, a later option</td></tr>
+              <tr><td>Oblivious HTTP (RFC 9458) relay</td><td>Hides the user's IP from us and Google</td><td>Needs a relay run by another company; later</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="keeps">
+          <div class="keep"><h3>What it costs</h3><p>We can ban a mask, not the account behind it (it gets a new mask next month). We can't answer who wrote a post, even to a court. A lost device loses its mask unless the user saved its backup code.</p></div>
+          <div class="keep"><h3>What it can't hide</h3><p>Same address and timing: posting carries no login token, our logs keep no IP for community routes, rewards arrive at random times. The text itself: the check before posting looks for the writer's name, college and contacts.</p></div>
+          <div class="keep"><h3>Schema</h3><p><code>community.author_identities</code>, <code>posts</code> (hour only), <code>author_points</code>, <code>spent_tokens</code>; <code>post_pass_issuance</code> on the account side. No column or key joins the two.</p></div>
+        </div>
+      </section>
+
+      <!-- ============ 11. WALLET ============ -->
+      <section id="wallet" aria-labelledby="wallet-title">
+        <p class="step-no">Step 11 · decided 4 Nov</p>
+        <h2 id="wallet-title">The wallet, and the AI cost behind it</h2>
+        <div class="prose">
+          <p>Pay as you go: recharge in rupees, spend credits (1 credit = ₹0.10) on actions that use AI; everything else is free. Each kind of task runs on its own Gemini model, so a retired model is a config change. The one in production, <code>gemini-2.5-flash-lite</code>, was retired in October 2026; engine 0.7.0 switched.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="tbl-mid">
+            <thead><tr><th>Action</th><th>Model</th><th>AI cost (from Jan 2027)</th><th>Price</th></tr></thead>
+            <tbody>
+              <tr><td>Resume analysis</td><td><code>gemini-3.5-flash-lite</code></td><td>₹0.41</td><td>8 credits · ₹0.80</td></tr>
+              <tr><td>Lay AI message</td><td><code>gemini-3.5-flash-lite</code></td><td>₹0.15</td><td>3 credits · ₹0.30</td></tr>
+              <tr><td>Resume tailored to a job</td><td><code>gemini-3.8-flash</code></td><td>₹1.22</td><td>25 credits · ₹2.50</td></tr>
+              <tr><td>Cover letter</td><td><code>gemini-3.8-flash</code></td><td>₹0.88</td><td>18 credits · ₹1.80</td></tr>
+              <tr><td>Cold email</td><td><code>gemini-3.8-flash</code></td><td>₹0.54</td><td>11 credits · ₹1.10</td></tr>
+              <tr><td>PDF, jobs, tracker, community, storage</td><td>none</td><td>about ₹0</td><td>free</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="metrics">
+          <div class="metric"><h3>One full journey: 282 credits, ₹28.20</h3><p>1 analysis, 30 Lay AI messages, 3 tailored resumes, 3 cover letters, 5 cold emails. About ₹13.91 of AI.</p></div>
+          <div class="metric"><h3>Recharge <span class="prop">₹60</span> to <span class="prop">₹2,000</span></h3><p>The smallest covers two journeys, so nobody stops halfway; the largest is about a month of 10 applications a day.</p></div>
+          <div class="metric"><h3>Where ₹100 goes</h3><p>AI ₹50 · servers and storage ₹25 · buffer ₹12.64 · your fee <span class="prop">10%</span> · payment gateway ₹2.36. If the buffer grows, prices go down, not your cut.</p></div>
+        </div>
+        <ul class="list">
+          <li>Every price is shown before the action runs and nothing is added at checkout (India's 2023 dark-pattern rules ban drip pricing). Your fee inside the price is normal.</li>
+          <li>Credits work only on Coverlay and can't be cashed out: a closed-system wallet, which needs no RBI licence. Unused credits are refunded when an account is deleted.</li>
+          <li>Tax law keeps payment records for years; they're kept under a billing id, without a name where the law allows. Check GST registration and records with a CA before launch.</li>
+          <li>Spending goes into analytics under <code>subject_id</code> only, so "who spends most" is a share, never a person.</li>
+        </ul>
+      </section>
+
+      <!-- ============ 12. TOOLS ============ -->
+      <section id="tools" aria-labelledby="tools-title">
+        <p class="step-no">Step 12 · decided 4 Nov</p>
+        <h2 id="tools-title">Team dashboards and the tools behind them</h2>
+        <div class="table-wrap">
+          <table class="tbl-wide">
+            <thead><tr><th>Need</th><th>Now (one VM)</th><th>Later</th><th>Licence</th></tr></thead>
+            <tbody>
+              <tr><td>Logs, metrics, alerts</td><td>Google Cloud Logging and Monitoring, instrumented with OpenTelemetry</td><td>SigNoz, or Grafana with Loki</td><td>open source / AGPL</td></tr>
+              <tr><td>Uptime from outside Google</td><td>Uptime Kuma</td><td></td><td>MIT</td></tr>
+              <tr><td>Error tracking</td><td>GlitchTip (works with Sentry SDKs)</td><td></td><td>MIT</td></tr>
+              <tr><td>Product dashboards</td><td>Our analytics schema with Metabase</td><td>PostHog (self-hosting is "hobby" scale)</td><td>AGPL / MIT core</td></tr>
+              <tr><td>Prompts, answers, AI cost</td><td>Our <code>prompt_stats</code> table</td><td>Langfuse</td><td>MIT</td></tr>
+              <tr><td>Wallet and billing</td><td>Our own append-only ledger</td><td>Lago</td><td>AGPL-3.0</td></tr>
+              <tr><td>Cost by service</td><td>Cloud Billing export to BigQuery, Google's free Looker Studio template</td><td></td><td>free</td></tr>
+              <tr><td>LaTeX-look PDF</td><td>Typst with New Computer Modern</td><td></td><td>Apache-2.0</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Cost per user type and "who spends most" come from our own usage ledger: every AI call is priced per model and tagged with its feature, the user type and <code>subject_id</code>. The preview's Team insights page shows the planned charts with sample numbers.</p>
+      </section>
+
+      <!-- ============ 13. SPIKE ============ -->
+      <section id="spike" aria-labelledby="spike-title">
+        <p class="step-no">Step 13 · planned</p>
+        <h2 id="spike-title">Ready for a sudden spike</h2>
+        <div class="pair">
+          <div class="hotel">
+            <p class="label">The hotel</p>
+            <p>Today one receptionist checks guests in, carries every bag and cooks breakfast. When a wedding party of 500 arrives, the line goes out of the door.</p>
+            <p>A ready hotel hands out numbered tickets and a tagged luggage room, calls in porters when the room fills, keeps its notes in a shared book anyone at the desk can read, and has separate rooms so a crowd in one doesn't block the others.</p>
+          </div>
+          <div class="tech">
+            <p class="label">In Coverlay today</p>
+            <p>One copy of each service on one VM, and the AI runs while the user waits. A second copy can't run safely yet: the watchlist rate limiter, the AI cache and the daily budget live in one process's memory, and the scheduled jobs would run twice. A spike today means slow pages, then errors.</p>
+          </div>
+        </div>
+        <ol class="purge">
+          <li><p><strong>Stateless services.</strong> Move the rate limiter, the AI cache and the budget to PostgreSQL or Redis; run scheduled jobs once (ShedLock or Cloud Scheduler).</p></li>
+          <li><p><strong>A queue for AI work.</strong> Uploads, analyses and tailoring become stored jobs (Postgres <code>SKIP LOCKED</code> first, Pub/Sub later) with idempotency keys; the user sees "Working on it…".</p></li>
+          <li><p><strong>Autoscaling.</strong> Cloud Run runs 1 to N copies of the API, the ML service and the workers; pages come from a CDN.</p></li>
+          <li><p><strong>Database.</strong> Cloud SQL with high availability, a read replica and pooling; analytics events split by month; each schema used by one part of the code.</p></li>
+          <li><p><strong>Gemini quota, the real limit.</strong> Ask Google for a higher quota before launch; the queue absorbs bursts; a waiting room replaces errors in extreme spikes.</p></li>
+          <li><p><strong>Know the limit.</strong> Load tests with k6 or Locust before launch and on every release, and a spike-day runbook.</p></li>
+        </ol>
+      </section>
+
+      <!-- ============ 14. LOGS ============ -->
+      <section id="logs" aria-labelledby="logs-title">
+        <p class="step-no">Step 14 · planned</p>
+        <h2 id="logs-title">Logs and alerts</h2>
+        <div class="duties">
+          <div class="duty"><h3>Every log line has</h3><ul><li>time, severity, service and request id</li><li>an <code>event=</code> name when something needs an alert</li></ul></div>
+          <div class="duty flag"><h3>No log line ever has</h3><ul><li>names, emails, phone numbers, links or resume text</li><li>prompts, even in placeholder form</li><li><code>subject_id</code> or <code>author_id</code> next to an account id</li><li>IP addresses on community routes</li></ul></div>
+          <div class="duty"><h3>Alerts</h3><ul><li>more than 5 server errors in 5 minutes</li><li>any <code>event=ai_unavailable</code> or <code>ai_budget_exhausted</code> (this would have caught the retired model on day one)</li><li>more than 50 failed logins in 5 minutes</li><li>a deletion job stuck over 24 hours</li><li>the uptime check failing, from outside Google</li></ul></div>
+        </div>
+        <p class="note">Logs are kept <span class="prop">30 days</span>. Since engine 0.7.0 the ML service already logs <code>event=ai_unavailable</code> with the error's class and status code only.</p>
+      </section>
+
       <!-- ============ MAP ============ -->
       <section id="map" aria-labelledby="map-title">
         <p class="step-no">Diagram</p>
@@ -653,7 +890,7 @@ html { scroll-behavior: smooth; }
           <div class="map">
             <div class="col">
               <h3>Who you are <span class="hotel-word">the register</span></h3>
-              <div class="tbl"><span class="n">users <span class="tag changed">changed</span></span><span class="c">email, password_hash, role, status, last_active_at, deletion_requested_at, token_version</span><span class="hotel-word">page in the register</span></div>
+              <div class="tbl"><span class="n">users <span class="tag changed">changed</span></span><span class="c">email, password_hash, role, status, last_active_at, deletion_requested_at, token_version, phone (encrypted) and its lookup hash</span><span class="hotel-word">page in the register</span></div>
               <div class="tbl"><span class="n">user_consents <span class="tag new">new</span></span><span class="c">kind, version, granted, decided_at</span><span class="hotel-word">signed house rules</span></div>
               <div class="tbl cut"><span class="n">user_analytics_<wbr>link <span class="tag new">new</span></span><span class="c">user_id ↔ subject_id. Cut on deletion</span><span class="hotel-word">the sealed envelope</span></div>
             </div>
@@ -679,7 +916,10 @@ html { scroll-behavior: smooth; }
               <div class="tbl"><span class="n">analytics.<wbr>events <span class="tag new">new</span></span><span class="c">subject_id, name, allowed details, 13 months</span><span class="hotel-word">ticket-number marks</span></div>
               <div class="tbl"><span class="n">analytics.<wbr>daily_metrics <span class="tag new">new</span></span><span class="c">nightly totals</span></div>
               <div class="tbl"><span class="n">analytics.<wbr>prompt_stats <span class="tag new">new</span></span><span class="c">day, intent, domain, count</span></div>
-              <div class="tbl"><span class="n">deleted_accounts <span class="tag new">new</span></span><span class="c">random id, date, reason</span><span class="hotel-word">check-out ledger</span></div>
+              <div class="tbl"><span class="n">analytics.<wbr>ai_samples <span class="tag new">new</span></span><span class="c">resume features and outcomes, no personal details</span></div>
+              <div class="tbl"><span class="n">analytics.<wbr>search_<wbr>suggestions <span class="tag new">new</span></span><span class="c">queries 20+ people searched</span></div>
+              <div class="tbl"><span class="n">community.<wbr>posts <span class="tag new">new</span></span><span class="c">under a mask; no key to any account</span><span class="hotel-word">notes on the lounge board</span></div>
+              <div class="tbl"><span class="n">deleted_accounts <span class="tag new">new</span></span><span class="c">subject_id, date, reason</span><span class="hotel-word">check-out ledger</span></div>
             </div>
           </div>
           <p class="shared"><strong>Shared, not personal:</strong> <code>companies</code>, <code>job_postings</code>, <code>roles</code>, <code>skill_vectors</code>, <code>market_skill_demand</code>. They describe jobs and roles, not people, and are untouched by deletions.</p>
@@ -788,27 +1028,53 @@ html { scroll-behavior: smooth; }
 
       <!-- ============ DECISIONS ============ -->
       <section id="decisions" aria-labelledby="decisions-title">
-        <p class="step-no">Your call</p>
-        <h2 id="decisions-title">Decisions for you</h2>
+        <p class="step-no">Agreed</p>
+        <h2 id="decisions-title">Decided</h2>
+        <h3>3 Nov 2026</h3>
         <div class="table-wrap">
           <table class="tbl-mid">
-            <thead><tr><th>Question</th><th>Proposal</th><th>Why</th></tr></thead>
+            <thead><tr><th>Question</th><th>Decided</th><th>Why</th></tr></thead>
             <tbody>
               <tr><td>Time to undo "Delete my account"</td><td><span class="prop">14 days</span></td><td>Enough to undo a mistake, short enough to honour the request</td></tr>
               <tr><td>When an account counts as inactive</td><td><span class="prop">90 days</span> without use</td><td>Stops reminders for people who have moved on</td></tr>
               <tr><td>When we send the deletion notice</td><td><span class="prop">18 months</span> without use</td><td>Job seekers often come back between job searches</td></tr>
               <tr><td>Notice before an inactive account is deleted</td><td><span class="prop">30 days</span></td><td>Time to sign in and keep it</td></tr>
-              <tr><td>How long raw usage events are kept</td><td><span class="prop">13 months</span>, then daily totals</td><td>Allows comparing a month with the same month last year</td></tr>
+              <tr><td>How long raw usage events are kept</td><td><span class="prop">13 months</span>, then daily totals</td><td>Compare a month with the same month last year</td></tr>
               <tr><td>Server logs and backups</td><td><span class="prop">30 days</span></td><td>Enough to debug and recover</td></tr>
-              <tr><td>Asking about analytics</td><td>An unticked box at sign-up for EU and UK users; a switch in Settings for everyone</td><td>GDPR expects consent for non-essential tracking. Check with a lawyer</td></tr>
+              <tr><td>Asking about analytics</td><td>Opt-in for EU and UK users, on for everyone else, a switch in Settings for all</td><td>GDPR expects consent for non-essential tracking. Check with a lawyer</td></tr>
               <tr><td>Minimum age</td><td><span class="prop">18+</span> for now</td><td>DPDP needs verifiable parental consent below 18; that flow comes later</td></tr>
-              <tr><td>Saved jobs and applications</td><td>Keep both: saved jobs are bookmarks, applications are the tracking</td><td>Less to migrate; each table has one job</td></tr>
+              <tr><td>Saved jobs and applications</td><td>Keep both: saved jobs are bookmarks, applications are the tracking</td><td>Each table has one job</td></tr>
               <tr><td>When the one reminder is due</td><td><span class="prop">3 days</span> after preparing</td><td>Soon enough to matter, rare enough not to nag</td></tr>
-              <tr><td>Lay AI chats</td><td>Kept until the user clears them or deletes the account</td><td>The other option is to delete chats older than 12 months automatically</td></tr>
+              <tr><td>Lay AI chats</td><td>Kept until the user clears them or deletes the account</td><td>The user's own working notes</td></tr>
             </tbody>
           </table>
         </div>
-        <p class="next">Once you agree on these, the next step is writing the V11 migrations and entities and checking them on a real PostgreSQL, the same way V10 was checked.</p>
+        <h3>4 Nov 2026</h3>
+        <div class="table-wrap">
+          <table class="tbl-mid">
+            <thead><tr><th>Question</th><th>Decided</th><th>Step</th></tr></thead>
+            <tbody>
+              <tr><td>What we keep after deletion</td><td>Features, outcomes and prompts under the analytics id, in one store; never personal details</td><td>7</td></tr>
+              <tr><td>Personal details in prompts and chats</td><td>Placeholders that point to the account; null after deletion</td><td>8</td></tr>
+              <tr><td>Deletion failures</td><td>A durable job retried until done; "Deleted" only at the end</td><td>9</td></tr>
+              <tr><td>Backups and copies</td><td>No copy may keep deleted data; restores replay the purge list</td><td>9</td></tr>
+              <tr><td>Who wrote a post</td><td>One-way: device key plus blind signature; nobody can trace it</td><td>10</td></tr>
+              <tr><td>One account per person</td><td>One per verified phone number, stored encrypted</td><td>3, map</td></tr>
+              <tr><td>AI models</td><td>3.5 Flash-Lite for reading and chat, 3.8 Flash for documents</td><td>11</td></tr>
+              <tr><td>Pricing</td><td>Pay as you go; ₹60 to ₹2,000; 1 credit = ₹0.10; fee <span class="prop">10%</span></td><td>11</td></tr>
+              <tr><td>Smallest group an insight may show</td><td><span class="prop">20 people</span></td><td>7, 12</td></tr>
+              <tr><td>Order of work</td><td>The clickable preview first; then the schema, logging and spike readiness</td><td>13, 14</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Still open</h3>
+        <ul class="list">
+          <li>The SMS provider for phone codes, and the cost per code.</li>
+          <li>GST registration and how payment records are kept without names: check with a CA.</li>
+          <li>Whether unused credits ever expire (the preview says they don't).</li>
+          <li>Semaphore and an Oblivious HTTP relay for posts: later, after the first version.</li>
+        </ul>
+        <p class="next">Next: your review of the clickable preview. After it, the schema (V11 to V15), logging and the first spike-readiness steps are built in that order.</p>
       </section>
     </main>
   </div>
