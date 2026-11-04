@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Team insights · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
+        <div>
+          <p class="crumb">Admin</p>
+          <h1 class="page-title">Team insights</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-violet">Preview</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <p class="alert alert-info" role="note">Preview with sample numbers. The real dashboards read the analytics store and the billing export; every figure is a count or an average, never a person.</p>
+        <p class="sr-only" id="page-status" role="status"></p>
+        <p class="muted insights-scope" id="insights-scope"></p>
+        <section class="insights-kpis" aria-label="This month" id="kpis"></section>
+
+        <h2 class="insights-section">Product</h2>
+        <section class="grid-main">
+          <article class="card viz-card" aria-labelledby="funnel-title">
+            <div class="card-head"><h3 class="viz-title" id="funnel-title">From sign-up to interview</h3></div>
+            <p class="viz-sub">People who reached each step this month</p>
+            <ul class="viz-bars" id="funnel"></ul>
+            <details class="viz-table"><summary>Table</summary><table id="funnel-table"></table></details>
+          </article>
+          <article class="card viz-card" aria-labelledby="prompts-title">
+            <div class="card-head"><h3 class="viz-title" id="prompts-title">What people ask Lay AI</h3></div>
+            <p class="viz-sub">Messages by intent. Stored with placeholders, for example:</p>
+            <p class="insights-example mono" id="prompt-example"></p>
+            <ul class="viz-bars" id="prompts"></ul>
+            <details class="viz-table"><summary>Table</summary><table id="prompts-table"></table></details>
+          </article>
+        </section>
+        <article class="card viz-card" aria-labelledby="templates-title">
+          <div class="card-head"><h3 class="viz-title" id="templates-title">Templates people choose, by target role</h3><ul class="viz-legend" id="templates-legend"></ul></div>
+          <div class="table-scroll"><table class="insights-table" id="templates"></table></div>
+        </article>
+
+        <h2 class="insights-section">Outcomes</h2>
+        <article class="card viz-card" aria-labelledby="outcomes-title">
+          <div class="card-head"><h3 class="viz-title" id="outcomes-title">Interview rate by experience and role</h3></div>
+          <p class="viz-sub">Interviews per application, from people who answered "Did you hear back?". A cell needs at least 20 people, so no result points at one person.</p>
+          <div class="table-scroll"><table class="insights-table insights-grid" id="outcomes"></table></div>
+        </article>
+
+        <h2 class="insights-section">Money</h2>
+        <section class="grid-main">
+          <article class="card viz-card" aria-labelledby="split-title">
+            <div class="card-head"><h3 class="viz-title" id="split-title">Where ₹100 of spent credits goes</h3></div>
+            <div class="viz-tall" id="split" role="img"></div>
+            <ul class="viz-legend" id="split-legend"></ul>
+            <details class="viz-table"><summary>Table</summary><table id="split-table"></table></details>
+          </article>
+          <article class="card viz-card" aria-labelledby="feature-title">
+            <div class="card-head"><h3 class="viz-title" id="feature-title">AI cost by feature</h3></div>
+            <p class="viz-sub">This month, in rupees</p>
+            <ul class="viz-bars" id="features"></ul>
+            <details class="viz-table"><summary>Table</summary><table id="features-table"></table></details>
+          </article>
+        </section>
+        <section class="grid-main">
+          <article class="card viz-card" aria-labelledby="types-title">
+            <div class="card-head"><h3 class="viz-title" id="types-title">Average spend per person, by experience</h3></div>
+            <p class="viz-sub">Rupees this month</p>
+            <ul class="viz-bars" id="types"></ul>
+            <details class="viz-table"><summary>Table</summary><table id="types-table"></table></details>
+          </article>
+          <article class="card viz-card" aria-labelledby="top-title">
+            <div class="card-head"><h3 class="viz-title" id="top-title">Who spends most</h3></div>
+            <p class="insights-hero" id="top-share"></p>
+            <p class="viz-sub">of AI cost comes from the top 5% of spenders: serious, daily appliers. No names: spend is counted under the analytics id.</p>
+            <div class="viz-meter" id="top-meter" role="img"><span></span></div>
+          </article>
+        </section>
+
+        <h2 class="insights-section">Health</h2>
+        <section class="insights-health" id="health" aria-label="Health"></section>
+        <div class="viz-tooltip" id="viz-tooltip" role="tooltip" hidden></div>
+      </div>
+    </div>
+
+    <script type="module" src="js/pages/team-insights.js"></script>
+  </body>
+</html>

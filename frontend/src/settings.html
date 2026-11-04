@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Settings & privacy · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
+        <div>
+          <p class="crumb">Account</p>
+          <h1 class="page-title">Settings & privacy</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-violet">Preview</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <p class="alert alert-info" role="note">Preview with sample data: nothing here changes your real account. Deleting runs a sample job in this browser so you can see each step.</p>
+        <p class="sr-only" id="page-status" role="status"></p>
+        <section class="grid-main settings">
+          <div class="settings-col">
+            <article class="card" aria-labelledby="account-title">
+              <div class="card-head"><h2 id="account-title">Account</h2></div>
+              <dl class="kv">
+                <div><dt>Email</dt><dd id="acct-email"></dd></div>
+                <div><dt>Phone</dt><dd><span id="acct-phone">+91 ••••• ••210</span> <span class="badge badge-green">Verified</span></dd></div>
+                <div><dt>Age</dt><dd>Confirmed 18 or older</dd></div>
+              </dl>
+              <details class="settings-phone">
+                <summary>Change phone number</summary>
+                <form class="settings-form" id="phone-form" novalidate>
+                  <div class="field"><label for="new-phone">New number</label><input class="input mono" id="new-phone" inputmode="tel" placeholder="+91 98765 43210" /></div>
+                  <div class="field" id="otp-field" hidden><label for="otp">Code sent by SMS (preview code: 123456)</label><input class="input mono" id="otp" inputmode="numeric" maxlength="6" /></div>
+                  <p class="field-error" id="phone-error" role="alert"></p>
+                  <button class="btn btn-secondary btn-sm" id="phone-submit" type="submit">Send code</button>
+                </form>
+                <p class="field-hint">One account per phone number. It's stored encrypted and deleted with your account.</p>
+              </details>
+            </article>
+
+            <article class="card" aria-labelledby="privacy-title">
+              <div class="card-head"><h2 id="privacy-title">Privacy</h2>
+                <label class="settings-region"><span>Region</span><select class="select" id="region"><option value="Other">India and others</option><option value="EU/UK">EU / UK</option></select></label>
+              </div>
+              <p class="muted settings-lead" id="region-note"></p>
+              <ul class="settings-toggles" id="consents"></ul>
+            </article>
+
+            <article class="card" aria-labelledby="export-title">
+              <div class="card-head"><h2 id="export-title">Your data</h2></div>
+              <p class="muted settings-lead">A ZIP with everything we hold about you, as JSON plus your uploaded files:</p>
+              <ul class="tick-list" id="export-list"></ul>
+              <button class="btn btn-secondary" id="export" type="button"><i data-icon="upload"></i>Export my data</button>
+              <p class="field-hint" id="export-note" hidden>In the real app the ZIP is ready in a minute and the link is emailed to you.</p>
+            </article>
+          </div>
+
+          <article class="card settings-danger" aria-labelledby="delete-title">
+            <div class="card-head"><h2 id="delete-title">Delete my account</h2><i data-icon="trash"></i></div>
+            <div id="delete-start">
+              <p class="muted">Deletes your resumes, versions, chats, applications and wallet. What stays is anonymous: usage counts and resume features under a random id that no longer leads to anyone, and community posts unless you delete them too.</p>
+              <form class="settings-form" id="delete-form" novalidate>
+                <fieldset class="rb-question">
+                  <legend>When</legend>
+                  <label class="settings-radio"><input type="radio" name="mode" value="grace" checked /> <span><strong>In 14 days</strong> (you can undo until then)</span></label>
+                  <label class="settings-radio"><input type="radio" name="mode" value="now" /> <span><strong>Now</strong>, no undo</span></label>
+                </fieldset>
+                <label class="bug-confirm"><input type="checkbox" id="delete-posts" /> Also delete my community posts</label>
+                <div class="field"><label for="delete-password">Your password</label><input class="input" id="delete-password" type="password" autocomplete="current-password" /></div>
+                <p class="field-error" id="delete-error" role="alert"></p>
+                <button class="btn btn-danger" type="submit">Delete my account</button>
+              </form>
+            </div>
+            <div class="settings-job" id="delete-job" hidden>
+              <p class="settings-job-status" id="job-status" role="status"></p>
+              <ol class="settings-steps" id="job-steps"></ol>
+              <div class="row">
+                <button class="btn btn-secondary" id="undo-delete" type="button">Keep my account</button>
+                <button class="btn btn-ghost" id="skip-wait" type="button">Skip the 14 days (preview)</button>
+                <button class="btn btn-ghost" id="reset-delete" type="button" hidden>Reset preview</button>
+              </div>
+              <details class="apps-stored" id="tombstone-box" hidden>
+                <summary>What remains (the tombstone)</summary>
+                <pre class="mono" id="tombstone"></pre>
+              </details>
+            </div>
+          </article>
+        </section>
+      </div>
+    </div>
+
+    <script type="module" src="js/pages/settings.js"></script>
+  </body>
+</html>

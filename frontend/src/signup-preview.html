@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Sign up (preview) · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <main class="auth-wrap">
+      <a class="brand" href="index.html">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#3b5bdb"/><path d="M11 7.5h7.2l4.3 4.3V24a1 1 0 0 1-1 1H11a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1z" fill="#fff"/><path d="M18.2 7.5v4.3h4.3z" fill="#c7d2fe"/><path d="M13 15.5h6.5M13 19h4.5" stroke="#3b5bdb" stroke-width="1.7" stroke-linecap="round"/></svg>
+        Coverlay
+      </a>
+
+      <div class="card auth-card signup-card">
+        <div class="row signup-head"><h1>Create your account</h1><span class="badge badge-violet">Preview</span></div>
+        <p class="sub">The planned sign-up: email, a verified phone (one account per number), 18+ and your privacy choices. Nothing is sent anywhere.</p>
+        <ol class="signup-steps" aria-label="Steps">
+          <li data-step="1">Account</li>
+          <li data-step="2">Phone</li>
+          <li data-step="3">Privacy</li>
+        </ol>
+
+        <form id="step-1" class="signup-form" novalidate>
+          <div class="field">
+            <label for="su-email">Email</label>
+            <input id="su-email" class="input" type="email" autocomplete="email" />
+            <p class="field-hint">Try deleting@example.com to see an account that is being deleted.</p>
+          </div>
+          <div class="field">
+            <label for="su-password">Password</label>
+            <input id="su-password" class="input" type="password" autocomplete="new-password" />
+            <p class="field-hint">8 to 72 characters.</p>
+          </div>
+          <div class="notice signup-deleting" id="su-deleting" hidden>
+            <p><strong>This account is being deleted</strong> (on <span id="su-deleting-date"></span>). Restore it, or delete it now and start fresh with the same email.</p>
+            <div class="row">
+              <button class="btn btn-primary btn-sm" id="su-restore" type="button">Restore my account</button>
+              <button class="btn btn-secondary btn-sm" id="su-fresh" type="button">Delete it now, start fresh</button>
+            </div>
+          </div>
+          <p class="field-error" id="su-error-1" role="alert"></p>
+          <button class="btn btn-primary btn-block" type="submit">Continue</button>
+        </form>
+
+        <form id="step-2" class="signup-form" novalidate hidden>
+          <div class="field">
+            <label for="su-phone">Mobile number</label>
+            <input id="su-phone" class="input mono" inputmode="tel" autocomplete="tel" placeholder="+91 98765 43210" />
+            <p class="field-hint">One account per number. We keep it encrypted and delete it with your account.</p>
+          </div>
+          <div class="field" id="su-otp-field" hidden>
+            <label for="su-otp">6-digit code (preview code: 123456)</label>
+            <input id="su-otp" class="input mono" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </div>
+          <p class="field-error" id="su-error-2" role="alert"></p>
+          <button class="btn btn-primary btn-block" id="su-phone-submit" type="submit">Send code</button>
+        </form>
+
+        <form id="step-3" class="signup-form" novalidate hidden>
+          <label class="settings-region"><span>Region</span>
+            <select class="select" id="su-region"><option value="Other">India and others</option><option value="EU/UK">EU / UK</option></select>
+          </label>
+          <label class="bug-confirm"><input type="checkbox" id="su-age" /> I'm 18 or older</label>
+          <label class="bug-confirm"><input type="checkbox" id="su-terms" /> I agree to the Terms and the Privacy notice</label>
+          <label class="bug-confirm"><input type="checkbox" id="su-analytics" /> <span>Usage analytics and AI learning, under a random id (never my name or contacts)<span class="field-hint signup-default" id="su-default"></span></span></label>
+          <p class="field-error" id="su-error-3" role="alert"></p>
+          <button class="btn btn-primary btn-block" type="submit">Create account (preview)</button>
+        </form>
+
+        <div class="alert alert-success" id="su-done" role="status" hidden></div>
+      </div>
+
+      <p class="auth-switch"><a href="register.html">Today's sign-up</a> · <a href="login.html">Sign in</a></p>
+    </main>
+
+    <script type="module" src="js/pages/signup-preview.js"></script>
+  </body>
+</html>

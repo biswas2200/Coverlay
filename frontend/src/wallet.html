@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Wallet · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
+        <div>
+          <p class="crumb">Account</p>
+          <h1 class="page-title">Wallet</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-violet">Preview</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <p class="alert alert-info" role="note">Preview with sample data: no money moves, and the balance lives in this browser only. Prices are the planned ones (Gemini list prices, November 2026).</p>
+        <p class="sr-only" id="page-status" role="status"></p>
+        <section class="wallet-top">
+          <article class="card wallet-balance" aria-labelledby="balance-title">
+            <p class="section-label" id="balance-title">Balance</p>
+            <p class="wallet-credits"><b class="mono" id="balance-credits">0</b> <span>credits</span></p>
+            <p class="muted" id="balance-rupees"></p>
+            <p class="alert alert-error wallet-warning" id="low-balance" role="alert" hidden></p>
+            <div class="wallet-try">
+              <p class="field-hint">Try spending in the preview (sample, nothing is charged):</p>
+              <div class="row" id="try-actions"></div>
+            </div>
+          </article>
+
+          <article class="card wallet-recharge" aria-labelledby="recharge-title">
+            <div class="card-head"><h2 id="recharge-title">Recharge</h2><span class="badge">UPI · cards</span></div>
+            <form class="wallet-form" id="recharge-form" novalidate>
+              <fieldset class="rb-question">
+                <legend>Amount</legend>
+                <div class="rb-choices" id="recharge-options"></div>
+              </fieldset>
+              <div class="field">
+                <label for="recharge-custom">Or another amount (₹60 to ₹2,000)</label>
+                <input class="input mono" id="recharge-custom" type="number" inputmode="numeric" min="60" max="2000" step="1" placeholder="e.g. 150" />
+                <p class="field-error" id="recharge-error" role="alert"></p>
+              </div>
+              <p class="wallet-gets" id="recharge-gets"></p>
+              <button class="btn btn-primary" id="recharge-pay" type="submit">Pay</button>
+              <p class="field-hint">Prices include taxes. Credits work only on Coverlay and don't expire; any left over are refunded if you delete your account.</p>
+            </form>
+            <p class="alert alert-success" id="recharge-done" role="status" hidden></p>
+          </article>
+        </section>
+
+        <section class="grid-main">
+          <article class="card" aria-labelledby="prices-title">
+            <div class="card-head"><h2 id="prices-title">What each action costs</h2></div>
+            <p class="muted wallet-lead">You see the price before anything runs. Only actions that use AI cost credits.</p>
+            <ul class="wallet-prices" id="price-list"></ul>
+            <p class="section-label wallet-free-label">Always free</p>
+            <ul class="tick-list" id="free-list"></ul>
+          </article>
+
+          <article class="card" aria-labelledby="journey-title">
+            <div class="card-head"><h2 id="journey-title">One full journey</h2><span class="badge badge-blue" id="journey-total"></span></div>
+            <p class="muted wallet-lead">From the first upload to a few tailored applications. The smallest recharge covers about two.</p>
+            <table class="wallet-table">
+              <thead><tr><th scope="col">Step</th><th scope="col">Times</th><th scope="col">Credits</th></tr></thead>
+              <tbody id="journey-rows"></tbody>
+            </table>
+          </article>
+        </section>
+
+        <article class="card" aria-labelledby="history-title">
+          <div class="card-head"><h2 id="history-title">History</h2><button class="btn btn-ghost btn-sm" id="reset-wallet" type="button"><i data-icon="refresh"></i>Reset sample</button></div>
+          <ul class="timeline" id="history"></ul>
+        </article>
+      </div>
+    </div>
+
+    <script type="module" src="js/pages/wallet.js"></script>
+  </body>
+</html>

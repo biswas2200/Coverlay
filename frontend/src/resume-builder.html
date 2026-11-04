@@ -62,6 +62,7 @@
                 <label class="rb-choice"><input type="radio" name="style" value="simple" /><span>Simple</span></label>
                 <label class="rb-choice"><input type="radio" name="style" value="modern" /><span>Modern</span></label>
                 <label class="rb-choice"><input type="radio" name="style" value="academic" /><span>Academic</span></label>
+                <label class="rb-choice"><input type="radio" name="style" value="classic" /><span>Classic (LaTeX look)</span></label>
               </div>
             </fieldset>
             <fieldset class="rb-question">
@@ -100,11 +101,66 @@
                 <button class="btn btn-ghost btn-sm" id="viewing-back" type="button">Back to current</button>
               </span>
             </div>
-            <p class="muted rb-hint" id="editor-hint">Click any part of your resume and type to change it. Every change is kept as a version.</p>
+            <div class="rb-toolbar" id="rb-toolbar" role="toolbar" aria-label="Formatting" aria-controls="rb-paper">
+              <div class="rb-tool-group">
+                <label class="sr-only" for="fmt-font">Font</label>
+                <select class="select" id="fmt-font" data-format="font">
+                  <option value="sans">Sans</option>
+                  <option value="serif">Serif</option>
+                  <option value="classic">LaTeX (CMU Serif)</option>
+                </select>
+                <label class="sr-only" for="fmt-size">Text size</label>
+                <select class="select" id="fmt-size" data-format="size">
+                  <option value="s">Small</option>
+                  <option value="m">Medium</option>
+                  <option value="l">Large</option>
+                </select>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Text style">
+                <button class="rb-tool" type="button" data-cmd="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
+                <button class="rb-tool" type="button" data-cmd="italic" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
+                <button class="rb-tool" type="button" data-cmd="underline" aria-label="Underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <button class="rb-tool" type="button" data-cmd="link" aria-label="Add a link" title="Add a link"><i data-icon="link"></i></button>
+              </div>
+              <div class="rb-tool-group">
+                <button class="rb-tool" type="button" id="fmt-bullets" aria-pressed="false" aria-label="Experience as bullet points" title="Experience as bullet points"><i data-icon="list"></i></button>
+                <label class="sr-only" for="fmt-align">Header alignment</label>
+                <select class="select" id="fmt-align" data-format="align">
+                  <option value="left">Header left</option>
+                  <option value="center">Header centred</option>
+                </select>
+                <label class="sr-only" for="fmt-spacing">Spacing</label>
+                <select class="select" id="fmt-spacing" data-format="spacing">
+                  <option value="tight">Tight</option>
+                  <option value="normal">Normal</option>
+                  <option value="airy">Airy</option>
+                </select>
+              </div>
+              <div class="rb-tool-group rb-tool-style">
+                <label for="fmt-style">Writing style</label>
+                <select class="select" id="fmt-style" data-format="style">
+                  <option value="formal">Formal</option>
+                  <option value="concise">Concise</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="beginner">Beginner</option>
+                </select>
+              </div>
+            </div>
+            <form class="rb-linkbar" id="rb-linkbar" hidden>
+              <label for="link-url">Link for the selected text</label>
+              <input class="input" id="link-url" placeholder="linkedin.com/in/your-name or you@email.com" autocomplete="off" />
+              <button class="btn btn-primary btn-sm" type="submit">Add link</button>
+              <button class="btn btn-ghost btn-sm" id="link-cancel" type="button">Cancel</button>
+              <p class="field-error" id="link-error"></p>
+            </form>
+            <p class="muted rb-hint" id="editor-hint">Click any part of your resume and type to change it. Select text to make it bold or a link. Every change is kept as a version.</p>
             <article class="rb-paper" id="rb-paper" aria-label="Your resume"></article>
             <div class="rb-pointer" id="rb-pointer" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M4.5 2.5 19.5 12l-6.8 1.7L9.3 20.5z" /></svg>
-              <span>Lay AI</span>
+              <div class="rb-pointer-body">
+                <span class="rb-pointer-label" id="rb-pointer-label">Lay AI</span>
+                <span class="rb-pointer-hint" id="rb-pointer-hint" hidden></span>
+              </div>
             </div>
           </div>
 
@@ -113,7 +169,7 @@
               <span class="lay-avatar" aria-hidden="true"><i data-icon="sparkle"></i></span>
               <div>
                 <p class="lay-title">Lay AI</p>
-                <p class="lay-sub">Preview: sample replies</p>
+                <p class="lay-sub" id="lay-sub">Preview: sample replies</p>
               </div>
               <button class="icon-btn lay-close" id="lay-close" type="button" aria-label="Close Lay AI"><i data-icon="close"></i></button>
             </div>
@@ -124,6 +180,7 @@
             <div class="lay-body" id="lay-chat" role="tabpanel" aria-labelledby="tab-chat">
               <ul class="lay-messages" id="lay-messages" role="log" aria-live="polite"></ul>
               <div class="lay-suggestions" id="lay-suggestions">
+                <button class="lay-suggestion" type="button" data-prompt="Make it fit a DevOps role">Fit a DevOps role</button>
                 <button class="lay-suggestion" type="button" data-prompt="Add Docker and Kubernetes to my skills">Add Docker and Kubernetes</button>
                 <button class="lay-suggestion" type="button" data-prompt="Shorten my summary">Shorten my summary</button>
                 <button class="lay-suggestion" type="button" data-prompt="Rewrite my summary for a senior backend role">Fit a senior backend role</button>
@@ -150,6 +207,7 @@
             <p class="field-hint">Opens the print window: choose "Save as PDF".</p>
             <button class="btn btn-secondary" id="download-docx" type="button">Download DOCX</button>
             <p class="field-hint" id="docx-note" hidden>DOCX comes with the real build. For now, use Download PDF.</p>
+            <p class="field-hint" id="pdf-only-note" hidden>Classic is PDF only: the PDF is typeset like LaTeX (Typst, with the same font), and a DOCX can't keep that look.</p>
             <button class="btn btn-ghost" id="back-to-editor" type="button">Back to editor</button>
           </div>
         </section>

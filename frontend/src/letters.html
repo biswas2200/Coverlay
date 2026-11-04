@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Letters & emails · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
+        <div>
+          <p class="crumb">Resume</p>
+          <h1 class="page-title">Letters & emails</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-violet">Preview</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <p class="alert alert-info" role="note">Preview with sample data: drafts are written here from your sample resume, no AI is called and nothing is charged. The real drafts come from Gemini 3.8 Flash.</p>
+        <p class="sr-only" id="page-status" role="status"></p>
+        <section class="letters">
+          <article class="card letters-controls" aria-labelledby="letters-setup">
+            <h2 class="sr-only" id="letters-setup">What to write</h2>
+            <div class="seg" role="tablist" aria-label="Type" id="type-tabs"></div>
+            <fieldset class="rb-question">
+              <legend>Template</legend>
+              <ul class="letters-templates" id="template-list"></ul>
+            </fieldset>
+            <div class="field">
+              <label for="job-select">For which job</label>
+              <select class="select" id="job-select"></select>
+              <p class="field-hint" id="job-fit"></p>
+            </div>
+            <div class="field" id="recipient-field">
+              <label for="recipient">Who you're writing to (first name)</label>
+              <input class="input" id="recipient" maxlength="40" autocomplete="off" placeholder="e.g. Priya" />
+              <p class="field-hint"><i data-icon="lock"></i> Stays on your screen: Gemini only sees {other.person_1}.</p>
+            </div>
+            <p class="letters-cost" id="letter-cost"></p>
+          </article>
+
+          <article class="card letters-doc" aria-labelledby="doc-title">
+            <div class="card-head">
+              <h2 id="doc-title">Draft</h2>
+              <div class="card-head-actions">
+                <button class="btn btn-ghost btn-sm" id="toggle-gemini" type="button" aria-pressed="false"><i data-icon="eye"></i>What Gemini sees</button>
+                <button class="btn btn-secondary btn-sm" id="copy-draft" type="button">Copy</button>
+                <button class="btn btn-primary btn-sm" id="print-draft" type="button"><i data-icon="file"></i>PDF</button>
+              </div>
+            </div>
+            <p class="alert alert-info letters-gemini-note" id="gemini-note" hidden>This is the draft as Gemini gets and writes it: placeholders, no personal details. Your screen fills them in.</p>
+            <div class="letters-paper" id="letter-paper"></div>
+            <p class="field-hint" id="length-note"></p>
+          </article>
+
+          <article class="card letters-suggest" aria-labelledby="suggest-title">
+            <div class="card-head"><h2 id="suggest-title">Lay AI suggests</h2></div>
+            <p class="muted letters-lead">Only facts from your resume. Nothing changes until you add it.</p>
+            <ul class="lay-suggest-list" id="letter-suggestions"></ul>
+          </article>
+        </section>
+      </div>
+    </div>
+
+    <script type="module" src="js/pages/letters.js"></script>
+  </body>
+</html>

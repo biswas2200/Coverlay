@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Community · Coverlay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar"></aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu-button" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i data-icon="menu"></i></button>
+        <div>
+          <p class="crumb">Jobs</p>
+          <h1 class="page-title">Community</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="badge badge-violet">Preview</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <p class="alert alert-info" role="note">Preview with sample data: posts stay in this browser. The real community signs posts with a key made on your device, so no one can link them to your account.</p>
+        <p class="sr-only" id="page-status" role="status"></p>
+        <section class="community">
+          <div class="community-main">
+            <article class="card" aria-labelledby="compose-title">
+              <div class="card-head"><h2 id="compose-title">Post anonymously</h2><span class="badge badge-violet" id="compose-as"></span></div>
+              <form class="community-form" id="compose-form" novalidate>
+                <div class="field">
+                  <label for="post-text">What would help others?</label>
+                  <textarea class="input" id="post-text" rows="4" maxlength="1000" placeholder="An interview question, an offer, how a referral worked…"></textarea>
+                </div>
+                <div class="community-form-row">
+                  <div class="field"><label for="post-topic">Topic</label><select class="select" id="post-topic"></select></div>
+                  <div class="field"><label for="post-company">Company (optional)</label><input class="input" id="post-company" maxlength="60" autocomplete="off" /></div>
+                </div>
+                <div class="community-check" id="post-check" role="alert" hidden>
+                  <p><i data-icon="shield"></i> <strong>This could identify you:</strong> <span id="check-list"></span>.</p>
+                  <p class="field-hint">Post it like this instead?</p>
+                  <blockquote class="community-safe" id="check-safe"></blockquote>
+                  <div class="row">
+                    <button class="btn btn-primary btn-sm" id="use-safe" type="button">Use this version</button>
+                    <button class="btn btn-ghost btn-sm" id="keep-mine" type="button">Edit it myself</button>
+                  </div>
+                </div>
+                <p class="field-error" id="post-error" role="alert"></p>
+                <div class="row community-actions">
+                  <button class="btn btn-primary" type="submit">Post as <span id="post-as"></span></button>
+                  <span class="field-hint">+5 points for each post</span>
+                </div>
+              </form>
+            </article>
+
+            <div class="chips community-filters" role="group" aria-label="Filter by topic" id="topic-filters"></div>
+            <ul class="community-feed" id="feed"></ul>
+          </div>
+
+          <aside class="community-side">
+            <article class="card" aria-labelledby="mask-title">
+              <p class="section-label" id="mask-title">Your mask this month</p>
+              <p class="community-handle" id="mask-handle"></p>
+              <dl class="kv community-kv">
+                <div><dt>Posts</dt><dd class="mono" id="mask-posts"></dd></div>
+                <div><dt>Points</dt><dd class="mono" id="mask-points"></dd></div>
+              </dl>
+              <button class="btn btn-secondary btn-block" id="redeem" type="button"><i data-icon="wallet"></i>Move points to wallet</button>
+              <p class="field-hint" id="redeem-note">Points arrive as credits in a small batch at a random time within a day, so the amount and the timing don't point back to your posts.</p>
+            </article>
+            <article class="card community-explain" aria-labelledby="explain-title">
+              <h2 id="explain-title"><i data-icon="lock"></i> What nobody can see</h2>
+              <ul class="tick-list">
+                <li><i data-icon="check"></i><span>Which account wrote a post: not us, not Google, not anyone with our database or our code.</span></li>
+                <li><i data-icon="check"></i><span>Your mask is a key made on this device. Coverlay stamped it without seeing it.</span></li>
+                <li><i data-icon="check"></i><span>Posts keep only the hour they were made, never the exact time.</span></li>
+              </ul>
+              <p class="field-hint">What you write can still give you away: the check above looks for your name, college and contacts before you post.</p>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </div>
+
+    <script type="module" src="js/pages/community.js"></script>
+  </body>
+</html>
