@@ -6,6 +6,7 @@
   "scripts": {
     "start": "python3 -m http.server 4200 --directory src",
     "test": "node --test \"tests/*.test.js\"",
-    "preview": "node preview/server.mjs"
+    "preview": "node preview/server.mjs",
+    "preview:hosted": "node preview/build-hosted.mjs"
   }
 }

@@ -36,8 +36,10 @@
   color-scheme: light;
 }
 
+/* Dark tokens follow the system theme. The guard lets a page that sets data-theme="light" stay
+   light (the hosted preview's viewer does; preview/build-hosted.mjs adds the data-theme="dark" copy). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1115;
     --surface: #171a20;
     --surface-2: #1d2128;
@@ -1114,7 +1116,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
    Both sets checked with the dataviz validator on these surfaces (light #fff, dark #171a20). */
 :root { --viz-1: #3b5bdb; --viz-c1: #2a78d6; --viz-c2: #eb6834; --viz-c3: #1baf7a; --viz-c4: #eda100; --viz-c5: #e87ba4; --viz-track: #eef0f6; --status-good: #0ca30c; --status-warning: #fab219; --status-critical: #d03b3b; }
 @media (prefers-color-scheme: dark) {
-  :root { --viz-1: #3987e5; --viz-c1: #3987e5; --viz-c2: #d95926; --viz-c3: #199e70; --viz-c4: #c98500; --viz-c5: #d55181; --viz-track: #232831; }
+  :root:not([data-theme="light"]) { --viz-1: #3987e5; --viz-c1: #3987e5; --viz-c2: #d95926; --viz-c3: #199e70; --viz-c4: #c98500; --viz-c5: #d55181; --viz-track: #232831; }
 }
 .insights-scope { margin-top: -8px; font-size: 13.5px; }
 .insights-kpis, .insights-health { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
@@ -1155,7 +1157,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .viz-tall > span { display: flex; align-items: center; min-width: 4px; padding-left: 6px; border-radius: 4px; }
 .viz-tall-label { font-size: 12px; font-weight: 700; color: #ffffff; white-space: nowrap; }
 .viz-tall > .viz-c4 .viz-tall-label { color: #0b0b0b; }
-@media (prefers-color-scheme: dark) { .viz-tall > .viz-c4 .viz-tall-label { color: #ffffff; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .viz-tall > .viz-c4 .viz-tall-label { color: #ffffff; } }
 .viz-meter { height: 10px; border-radius: 999px; background: var(--viz-track); overflow: hidden; }
 .viz-meter > span { display: block; height: 100%; border-radius: 999px; background: var(--viz-1); }
 .viz-meter-sm { display: inline-block; width: 70px; height: 6px; margin-left: 8px; vertical-align: middle; }

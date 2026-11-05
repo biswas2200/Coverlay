@@ -37,7 +37,7 @@ In Docker Compose, the `frontend` service is plain nginx serving `src/` on port 
 ### The clickable preview (no backend)
 
 To review every screen before anything is built, run the preview server. It serves `src/`,
-answers the API with sample data (`preview/mock-api.mjs`) and opens on a hub page that signs
+answers the API with sample data (`preview/mock-answers.js`) and opens on a hub page that signs
 in a preview admin and links every screen:
 
 ```bash
@@ -48,6 +48,13 @@ npm run preview          # http://localhost:4300 ; PORT=4400 npm run preview for
 Pages marked **Preview** in the sidebar are prototypes with sample data: they keep their state
 in the browser only and call neither the backend nor an AI. "Reset all preview data" on the hub
 clears it.
+
+**Hosted copy.** `npm run preview:hosted` writes `preview/dist/`, a static copy that needs no
+server: `js/config.js` there answers the API in the page from `preview/mock-answers.js` (the same
+answers the Node preview sends), the hub is the main page, the landing page becomes `home.html`,
+and every page gets an "All screens" link back to the hub. It is published as a private
+claude.ai artifact so the preview opens any time, on a phone too. Download PDF works only in the
+local preview, because the artifact can't open the print dialog.
 
 ## Pages
 

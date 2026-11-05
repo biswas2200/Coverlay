@@ -10,7 +10,10 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="css/app.css" />
     <style>
-      .hub { max-width: 980px; margin: 0 auto; padding: 40px 16px 64px; display: grid; gap: 22px; }
+      .hub {
+        max-width: 980px; margin: 0 auto; display: grid; gap: 22px; padding-block: 40px 64px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+      }
       .hub-head { display: grid; gap: 10px; }
       .hub-head h1 { font-size: clamp(28px, 4vw, 38px); }
       .hub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -73,7 +76,7 @@
       </section>
     </main>
     <script type="module">
-      // Signs in a preview user the sample API recognises (frontend/preview/mock-api.mjs).
+      // Signs in a preview user the sample API recognises (frontend/preview/mock-answers.js).
       const user = { id: '00000000-0000-4000-8000-000000000001', email: 'preview@coverlay.app', role: 'ADMIN', createdAt: '2026-11-01T09:00:00Z' };
       const start = () => {
         try {
