@@ -547,6 +547,37 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .rb-choice input:checked + span { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .rb-choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .rb-start-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.rb-start-other { display: grid; gap: 10px; justify-items: start; }
+
+/* LinkedIn import, inside the start step */
+.rb-linkedin { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--border); }
+.rb-linkedin .card-head { margin-bottom: 0; }
+.rb-linkedin h3 { font-size: 17px; }
+.rb-linkedin h3:focus { outline: none; }
+.rb-linkedin-steps { display: grid; gap: 6px; padding-left: 20px; list-style: decimal; font-size: 14px; }
+.rb-linkedin-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.rb-linkedin-pick input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rb-linkedin-review { display: grid; gap: 10px; padding: 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); }
+.rb-linkedin-review h4 { margin: 0; font-size: 15px; }
+.rb-linkedin-review > .btn { justify-self: start; }
+.rb-found { display: grid; gap: 6px; }
+.rb-found-item {
+  display: grid; grid-template-columns: auto 92px minmax(0, 1fr) auto; gap: 4px 10px; align-items: baseline;
+  padding: 8px 10px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); font-size: 13.5px; cursor: pointer;
+}
+.rb-found-item input { align-self: center; width: 16px; height: 16px; accent-color: var(--accent); }
+.rb-found-group { font: 500 11px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); }
+.rb-found-label { overflow-wrap: anywhere; }
+.rb-found-meta { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.rb-found-item:has(input:not(:checked)) .rb-found-label { color: var(--faint); text-decoration: line-through; }
+.rb-found-private { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); }
+.rb-found-private .icon { width: 15px; height: 15px; margin-top: 2px; color: var(--green); }
+.rb-linkedin-never { padding-top: 4px; }
+@media (max-width: 600px) {
+  .rb-found-item { grid-template-columns: auto minmax(0, 1fr); }
+  .rb-found-group { grid-column: 2; }
+  .rb-found-label, .rb-found-meta { grid-column: 2; }
+}
 .rb-link {
   display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none;
   color: var(--accent); font-weight: 600; cursor: pointer;
@@ -978,6 +1009,91 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .settings-step.is-done .settings-step-icon { background: var(--green-soft); color: var(--green); }
 .settings-step.is-retrying .settings-step-icon { background: var(--amber-soft); color: var(--amber); }
 
+/* ---------- Lay AI assistant on the phone (preview) ---------- */
+.assistant { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.phone {
+  position: relative; display: flex; flex-direction: column; height: min(760px, calc(100dvh - 180px)); min-height: 560px;
+  border: 10px solid #1b1d22; border-radius: 40px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow);
+}
+.phone-notch { position: absolute; top: 0; left: 50%; width: 120px; height: 22px; transform: translateX(-50%); border-radius: 0 0 14px 14px; background: #1b1d22; z-index: 2; }
+.phone-head { display: flex; align-items: center; gap: 10px; padding: 30px 16px 12px; border-bottom: 1px solid var(--border); }
+.phone-messages { display: grid; align-content: start; gap: 10px; flex: 1; overflow-y: auto; padding: 14px; }
+.pmsg { max-width: 88%; padding: 9px 12px; border-radius: 14px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.pmsg.from-you { justify-self: end; border-bottom-right-radius: 4px; background: var(--accent); color: var(--on-accent); }
+.pmsg.from-lay { justify-self: start; display: grid; gap: 8px; border-bottom-left-radius: 4px; background: var(--lay-soft); color: var(--text); }
+.pmsg.is-typing { color: var(--muted); font-style: italic; }
+.pmsg.is-opener { background: var(--surface-2); border: 1px dashed var(--border-strong); }
+.pmsg.is-reminder { border: 1px solid var(--amber); background: var(--amber-soft); }
+.pmsg-tag { display: inline-flex; align-items: center; gap: 4px; font: 600 11px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber); }
+.pmsg-tag .icon { width: 13px; height: 13px; }
+.pjobs { display: grid; gap: 6px; }
+.pjob { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); }
+.pjob div { display: grid; gap: 1px; min-width: 0; }
+.pjob strong { font-size: 13.5px; }
+.pjob span { font-size: 12px; color: var(--muted); }
+.pjob-match { font-weight: 600; color: var(--green); }
+.plinks, .plink-board { font-size: 12.5px; }
+.ppack { display: grid; gap: 4px; font-size: 13px; }
+.ppack li { display: flex; align-items: center; gap: 6px; }
+.ppack .icon { width: 14px; height: 14px; color: var(--green); }
+.pready { justify-self: start; }
+.phone-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 10px; }
+.phone-form { display: flex; gap: 8px; padding: 10px 12px 14px; border-top: 1px solid var(--border); }
+.phone-form .btn { min-width: 44px; padding: 8px 12px; }
+.assistant-side { display: grid; gap: 16px; }
+.assistant-h { font-size: 16px; margin-bottom: 10px; }
+.assistant-h:not(:first-child) { margin-top: 16px; }
+.assistant-never { display: grid; gap: 6px; padding-left: 18px; list-style: disc; font-size: 14px; color: var(--muted); }
+.assistant-controls { margin-top: 10px; }
+
+/* ---------- search with suggestions (preview) ---------- */
+.search-page { display: grid; gap: 20px; }
+.search-box { position: relative; padding: 14px; overflow: visible; z-index: 5; }
+.search-field { display: flex; align-items: center; gap: 10px; }
+.search-field > .icon { flex: none; width: 20px; height: 20px; color: var(--faint); }
+.search-field .input { flex: 1; min-width: 0; }
+.search-suggest {
+  position: absolute; left: 14px; right: 14px; top: calc(100% - 6px); display: grid; gap: 2px; max-height: min(420px, 60vh);
+  padding: 8px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow);
+}
+.search-suggest[hidden] { display: none; }
+.search-group {
+  display: flex; align-items: center; gap: 6px; padding: 8px 8px 4px;
+  font: 500 11px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint);
+}
+.search-group .icon { width: 13px; height: 13px; }
+.search-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 9px 10px;
+  border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.search-option > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.search-option:hover, .search-option[aria-selected="true"] { background: var(--accent-soft); }
+.search-option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.search-meta { flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.search-hidden { padding: 2px 10px 6px; font-size: 12px; font-style: italic; color: var(--faint); }
+.search-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); gap: 20px; align-items: start; }
+.search-results { display: grid; gap: 10px; align-content: start; }
+.search-h { font-size: 16px; }
+.search-side .card-head { margin-bottom: 8px; }
+.search-side { display: grid; gap: 16px; }
+.search-side .search-h { margin-bottom: 6px; }
+.search-side .card-head .search-h { margin-bottom: 0; }
+.search-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.search-company { display: grid; gap: 10px; align-content: start; }
+.search-company-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.search-company-head h3 { font-size: 15.5px; }
+.search-company-head p { font-size: 13px; }
+.search-logo { flex: none; font-size: 13px; }
+.search-jobs { font-size: 13.5px; color: var(--muted); }
+.search-jobs strong { color: var(--text); font-size: 15px; }
+.search-history { display: grid; gap: 8px; margin-top: 10px; font-size: 14px; }
+.search-history .rb-link { text-align: left; overflow-wrap: anywhere; }
+.search-history .icon { flex: none; width: 15px; height: 15px; }
+.search-event {
+  margin: 10px 0; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--border-strong);
+  font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
 /* ---------- sign-up preview ---------- */
 .signup-card { width: min(460px, 100%); }
 .signup-head { justify-content: space-between; }
@@ -1073,7 +1189,8 @@ textarea.input { resize: vertical; line-height: 1.5; }
   .insights-health { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
-  .wallet-top, .apps-top, .community, .letters { grid-template-columns: minmax(0, 1fr); }
+  .wallet-top, .apps-top, .community, .letters, .assistant, .search-layout { grid-template-columns: minmax(0, 1fr); }
+  .phone { border-width: 6px; border-radius: 26px; height: min(680px, calc(100dvh - 140px)); }
   .community-side { position: static; }
   .apps-board { grid-template-columns: repeat(5, minmax(240px, 82vw)); scroll-snap-type: x mandatory; }
   .apps-col { scroll-snap-align: start; }
@@ -1081,6 +1198,8 @@ textarea.input { resize: vertical; line-height: 1.5; }
 }
 @media (max-width: 600px) {
   .community-form-row { grid-template-columns: minmax(0, 1fr); }
+  .search-field .btn { padding-inline: 12px; }
+  .search-suggest { left: 8px; right: 8px; }
   .letters-paper { padding: 22px 18px; }
   .insights-kpis, .insights-health { grid-template-columns: minmax(0, 1fr); }
   .viz-row { grid-template-columns: minmax(0, 1fr); }

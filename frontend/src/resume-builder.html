@@ -73,10 +73,42 @@
               </div>
             </fieldset>
             <div class="rb-start-actions">
-              <button class="rb-link" id="from-upload" type="button"><i data-icon="upload"></i>Start from my uploaded resume</button>
+              <span class="rb-start-other">
+                <button class="rb-link" id="from-upload" type="button"><i data-icon="upload"></i>Start from my uploaded resume</button>
+                <button class="rb-link" id="from-linkedin" type="button" aria-expanded="false" aria-controls="linkedin-panel"><i data-icon="link"></i>Start from my LinkedIn profile</button>
+              </span>
               <button class="btn btn-primary" type="submit"><i data-icon="sparkle"></i>Suggest templates</button>
             </div>
           </form>
+
+          <!-- LinkedIn import: the user's own "Save to PDF" file, then a review of what we found -->
+          <section class="rb-linkedin" id="linkedin-panel" aria-labelledby="linkedin-title" hidden>
+            <div class="card-head">
+              <h3 id="linkedin-title">Start from your LinkedIn profile</h3>
+              <button class="btn btn-ghost btn-sm" id="linkedin-close" type="button">Close</button>
+            </div>
+            <ol class="rb-linkedin-steps">
+              <li>On LinkedIn, open <strong>Me</strong>, then <strong>View profile</strong>.</li>
+              <li>Press <strong>More</strong> (on some screens <strong>Resources</strong>), then <strong>Save to PDF</strong>.</li>
+              <li>Choose that file here.</li>
+            </ol>
+            <div class="rb-linkedin-pick">
+              <input class="sr-only" id="linkedin-file" type="file" accept=".pdf,application/pdf" />
+              <label class="btn btn-secondary" for="linkedin-file"><i data-icon="upload"></i>Choose the PDF</label>
+              <button class="rb-link" id="linkedin-sample" type="button">Use a sample LinkedIn PDF</button>
+            </div>
+            <p class="field-hint" id="linkedin-file-note">Preview: the file stays on your device. We show its name and use a sample profile. The real app reads the PDF on our server, like a resume upload.</p>
+            <p class="field-error" id="linkedin-error" role="alert"></p>
+
+            <div class="rb-linkedin-review" id="linkedin-review" hidden>
+              <h4 id="found-title">What we found</h4>
+              <p class="field-hint">Untick anything you don't want on this resume. You can edit everything after.</p>
+              <ul class="rb-found" id="linkedin-found" aria-labelledby="found-title"></ul>
+              <p class="rb-found-private"><i data-icon="lock"></i><span>Your name, email and profile link go on the resume and stay in your account. Lay AI and analytics see placeholders such as {user.name}, never the values.</span></p>
+              <button class="btn btn-primary" id="linkedin-import" type="button"><i data-icon="check"></i>Import and choose a template</button>
+            </div>
+            <p class="field-hint rb-linkedin-never">We never scrape LinkedIn. Its profile API is open only to approved partners, so the PDF you save yourself is how your profile comes in.</p>
+          </section>
         </section>
 
         <!-- 2. Templates from the answers -->
