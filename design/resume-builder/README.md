@@ -1,5 +1,9 @@
 # Resume Builder: design
 
+> **The working prototype has replaced these wireframes as the source of truth.** What the Resume
+> Builder does, and what the frontend, backend and ML service must implement, is in
+> [`docs/prototype-spec.md`](../../docs/prototype-spec.md). These wireframes are kept as history.
+
 A planned feature: a page where the resume is shown on the left and can be edited by typing,
 with Lay AI (the assistant) in a right-side panel -- Chat and Versions tabs -- that changes the
 same resume. The full plan is on the "Roadmap" tab of the Project Tracker sheet.

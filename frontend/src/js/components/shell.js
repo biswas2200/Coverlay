@@ -6,9 +6,12 @@ import { initials, shortDate } from '../pages/insights.js';
 import { roleLabel } from '../pages/dashboard-rules.js';
 import { openBugReport } from './bug-report.js';
 import { hydrateIcons, icon } from './icons.js';
+import { mountVersionMenu } from './version-menu.js';
 
 // The app shell shared by the signed-in pages: the sidebar with the account, the main navigation
-// (grouped), the resume versions, plus the mobile drawer behaviour.
+// (grouped, the only part that scrolls), the pinned footer (Report a bug, Sign out), plus the
+// mobile drawer behaviour. The resume versions are not in the sidebar: a page that uses the
+// resume puts a version menu in its top bar (see version-menu.js).
 // The page's HTML holds an empty <aside id="sidebar">, a #scrim and a #menu-button.
 
 // Grouped so the sidebar stays scannable as features are added. Pages marked `preview` are
@@ -44,11 +47,10 @@ export const NAV_GROUPS = [
   },
 ];
 
-let versionList = null;
-
 /**
  * Builds the sidebar with `active` highlighted. Resolves to the user's resume versions
- * (oldest first, `[]` if they could not be loaded), which the pages reuse.
+ * (oldest first, `[]` if they could not be loaded), which the pages reuse. A page with a
+ * `#version-menu-slot` in its top bar gets the version menu there (label from `data-label`).
  */
 export function renderShell(active) {
   const sidebar = document.getElementById('sidebar');
@@ -80,8 +82,6 @@ export function renderShell(active) {
     ]),
   );
 
-  versionList = el('ul', { class: 'sb-versions' }, el('li', { class: 'sb-empty' }, 'Loading…'));
-
   const reportBug = el('button', { class: 'sb-link', type: 'button' }, icon('alert'), 'Report a bug');
   reportBug.addEventListener('click', () => {
     setDrawer(false);
@@ -93,9 +93,11 @@ export function renderShell(active) {
     icon('chart'), 'Team insights', el('span', { class: 'sb-tag' }, 'Preview'));
   const adminLink = el('a', { class: 'sb-link', href: 'admin-bugs.html', 'data-nav': 'admin-bugs', hidden: true },
     icon('check'), 'Bug reports (admin)');
+  const adminLabel = el('p', { class: 'sb-label', hidden: true }, 'Admin');
   const paintAdmin = () => {
     adminLink.hidden = role !== 'ADMIN';
     insightsLink.hidden = role !== 'ADMIN';
+    adminLabel.hidden = role !== 'ADMIN';
   };
   paintAdmin();
 
@@ -116,10 +118,9 @@ export function renderShell(active) {
       el('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(user?.email)),
       el('div', {}, el('p', { class: 'sb-email', title: user?.email ?? '' }, user?.email ?? ''), roleBadge),
     ),
-    nav,
-    el('p', { class: 'sb-label' }, 'Resume versions'),
-    versionList,
-    el('div', { class: 'sb-foot' }, insightsLink, adminLink, reportBug, signOut),
+    // Only this middle part scrolls; the account stays on top and Report a bug / Sign out stay at the bottom.
+    el('div', { class: 'sb-scroll' }, nav, adminLabel, insightsLink, adminLink),
+    el('div', { class: 'sb-foot' }, reportBug, signOut),
   );
   setActive(active);
 
@@ -148,12 +149,12 @@ export function renderShell(active) {
 
   return listVersions().then(
     (versions) => {
-      renderVersions(versions);
+      const slot = document.getElementById('version-menu-slot');
+      mountVersionMenu(slot, versions, { label: slot?.dataset.label ?? 'Resume' });
       return versions;
     },
     (error) => {
       console.error('Could not load resume versions', error);
-      versionList.replaceChildren(el('li', { class: 'sb-empty' }, 'Versions unavailable'));
       return [];
     },
   );
@@ -168,36 +169,6 @@ export function setActive(key) {
       link.removeAttribute('aria-current');
     }
   }
-}
-
-/** Newest first; `currentId` marks the version on screen. */
-export function renderVersions(versions, currentId = null) {
-  if (!versionList) {
-    return;
-  }
-  if (versions.length === 0) {
-    versionList.replaceChildren(el('li', { class: 'sb-empty' }, 'No uploads yet'));
-    return;
-  }
-  versionList.replaceChildren(
-    ...[...versions].reverse().map((resume) =>
-      el(
-        'li',
-        {},
-        el(
-          'a',
-          {
-            class: 'sb-version',
-            href: `upload.html?resume=${encodeURIComponent(resume.id)}`,
-            'aria-current': resume.id === currentId ? 'true' : null,
-          },
-          el('span', { class: 'sb-dot', 'aria-hidden': 'true' }),
-          `Version ${resume.version}`,
-          el('span', { class: 'when' }, shortDate(resume.uploadedAt)),
-        ),
-      ),
-    ),
-  );
 }
 
 /** The logo link used in the sidebar and on the public pages. */
@@ -220,8 +191,4 @@ function setDrawer(open) {
   document.getElementById('menu-button').setAttribute('aria-expanded', String(open));
 }
 
-export const BRAND_SVG =
-  '<svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#3b5bdb"/>' +
-  '<path d="M11 7.5h7.2l4.3 4.3V24a1 1 0 0 1-1 1H11a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1z" fill="#fff"/>' +
-  '<path d="M18.2 7.5v4.3h4.3z" fill="#c7d2fe"/>' +
-  '<path d="M13 15.5h6.5M13 19h4.5" stroke="#3b5bdb" stroke-width="1.7" stroke-linecap="round"/></svg>';
+export const BRAND_SVG = '<img class="brand-mark" src="logo.png" alt="" />';

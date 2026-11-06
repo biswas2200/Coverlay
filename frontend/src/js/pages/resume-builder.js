@@ -4,33 +4,49 @@ import { getUser, requireAuth } from '../core/session.js';
 import { hydrateIcons, icon } from '../components/icons.js';
 import { renderShell } from '../components/shell.js';
 import { guardText, knownValues, privacyNote, resolveText } from './privacy-guard-rules.js';
+import { createResumeEditor } from './resume-editor.js';
+import { docToPlainText, readingNotes, resumeToDoc } from './resume-doc.js';
+import { RULER_THICKNESS, createRuler } from './resume-ruler.js';
 import {
   DEFAULT_ANSWERS,
   DEFAULT_FORMAT,
+  FONT_SIZE,
+  HIDEABLE_SECTIONS,
+  MARGIN_KEYS,
+  MARGIN_LIMITS_MM,
+  MARGIN_PRESETS,
+  PAGE_SIZES,
   WRITING_STYLE_LABELS,
   addVersion,
   answersSummary,
-  applyEdit,
   applySuggestion,
   createHistory,
   currentResume,
   diffResume,
   fieldLabel,
+  clampMargin,
   findVersion,
+  fromMm,
+  marginPreset,
+  mmToPx,
+  toMm,
+  fitRequest,
+  fitToPages,
   isRichPath,
   isSavedState,
-  mergeSegments,
+  joinList,
   normalizeFormat,
   normalizeText,
+  pageUsage,
   parseInline,
   relativeTime,
+  resumeStats,
   restoreVersion,
   safeHref,
   sampleLayReply,
   sampleResume,
   sectionLabel,
   sentences,
-  serializeSegments,
   suggestTemplates,
   templateById,
   versionsNewestFirst,
@@ -51,8 +67,13 @@ import {
 const STORE_KEY = `coverlay.resumeBuilder.${getUser()?.id ?? 'guest'}`;
 const TYPING_DELAY_MS = 650;
 const HINT_DELAY_MS = 900;
-const EDITING_MS = 1800;
+const EDITING_MS = 2800; // how long the Lay AI cursor stays on what it changed
 const MAX_MESSAGES = 60;
+const PANEL_SIZE_KEY = 'coverlay.layPanelSize';
+const ZOOM_KEY = 'coverlay.resumeZoom';
+const MAX_FIT = 1.5; // "Fit width" never draws the page bigger than 150%
+const ZOOMS = ['fit', '0.75', '1', '1.25', '1.5'];
+const PAGE_PAIRS = [['rb-page-wrap', 'rb-editor'], ['rb-page-wrap', 'rb-paper'], ['final-wrap', 'final-paper']]; // [wrapper, page]
 const GREETING = "Hi! I'm Lay AI. Tell me what to change in your resume, or edit it yourself on the left.";
 
 let state = loadState();
@@ -65,8 +86,16 @@ let pointerFrame = 0;
 let hintTimer = 0;
 let editingTimer = 0;
 let editingPath = null; // the field the Lay AI cursor points at while "editing"
-let pendingField = null; // a field whose focus moved to the toolbar or the link bar, not yet committed
-let linkRange = null; // the selection the link bar adds its link to
+let editor = null; // the Tiptap resume editor (resume-editor.js), made in wire()
+let activePath = null; // the field the caret was last in, to commit an edit when the caret leaves it
+let shownResume = null; // the resume object the editor document was last built from
+let shownBullets = false;
+let shownColumns = 1;
+let zoom = ZOOMS.includes(readJson(ZOOM_KEY)) ? readJson(ZOOM_KEY) : 'fit'; // how big the page is drawn: 'fit' or a number as text
+let templateFilter = 'all'; // 'all', '1' or '2': the template page's columns filter
+let rulers = null; // { x, y }: the rulers along the top and left of the editable page
+let pointerDown = false; // a mouse button is held, so the page must not change shape yet
+let dropPending = false; // emptied skills waiting for the mouse button to come up
 const storedOpen = new Set(); // messages whose "What we store" box is open
 
 if (requireAuth()) {
@@ -117,6 +146,13 @@ function wire() {
   });
   byId('from-upload').addEventListener('click', () => readAnswers(true));
   byId('templates-back').addEventListener('click', () => goTo('start'));
+  byId('template-filter').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-filter]');
+    if (button) {
+      templateFilter = button.dataset.filter;
+      renderTemplates();
+    }
+  });
   byId('template-list').addEventListener('click', (event) => {
     const button = event.target.closest('[data-template]');
     if (button) {
@@ -133,37 +169,41 @@ function wire() {
   });
   byId('change-template').addEventListener('click', () => goTo('templates'));
   byId('finish-button').addEventListener('click', () => {
-    commitPending();
+    commitEditor();
     goTo('finished');
   });
 
-  const paper = byId('rb-paper');
-  paper.addEventListener('focusout', onFieldCommit);
-  paper.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey && event.target.closest('.rb-field')) {
-      event.preventDefault();
-      event.target.blur();
+  editor = createResumeEditor(byId('rb-editor'), {
+    onTyping,
+    onSelection: onCaretMoved,
+    onFocus: schedulePointer,
+    onBlur: onEditorBlur,
+  });
+  editor.onSkillButton(() => editor.addSkill());
+  const bubble = byId('rb-bubble');
+  bubble.addEventListener('mousedown', (event) => event.preventDefault()); // keep the selection in the text
+  bubble.addEventListener('click', (event) => {
+    const tool = event.target.closest('.rb-tool[data-cmd]');
+    if (tool) {
+      runCommand(tool.dataset.cmd);
+      updateBubble();
     }
   });
-  paper.addEventListener('focusin', () => {
-    pendingField = null;
-    schedulePointer();
-  });
-  paper.addEventListener('input', onTyping);
-  paper.addEventListener('click', (event) => {
-    if (event.target.closest('#rb-add-skill')) {
-      addSkillChip();
+  window.addEventListener('resize', updateBubble);
+  document.addEventListener('pointerdown', () => { pointerDown = true; }, true);
+  document.addEventListener('pointerup', () => {
+    pointerDown = false;
+    if (dropPending) {
+      dropPending = false;
+      editor.dropEmptySkills();
     }
-  });
-  document.addEventListener('selectionchange', () => {
-    if (document.activeElement?.closest?.('#rb-paper .rb-field')) {
-      schedulePointer();
-      updateToolState();
-    }
-  });
+  }, true);
   window.addEventListener('resize', schedulePointer);
 
   wireToolbar();
+  wirePage();
+  wirePanelResize();
+  wireSections();
 
   byId('lay-fab').addEventListener('click', openPanel);
   byId('lay-close').addEventListener('click', closePanel);
@@ -230,11 +270,16 @@ function chooseTemplate(id) {
   } else if (state.templateId !== template.id) {
     state.history = addVersion(state.history, currentResume(state.history), { source: 'template', summary: `Switched to template ${template.name}`, at });
   }
-  // Classic is the LaTeX look, so it brings its typeface; leaving it goes back to sans.
-  if (template.id === 'classic') {
-    state.format = normalizeFormat({ ...state.format, font: 'classic' });
-  } else if (state.format.font === 'classic') {
-    state.format = normalizeFormat({ ...state.format, font: 'sans' });
+  // A template brings its typeface (Classic is the LaTeX look) and its columns; leaving Classic goes back to sans.
+  if (state.templateId !== template.id) {
+    const font = template.id === 'classic' ? 'classic' : template.font ?? (state.format.font === 'classic' ? 'sans' : state.format.font);
+    state.format = normalizeFormat({ ...state.format, font, columns: template.columns ?? 1 });
+  }
+  if (state.templateId !== template.id) {
+    // A template brings its own text size and margins (Compact is tighter).
+    state.format = normalizeFormat({
+      ...state.format, fontSize: template.fontSize, ...Object.fromEntries(MARGIN_KEYS.map((key) => [key, template.margin])),
+    });
   }
   state.templateId = template.id;
   goTo('editor');
@@ -243,125 +288,76 @@ function chooseTemplate(id) {
 
 // ---------- editing the resume ----------
 
-/** What a field holds now: markup for the rich fields, plain text for the rest. */
-function fieldValue(field) {
-  return isRichPath(field.dataset.path) ? serializeSegments(mergeSegments(segmentsFromDom(field))) : field.textContent;
-}
-
-/** The field's content as formatted segments, reading what contenteditable produced. */
-function segmentsFromDom(root) {
-  const out = [];
-  const walk = (node, style) => {
-    for (const child of node.childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        if (child.data) {
-          out.push({ text: child.data.replace(/ /g, ' '), ...style });
-        }
-        continue;
-      }
-      if (child.nodeType !== Node.ELEMENT_NODE) {
-        continue;
-      }
-      const tag = child.tagName;
-      if (tag === 'BR') {
-        out.push({ text: ' ', ...style });
-        continue;
-      }
-      const next = { ...style };
-      const css = child.style ?? {};
-      if (tag === 'B' || tag === 'STRONG' || /bold|[6-9]00/.test(css.fontWeight ?? '')) {
-        next.bold = true;
-      }
-      if (tag === 'I' || tag === 'EM' || css.fontStyle === 'italic') {
-        next.italic = true;
-      }
-      if (tag === 'U' || /underline/.test(css.textDecoration ?? '')) {
-        next.underline = true;
-      }
-      if (tag === 'A') {
-        const href = safeHref(child.getAttribute('href'));
-        if (href) {
-          next.href = href;
-        }
-      }
-      if ((tag === 'DIV' || tag === 'P' || tag === 'LI') && out.length) {
-        out.push({ text: ' ' });
-      }
-      walk(child, next);
-    }
-  };
-  walk(root, {});
-  return out;
-}
-
-function onFieldCommit(event) {
-  const field = event.target.closest('.rb-field');
-  if (!field || viewing !== null) {
-    return;
-  }
-  // Focus moving to the toolbar or the link bar is still editing this field.
-  if (event.relatedTarget?.closest?.('#rb-toolbar, #rb-linkbar')) {
-    pendingField = field;
-    return;
-  }
-  const nextPath = event.relatedTarget?.closest?.('#rb-paper .rb-field')?.dataset.path ?? null;
-  if (!nextPath) {
-    hidePointer();
-  }
-  commitField(field);
-  if (nextPath) {
-    focusField(nextPath);
-  }
-}
-
-/** Turns a field's edit into a version; true when something changed. */
-function commitField(field) {
-  const before = currentResume(state.history);
-  const after = applyEdit(before, field.dataset.path, fieldValue(field));
-  if (after === before) {
-    if (field.dataset.new !== undefined) {
-      field.remove();
-    }
+/**
+ * Turns what was typed into a version, if anything changed: one version per field, like
+ * before. The editor already shows the new text, so it is not redrawn.
+ */
+function commitEditor() {
+  // Never save an editor that was not showing this resume (it was never drawn, so it is still empty).
+  if (!editor?.isDirty() || viewing !== null || !state.history || shownResume === null) {
     return false;
   }
-  state.history = addVersion(state.history, after, { source: 'you', summary: `You edited ${sectionLabel(field.dataset.path)}`, at: Date.now() });
+  const before = currentResume(state.history);
+  const after = editor.getResume(before);
+  editor.markClean();
+  const change = diffResume(before, after);
+  if (!change.fields.length && !change.addedSkills.length && !change.removedSkills.length && !change.extraChanged && after.skills.length === before.skills.length
+    && after.skills.every((skill, i) => skill === before.skills[i])) {
+    return false;
+  }
+  const where = change.fields[0] ?? (change.extraChanged && !change.addedSkills.length && !change.removedSkills.length ? 'custom' : 'skills');
+  state.history = addVersion(state.history, after, { source: 'you', summary: `You edited ${sectionLabel(where)}`, at: Date.now() });
   highlight = null;
+  editor.setHighlight(null);
+  shownResume = after;
   save();
-  renderEditor();
+  if (panelOpen) {
+    renderPanel();
+  }
+  updateStatus();
   return true;
 }
 
-/** Commits the field the toolbar took focus from, before anything re-draws the paper. */
-function commitPending() {
-  if (pendingField?.isConnected) {
-    commitField(pendingField);
+/** The caret moved: leaving a field with an edit in it commits that edit. */
+function onCaretMoved() {
+  const path = editor.currentField()?.path ?? null;
+  if (path !== activePath) {
+    commitEditor();
+    dropEmptySkillsSoon();
+    activePath = path;
   }
-  pendingField = null;
+  schedulePointer();
+  updateToolState();
+  updateBubble();
+  updateStatus();
+  updateContext();
 }
 
-function addSkillChip() {
-  const list = byId('rb-skill-list');
-  const index = currentResume(state.history).skills.length;
-  const chip = el('li', {
-    class: 'rb-field', 'data-path': `skills.${index}`, 'data-new': '', contenteditable: 'true',
-    role: 'textbox', 'aria-label': 'New skill', spellcheck: 'true',
-  });
-  list.insertBefore(chip, byId('rb-add-skill').closest('li'));
-  chip.focus();
+/**
+ * Removing an emptied skill makes the page shorter. With the mouse still down that would move
+ * the text under the pointer mid-click and turn the click into a drag, so it waits for the
+ * button to come up.
+ */
+function dropEmptySkillsSoon() {
+  if (pointerDown) {
+    dropPending = true;
+  } else {
+    editor.dropEmptySkills();
+  }
 }
 
-function focusField(path) {
-  const field = byId('rb-paper').querySelector(`[data-path="${path}"]`);
-  if (!field) {
+function onEditorBlur(relatedTarget) {
+  // Focus moving to the toolbar or the link bar is still editing.
+  if (relatedTarget?.closest?.('#rb-toolbar, #rb-linkbar, #rb-context')) {
     return;
   }
-  field.focus();
-  const range = document.createRange();
-  range.selectNodeContents(field);
-  range.collapse(false);
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
+  commitEditor();
+  dropEmptySkillsSoon();
+  activePath = null;
+  hidePointer();
+  updateBubble();
+  updateStatus();
+  show(byId('rb-context'), false);
 }
 
 // ---------- the toolbar ----------
@@ -369,8 +365,21 @@ function focusField(path) {
 function wireToolbar() {
   const toolbar = byId('rb-toolbar');
   for (const select of toolbar.querySelectorAll('[data-format]')) {
-    select.addEventListener('change', () => setFormat(select.dataset.format, select.value));
+    select.addEventListener('change', () => setFormat(select.dataset.format, select.dataset.number !== undefined ? Number(select.value) : select.value));
   }
+  byId('size-down').addEventListener('click', () => setFormat('fontSize', state.format.fontSize - FONT_SIZE.step));
+  byId('size-up').addEventListener('click', () => setFormat('fontSize', state.format.fontSize + FONT_SIZE.step));
+  byId('fmt-fontsize').addEventListener('change', (event) => setFormat('fontSize', Number(event.target.value)));
+  byId('fmt-limit').addEventListener('change', (event) => {
+    state.answers.pages = Number(event.target.value) === 2 ? 2 : 1;
+    save();
+    updatePageStatus();
+  });
+  byId('fit-page').addEventListener('click', () => {
+    const result = fitResume(null);
+    showFitNote(fitSentence(result));
+    announce(fitSentence(result));
+  });
   byId('fmt-bullets').addEventListener('click', () => setFormat('bullets', !state.format.bullets));
   // Pressing a tool must not take the selection out of the field being edited.
   toolbar.addEventListener('mousedown', (event) => {
@@ -389,7 +398,7 @@ function wireToolbar() {
 }
 
 function setFormat(key, value) {
-  commitPending();
+  commitEditor();
   state.format = normalizeFormat({ ...state.format, [key]: value });
   save();
   renderEditor();
@@ -398,50 +407,65 @@ function setFormat(key, value) {
   }
 }
 
-/** The rich field being edited (focused, or the one the toolbar took focus from). */
-function activeRichField() {
-  const focused = document.activeElement?.closest?.('#rb-paper .rb-field');
-  const field = focused ?? (pendingField?.isConnected ? pendingField : null);
-  return field && isRichPath(field.dataset.path) ? field : null;
-}
-
 function runCommand(command) {
-  const field = activeRichField();
-  if (!field) {
+  if (command === 'undo' || command === 'redo') {
+    editor[command]();
+    updateToolState();
+    return;
+  }
+  const field = editor.currentField();
+  if (!field?.rich) {
     announce('Click into your summary, experience or contact line first, then use the toolbar.');
     flashHint('Click into a field first, then pick bold, italic, underline or a link.');
     return;
   }
   if (command === 'link') {
-    openLinkBar(field);
+    openLinkBar();
     return;
   }
-  field.focus();
-  // execCommand is deprecated but still the one way to format a contenteditable selection
-  // in every browser; fieldValue() reads the result back into the markup.
-  document.execCommand(command);
+  editor.toggle(command);
   updateToolState();
 }
 
 function updateToolState() {
-  for (const tool of byId('rb-toolbar').querySelectorAll('.rb-tool[data-cmd]')) {
+  const rich = Boolean(editor.currentField()?.rich);
+  for (const tool of document.querySelectorAll('#rb-toolbar .rb-tool[data-cmd], #rb-bubble .rb-tool[data-cmd]')) {
     const command = tool.dataset.cmd;
-    if (command !== 'link') {
-      let on = false;
-      try {
-        on = document.queryCommandState(command);
-      } catch {
-        on = false;
-      }
-      tool.setAttribute('aria-pressed', String(Boolean(on) && Boolean(activeRichField())));
+    if (command === 'undo' || command === 'redo') {
+      tool.disabled = !(command === 'undo' ? editor.canUndo() : editor.canRedo());
+    } else if (command !== 'link') {
+      tool.setAttribute('aria-pressed', String(rich && editor.isActive(command)));
     }
   }
 }
 
-function openLinkBar(field) {
-  const selection = window.getSelection();
-  linkRange = selection.rangeCount && field.contains(selection.anchorNode) ? selection.getRangeAt(0).cloneRange() : null;
-  pendingField = field;
+/** The small floating toolbar above selected text in a field that takes formatting. */
+function updateBubble() {
+  const bubble = byId('rb-bubble');
+  const rect = viewing === null && editor.hasFocus() && editor.currentField()?.rich ? editor.selectionRect() : null;
+  if (!rect) {
+    show(bubble, false);
+    return;
+  }
+  show(bubble, true);
+  const stage = byId('rb-stage').getBoundingClientRect();
+  const x = Math.min(Math.max(rect.left - stage.left, 0), stage.width - bubble.offsetWidth);
+  const y = rect.top - stage.top - bubble.offsetHeight - 8;
+  bubble.style.transform = `translate(${Math.round(x)}px, ${Math.round(Math.max(y, 0))}px)`;
+}
+
+/** Word and character counts, and whether the last edit has been kept as a version. */
+function updateStatus() {
+  if (!editor || !state.history || viewing !== null) {
+    return;
+  }
+  const before = currentResume(state.history);
+  const { words, characters } = resumeStats(editor.isDirty() ? editor.getResume(before) : before);
+  setText(byId('rb-count'), `${words} ${words === 1 ? 'word' : 'words'} · ${characters} characters`);
+  setText(byId('rb-saved'), editor.isDirty() ? 'Editing: kept as a version when you leave the field' : `All changes kept · v${state.history.current}`);
+}
+
+function openLinkBar() {
   setText(byId('link-error'), '');
   const input = byId('link-url');
   input.value = '';
@@ -451,11 +475,7 @@ function openLinkBar(field) {
 
 function closeLinkBar() {
   show(byId('rb-linkbar'), false);
-  const field = pendingField;
-  linkRange = null;
-  if (field?.isConnected) {
-    field.focus();
-  }
+  editor.focus();
 }
 
 function addLink(event) {
@@ -466,48 +486,27 @@ function addLink(event) {
     setText(byId('link-error'), 'Use a web address like linkedin.com/in/your-name, or an email address.');
     return;
   }
-  const field = pendingField;
-  if (!field?.isConnected) {
-    closeLinkBar();
-    return;
-  }
-  field.focus();
-  const selection = window.getSelection();
-  const range = linkRange ?? (() => {
-    const end = document.createRange();
-    end.selectNodeContents(field);
-    end.collapse(false);
-    return end;
-  })();
-  selection.removeAllRanges();
-  selection.addRange(range);
-  if (range.collapsed) {
-    // Nothing selected: the address itself becomes the link text.
-    const link = el('a', { href }, typed.replace(/^mailto:/, ''));
-    range.insertNode(document.createTextNode(' '));
-    range.insertNode(link);
-  } else {
-    document.execCommand('createLink', false, href);
-  }
   show(byId('rb-linkbar'), false);
-  linkRange = null;
+  // With nothing selected, the address itself becomes the link text.
+  editor.setLink(href, typed.replace(/^mailto:/, ''));
   announce('Link added. Click outside the field to keep it.');
 }
 
 // ---------- the Lay AI cursor (animation only, no AI call) ----------
 
-function onTyping(event) {
+function onTyping() {
+  show(byId('fit-note'), false);
   schedulePointer();
-  const field = event.target.closest?.('.rb-field');
+  updateToolState();
+  updateBubble();
+  updateStatus();
   clearTimeout(hintTimer);
   setHint(null);
-  if (!field) {
-    return;
-  }
   // After a short pause, Lay AI "notices" what you typed and offers one tip.
   hintTimer = setTimeout(() => {
-    if (document.activeElement === field) {
-      setHint(watchHint(field.dataset.path, fieldValue(field)));
+    const field = editor.currentField();
+    if (field && editor.hasFocus()) {
+      setHint(watchHint(field.path, editor.currentValue(currentResume(state.history))));
     }
   }, HINT_DELAY_MS);
 }
@@ -519,14 +518,14 @@ function setHint(text) {
 }
 
 function flashHint(text) {
-  const field = byId('rb-paper').querySelector('[data-path="summary"]');
-  if (!field) {
+  const rect = editor.fieldRect('summary');
+  if (!rect) {
     return;
   }
   editingPath = 'summary';
   setPointerLabel('Lay AI');
   setHint(text);
-  placePointer(field.getBoundingClientRect(), true);
+  placePointer(rect, true);
   clearTimeout(editingTimer);
   editingTimer = setTimeout(() => {
     editingPath = null;
@@ -546,27 +545,21 @@ function schedulePointer() {
 
 function movePointer() {
   if (editingPath) {
-    const target = byId('rb-paper').querySelector(`[data-path="${editingPath}"]`);
-    if (target) {
-      placePointer(target.getBoundingClientRect(), true);
+    const rect = editor.fieldRect(editingPath);
+    if (rect && (rect.width > 0 || rect.height > 0)) { // a hidden section has no size: nothing to point at
+      placePointer(rect, true);
       return;
     }
   }
-  const field = document.activeElement?.closest?.('#rb-paper .rb-field');
-  if (!field) {
+  const field = editor.currentField();
+  if (!field || !editor.hasFocus()) {
     hidePointer();
     return;
   }
-  let rect = null;
-  const selection = window.getSelection();
-  if (selection.rangeCount && field.contains(selection.anchorNode)) {
-    const caret = selection.getRangeAt(0).cloneRange();
-    caret.collapse(false);
-    rect = caret.getClientRects()[0] ?? null;
-  }
+  const caret = editor.caretRect();
   setPointerLabel('Lay AI · watching');
   byId('rb-pointer').classList.remove('is-editing');
-  placePointer(rect ?? field.getBoundingClientRect(), !rect);
+  placePointer(caret ?? editor.fieldRect(field.path), !caret);
 }
 
 /** Beside the caret on the same line (never over the next line of text), or at a field's end. */
@@ -597,6 +590,7 @@ function pointToChange(change) {
     return;
   }
   editingPath = path;
+  scrollToEdit(path);
   setHint(null);
   setPointerLabel('Lay AI is editing…');
   byId('rb-pointer').classList.add('is-editing');
@@ -607,6 +601,25 @@ function pointToChange(change) {
     byId('rb-pointer').classList.remove('is-editing');
     hidePointer();
   }, EDITING_MS);
+}
+
+/**
+ * Brings what Lay AI just changed into view: if its field is off screen (or hugging an edge),
+ * the page scrolls to put it in the middle, so the person sees the edit and the cursor on it
+ * instead of changes happening below the fold. Respects "reduce motion".
+ */
+function scrollToEdit(path) {
+  const rect = editor.fieldRect(path);
+  if (!rect || (rect.width === 0 && rect.height === 0)) {
+    return; // a hidden section has nothing to show
+  }
+  const edge = 110;
+  if (rect.top >= edge && rect.bottom <= window.innerHeight - edge) {
+    return; // already well inside the window
+  }
+  const top = window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2;
+  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: Math.max(0, top), behavior: calm ? 'auto' : 'smooth' });
 }
 
 function skillPath(change) {
@@ -640,7 +653,7 @@ function send(text) {
   if (!typed || replying || !state.history) {
     return;
   }
-  commitPending();
+  commitEditor();
   viewing = null;
   replying = true;
   // The guard: what is stored (and what Lay AI would send to Gemini) has placeholders; the
@@ -652,7 +665,11 @@ function send(text) {
 
   setTimeout(() => {
     const before = currentResume(state.history);
-    const result = sampleLayReply(guard.stored, before, state.format.style);
+    // "Fit it on one page" changes how the resume is set (spacing, margins, text size), never the words.
+    const fit = fitRequest(guard.stored);
+    const result = fit
+      ? { reply: fitSentence(fitResume(fit.pages)), resume: before, summary: null }
+      : sampleLayReply(guard.stored, before, state.format.style);
     let change = null;
     if (result.resume !== before) {
       state.history = addVersion(state.history, result.resume, { source: 'ai', summary: result.summary, at: Date.now() });
@@ -673,7 +690,8 @@ function send(text) {
       pointToChange(change);
     }
     if (tab === 'chat') {
-      byId('lay-input').focus();
+      // preventScroll: the page is scrolling to what Lay AI changed, and focusing the box must not cancel that.
+      byId('lay-input').focus({ preventScroll: true });
     }
   }, TYPING_DELAY_MS);
 }
@@ -709,6 +727,7 @@ function decide(messageKey, itemId, action) {
   if (!item || item.status !== 'open') {
     return;
   }
+  commitEditor();
   if (action === 'add') {
     const before = currentResume(state.history);
     const after = applySuggestion(before, item);
@@ -742,6 +761,399 @@ function restoreTo(number) {
   save();
   renderEditor();
   announce(`Restored version ${number}.`);
+}
+
+// ---------- custom sections and tables ----------
+
+/** "Add section", the section and table tools that appear when the caret is in one, and the ATS reading order. */
+function wireSections() {
+  byId('add-section').addEventListener('change', (event) => {
+    const [kind, columns] = event.target.value.split('-');
+    event.target.value = '';
+    if (!kind) {
+      return;
+    }
+    commitEditor();
+    editor.addSection(kind, Number(columns) || 2);
+    commitEditor();
+    updateContext();
+    updateStatus();
+    announce('Section added. Type its name, then fill it in.');
+  });
+
+  const context = byId('rb-context');
+  context.addEventListener('mousedown', (event) => {
+    if (event.target.closest('button')) {
+      event.preventDefault(); // keep the caret in the section while a tool is used
+    }
+  });
+  context.addEventListener('click', (event) => {
+    const tool = event.target.closest('[data-ctx], [data-table]');
+    if (!tool) {
+      return;
+    }
+    if (tool.dataset.table) {
+      editor.tableCommand(tool.dataset.table);
+    } else {
+      const done = {
+        up: () => editor.moveSection(-1),
+        down: () => editor.moveSection(1),
+        delete: () => editor.deleteSection(),
+        'insert-table': () => editor.insertTable(2, 2),
+      }[tool.dataset.ctx]();
+      if (!done && tool.dataset.ctx !== 'insert-table') {
+        return;
+      }
+    }
+    commitEditor();
+    updateContext();
+    updateStatus();
+  });
+  byId('ctx-borders').addEventListener('change', (event) => {
+    editor.setTableBorders(event.target.value);
+    commitEditor();
+    updateContext();
+  });
+
+  byId('open-reading-order').addEventListener('click', () => {
+    commitEditor();
+    const doc = resumeToDoc(currentResume(state.history), { bullets: state.format.bullets, columns: state.format.columns });
+    setText(byId('reading-text'), docToPlainText(doc, { hidden: state.format.hidden }));
+    byId('reading-notes').replaceChildren(...readingNotes(doc).map((note) => el('li', {}, note)));
+    byId('reading-order').showModal();
+  });
+}
+
+/** Shows the section and table tools when the caret is in a custom section. */
+function updateContext() {
+  const bar = byId('rb-context');
+  const at = viewing === null && editor ? editor.sectionState() : null;
+  if (!at) {
+    show(bar, false);
+    return;
+  }
+  show(bar, true);
+  setText(byId('ctx-name'), `Section: ${at.title || 'untitled'}`);
+  byId('ctx-up').disabled = at.index <= 0;
+  byId('ctx-down').disabled = at.index >= at.count - 1;
+  show(byId('ctx-table'), at.inTable);
+  show(byId('ctx-insert'), !at.inTable);
+  if (at.inTable) {
+    byId('ctx-borders').value = at.borders;
+    for (const button of byId('ctx-table').querySelectorAll('[data-table]')) {
+      button.disabled = !editor.canTable(button.dataset.table);
+    }
+  }
+}
+
+// ---------- the page: size, scaling, how full it is, and fitting ----------
+
+/**
+ * The page is drawn at its true paper size (A4 or Letter) so the page count is real, then
+ * scaled down to fit its column. The scale is a transform, so the measurements below, which
+ * are in unscaled pixels, stay true to the paper.
+ */
+function layoutPages() {
+  for (const [wrapId, paperId] of PAGE_PAIRS) {
+    const wrap = byId(wrapId);
+    const paper = byId(paperId);
+    if (!wrap || !paper || paper.hidden || !wrap.offsetParent) {
+      continue;
+    }
+    // The rulers hug the editable page only: a strip along its top and one down its left side.
+    const rulersOn = paperId === 'rb-editor' && Boolean(rulers);
+    const gutter = rulersOn ? RULER_THICKNESS + 3 : 0;
+    const available = wrap.clientWidth - gutter - 10; // a little room for the page's shadow
+    const width = paper.offsetWidth;
+    if (available <= 0 || !width) {
+      continue;
+    }
+    // Fit width fills the space (up to 150%); a fixed zoom applies to the page being edited and scrolls sideways if it is wider.
+    const fixed = wrapId === 'rb-page-wrap' && zoom !== 'fit' ? Number(zoom) : null;
+    const scale = fixed ?? Math.min(MAX_FIT, available / width);
+    const left = gutter + Math.max(0, (available - width * scale) / 2);
+    paper.style.transform = Math.abs(scale - 1) > 0.001 ? `scale(${scale})` : '';
+    paper.style.left = `${left}px`;
+    paper.style.top = `${gutter}px`;
+    wrap.style.height = `${gutter + Math.ceil(paper.offsetHeight * scale) + 14}px`;
+    if (wrapId === 'rb-page-wrap') {
+      for (const ruler of rulers ? [rulers.x, rulers.y] : []) {
+        ruler.element.hidden = !rulersOn;
+      }
+    }
+    if (rulersOn) {
+      const page = PAGE_SIZES[state.format.page];
+      const pxPerMm = mmToPx(1) * scale;
+      const f = state.format;
+      rulers.x.element.style.left = `${left}px`;
+      rulers.x.element.style.top = '0px';
+      rulers.x.update({ lengthMm: page.widthMm, pxPerMm, startMm: f.marginLeft, endMm: f.marginRight, unit: f.unit });
+      rulers.y.element.style.left = `${Math.max(0, left - gutter)}px`;
+      rulers.y.element.style.top = `${gutter}px`;
+      rulers.y.update({ lengthMm: page.heightMm, pxPerMm, startMm: f.marginTop, endMm: f.marginBottom, unit: f.unit });
+    }
+  }
+}
+
+/**
+ * Sets one margin (in millimetres) from a ruler handle, the Page setup dialog, or a key press.
+ * The text always keeps at least 60 mm of width and 80 mm of height. While a handle is still
+ * being dragged (`commit` false) nothing is saved yet.
+ */
+function setMargin(key, mm, { commit = true } = {}) {
+  const f = state.format;
+  const page = PAGE_SIZES[f.page];
+  const pair = { marginTop: 'marginBottom', marginBottom: 'marginTop', marginLeft: 'marginRight', marginRight: 'marginLeft' }[key];
+  const horizontal = key === 'marginLeft' || key === 'marginRight';
+  const room = (horizontal ? page.widthMm - 60 : page.heightMm - 80) - f[pair];
+  state.format = normalizeFormat({ ...f, [key]: Math.min(clampMargin(mm), room) });
+  if (commit) {
+    save();
+  }
+  renderEditor();
+}
+
+/** The height the resume's content takes on the page: its text, plus the margins and the border. */
+function pageContentHeight(paper) {
+  const inner = paper.firstElementChild;
+  if (!inner) {
+    return 0;
+  }
+  const style = getComputedStyle(paper);
+  return inner.offsetHeight + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + 2;
+}
+
+/** The status bar's page figure: how much of the page limit the resume uses, and a line where each page ends. */
+function updatePageStatus() {
+  const paper = [byId('rb-editor'), byId('rb-paper')].find((candidate) => candidate && !candidate.hidden && candidate.offsetParent);
+  if (!paper) {
+    return;
+  }
+  const limit = state.answers.pages === 2 ? 2 : 1;
+  const usage = pageUsage(pageContentHeight(paper), state.format.page, limit);
+  paper.classList.toggle('is-multipage', usage.used > 1.003);
+  const badge = byId('rb-pages');
+  badge.classList.toggle('is-over', !usage.fits);
+  const pages = limit === 1 ? 'page' : 'pages';
+  setText(badge, usage.fits
+    ? `Fits ${limit} ${pages} · ${Math.round((usage.used / limit) * 100)}% full`
+    : `Over the ${limit}-page limit by ${Math.max(1, Math.round(usage.over * 100))}%`);
+}
+
+/** Content height of the editor if the resume were set with `format`: used to try fits without redrawing. */
+function measureFormat(format) {
+  const host = byId('rb-editor');
+  applyPaperFormat(host, state.templateId, format, true);
+  host.classList.add('rb-editor');
+  return pageContentHeight(host);
+}
+
+/**
+ * Fits the resume to `pages` pages (the page limit when null) by changing only how it is set.
+ * See fitToPages(): bounded, never deletes text, never goes below the smallest readable size.
+ */
+function fitResume(pages) {
+  commitEditor();
+  viewing = null;
+  const limit = pages ?? (state.answers.pages === 2 ? 2 : 1);
+  state.answers.pages = limit;
+  const result = fitToPages(state.format, limit, measureFormat);
+  state.format = result.format;
+  save();
+  renderEditor();
+  return { ...result, limit };
+}
+
+/** What happened, in words: it fit, it already fit, or it still does not and what to do. */
+function fitSentence(result) {
+  const pages = `${result.limit} ${result.limit === 1 ? 'page' : 'pages'}`;
+  if (result.fits && !result.changes.length) {
+    return `It already fits on ${pages}: ${Math.round((result.used / result.limit) * 100)}% of the space is used. I changed nothing.`;
+  }
+  if (result.fits) {
+    return `Done: it fits on ${pages} now. I ${joinList(result.changes)}. Every word is still there.`;
+  }
+  const way = result.limit === 1 ? 'or allow 2 pages' : 'or trim your oldest role';
+  return `It is still ${Math.max(1, Math.round(result.over * 100))}% too long for ${pages}, even at the smallest setting I use `
+    + `(${result.format.fontSize} pt, ${Number(Math.max(...MARGIN_KEYS.map((key) => result.format[key])).toFixed(1))} mm margins, tight spacing). I have not deleted anything. `
+    + `To make room, try "Shorten my summary", ${way}.`;
+}
+
+function showFitNote(text) {
+  setText(byId('fit-note'), text);
+  show(byId('fit-note'), true);
+}
+
+/** The paper size the browser prints at, when the resume is saved as a PDF. */
+function setPrintPage() {
+  let style = document.getElementById('rb-page-style');
+  if (!style) {
+    style = el('style', { id: 'rb-page-style' });
+    document.head.append(style);
+  }
+  style.textContent = `@page { size: ${state.format.page === 'letter' ? 'letter' : 'A4'}; margin: 0; }`;
+}
+
+/** The Page setup dialog: paper, units, the four margins, columns, the page limit, heading lines. */
+function wirePageSetup() {
+  const dialog = byId('page-setup');
+  byId('open-page-setup').addEventListener('click', () => {
+    renderPageSetup();
+    dialog.showModal();
+  });
+  byId('ps-page').addEventListener('change', (event) => setFormat('page', event.target.value));
+  byId('ps-unit').addEventListener('change', (event) => setFormat('unit', event.target.value));
+  byId('ps-columns').addEventListener('change', (event) => setFormat('columns', Number(event.target.value)));
+  byId('ps-rules').addEventListener('change', (event) => setFormat('rules', event.target.checked));
+  for (const box of dialog.querySelectorAll('[data-show]')) {
+    box.addEventListener('change', () => {
+      const shown = new Set([...dialog.querySelectorAll('[data-show]')].filter((other) => other.checked).map((other) => other.dataset.show));
+      setFormat('hidden', HIDEABLE_SECTIONS.filter((name) => !shown.has(name)));
+    });
+  }
+  byId('ps-limit').addEventListener('change', (event) => {
+    state.answers.pages = Number(event.target.value) === 2 ? 2 : 1;
+    save();
+    renderEditor();
+  });
+  byId('ps-preset').addEventListener('change', (event) => {
+    if (MARGIN_PRESETS[event.target.value]) {
+      state.format = normalizeFormat({ ...state.format, ...MARGIN_PRESETS[event.target.value] });
+      save();
+      renderEditor();
+    }
+  });
+  for (const input of dialog.querySelectorAll('[data-margin]')) {
+    input.addEventListener('change', () => {
+      if (input.value !== '') {
+        setMargin(input.dataset.margin, toMm(Number(input.value), state.format.unit));
+      }
+    });
+  }
+}
+
+/** Fills the dialog (and the toolbar's page-limit box) from the current format. */
+function renderPageSetup() {
+  const f = state.format;
+  byId('ps-page').value = f.page;
+  byId('ps-unit').value = f.unit;
+  byId('ps-columns').value = String(f.columns);
+  byId('ps-limit').value = String(state.answers.pages);
+  byId('ps-rules').checked = f.rules;
+  for (const box of byId('page-setup').querySelectorAll('[data-show]')) {
+    box.checked = !f.hidden.includes(box.dataset.show);
+  }
+  byId('ps-preset').value = marginPreset(f);
+  const step = f.unit === 'in' ? 0.05 : 0.1;
+  for (const input of byId('page-setup').querySelectorAll('[data-margin]')) {
+    input.step = String(step);
+    input.min = String(fromMm(MARGIN_LIMITS_MM.min, f.unit).toFixed(2));
+    input.max = String(fromMm(MARGIN_LIMITS_MM.max, f.unit).toFixed(2));
+    input.value = String(Number(fromMm(f[input.dataset.margin], f.unit).toFixed(f.unit === 'in' ? 2 : 1)));
+    input.setAttribute('aria-label', `${input.previousElementSibling.textContent} margin in ${f.unit === 'in' ? 'inches' : 'centimetres'}`);
+  }
+}
+
+/** Keeps the page scaled and its figure true as the column, the panel or the text change size. */
+function wirePage() {
+  rulers = {
+    x: createRuler('x', { start: 'marginLeft', end: 'marginRight' }, setMargin),
+    y: createRuler('y', { start: 'marginTop', end: 'marginBottom' }, setMargin),
+  };
+  byId('rb-page-wrap').append(rulers.x.element, rulers.y.element);
+  wirePageSetup();
+  const refresh = () => {
+    layoutPages();
+    updatePageStatus();
+  };
+  const observer = new ResizeObserver(refresh);
+  for (const id of ['rb-stage', 'rb-editor', 'rb-paper']) {
+    observer.observe(byId(id));
+  }
+  const zoomBox = byId('rb-zoom');
+  zoomBox.value = zoom;
+  zoomBox.addEventListener('change', () => {
+    zoom = ZOOMS.includes(zoomBox.value) ? zoomBox.value : 'fit';
+    writeJson(ZOOM_KEY, zoom);
+    refresh();
+    updateBubble();
+  });
+  window.addEventListener('resize', refresh);
+  document.fonts?.ready.then(refresh);
+}
+
+// ---------- the Lay AI panel: drag its edges to resize it ----------
+
+function wirePanelResize() {
+  const root = byId('step-editor');
+  const panel = byId('lay-panel');
+  const size = readJson(PANEL_SIZE_KEY) ?? {};
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const widthLimits = () => [300, Math.max(300, Math.min(720, root.clientWidth - 340))];
+  const heightLimits = () => [420, Math.max(420, window.innerHeight - 32)];
+
+  const apply = () => {
+    for (const [key, name] of [['w', '--lay-w'], ['h', '--lay-h']]) {
+      if (size[key]) {
+        root.style.setProperty(name, `${size[key]}px`);
+      } else {
+        root.style.removeProperty(name);
+      }
+    }
+  };
+  const setWidth = (value) => {
+    size.w = Math.round(clamp(value, ...widthLimits()));
+    apply();
+  };
+  const setHeight = (value) => {
+    size.h = Math.round(clamp(value, ...heightLimits()));
+    apply();
+  };
+  const remember = () => writeJson(PANEL_SIZE_KEY, size);
+  apply();
+
+  const drag = (handle, onMove) => {
+    handle.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      handle.setPointerCapture(event.pointerId);
+      handle.classList.add('is-dragging');
+      const start = { x: event.clientX, y: event.clientY, w: panel.offsetWidth, h: panel.offsetHeight };
+      const move = (moveEvent) => onMove(start, moveEvent);
+      const stop = () => {
+        handle.classList.remove('is-dragging');
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', stop);
+        handle.removeEventListener('pointercancel', stop);
+        remember();
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', stop);
+      handle.addEventListener('pointercancel', stop);
+    });
+  };
+  drag(byId('lay-resize-x'), (start, event) => setWidth(start.w + (start.x - event.clientX)));
+  drag(byId('lay-resize-y'), (start, event) => setHeight(start.h + (event.clientY - start.y)));
+
+  const keys = (handle, grow, shrink, resize, key) => {
+    handle.addEventListener('keydown', (event) => {
+      if (event.key === grow || event.key === shrink) {
+        event.preventDefault();
+        resize((key === 'w' ? panel.offsetWidth : panel.offsetHeight) + (event.key === grow ? 24 : -24));
+        remember();
+      } else if (event.key === 'Home') {
+        delete size[key];
+        apply();
+        remember();
+      }
+    });
+    handle.addEventListener('dblclick', () => {
+      delete size[key];
+      apply();
+      remember();
+    });
+  };
+  keys(byId('lay-resize-x'), 'ArrowLeft', 'ArrowRight', setWidth, 'w');
+  keys(byId('lay-resize-y'), 'ArrowDown', 'ArrowUp', setHeight, 'h');
 }
 
 // ---------- rendering ----------
@@ -780,8 +1192,12 @@ function renderStart() {
 
 function renderTemplates() {
   setText(byId('templates-sub'), answersSummary(state.answers));
+  for (const button of byId('template-filter').querySelectorAll('[data-filter]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.filter === templateFilter));
+  }
+  const shown = suggestTemplates(state.answers, Infinity).filter((template) => templateFilter === 'all' || String(template.columns ?? 1) === templateFilter);
   byId('template-list').replaceChildren(
-    ...suggestTemplates(state.answers).map((template, index) =>
+    ...shown.map((template, index) =>
       el(
         'li',
         { class: `card rb-tpl-card${index === 0 ? ' is-best' : ''}` },
@@ -791,6 +1207,7 @@ function renderTemplates() {
           { class: 'rb-tpl-title' },
           el('h3', {}, template.name),
           index === 0 ? el('span', { class: 'badge badge-green' }, 'Best match') : null,
+          el('span', { class: 'badge' }, (template.columns ?? 1) === 2 ? 'Two columns' : 'One column'),
           template.pdfOnly ? el('span', { class: 'badge' }, 'PDF only') : null,
           state.templateId === template.id ? el('span', { class: 'badge badge-blue' }, 'In use') : null,
         ),
@@ -810,7 +1227,28 @@ function renderEditor() {
   const editable = viewing === null;
 
   byId('step-editor').classList.toggle('panel-open', panelOpen);
-  fillPaper(byId('rb-paper'), resume, { editable, highlight: editable ? highlight : null, templateId: state.templateId, format: state.format });
+  show(byId('rb-editor'), editable);
+  show(byId('rb-paper'), !editable);
+  show(byId('rb-statusbar'), editable);
+  if (!editable) {
+    show(byId('rb-bubble'), false);
+  }
+  if (editable) {
+    const host = byId('rb-editor');
+    applyPaperFormat(host, state.templateId, state.format, true);
+    host.classList.add('rb-editor');
+    // Redraw the document only when the resume, the bullets or the columns are not what it shows.
+    if (shownResume !== resume || shownBullets !== state.format.bullets || shownColumns !== state.format.columns) {
+      editor.setResume(resume, { bullets: state.format.bullets, columns: state.format.columns });
+      shownResume = resume;
+      shownBullets = state.format.bullets;
+      shownColumns = state.format.columns;
+    }
+    editor.setHighlight(highlight);
+    updateStatus();
+  } else {
+    fillPaper(byId('rb-paper'), resume, { editable: false, highlight: null, templateId: state.templateId, format: state.format });
+  }
   renderToolbar(editable);
   show(byId('editor-hint'), editable);
   show(byId('viewing-banner'), !editable);
@@ -826,6 +1264,8 @@ function renderEditor() {
   if (panelOpen) {
     renderPanel();
   }
+  layoutPages();
+  updatePageStatus();
 }
 
 function renderToolbar(editable) {
@@ -837,6 +1277,11 @@ function renderToolbar(editable) {
     select.value = String(state.format[select.dataset.format]);
   }
   byId('fmt-bullets').setAttribute('aria-pressed', String(state.format.bullets));
+  byId('fmt-fontsize').value = String(state.format.fontSize);
+  byId('fmt-limit').value = String(state.answers.pages);
+  show(byId('columns-note'), editable && state.format.columns === 2);
+  renderPageSetup();
+  updateContext();
 }
 
 function renderPanel() {
@@ -975,6 +1420,8 @@ function renderFinished() {
   const template = templateById(state.templateId);
   fillPaper(byId('final-paper'), currentResume(state.history), { editable: false, highlight: null, templateId: template.id, format: state.format });
   setText(byId('finished-sub'), `Template ${template.name}, version ${state.history.current}.`);
+  setPrintPage();
+  layoutPages();
   show(byId('docx-note'), false);
   show(byId('download-docx'), !template.pdfOnly);
   show(byId('pdf-only-note'), Boolean(template.pdfOnly));
@@ -1000,13 +1447,63 @@ function richNodes(markup) {
   });
 }
 
+/** The classes that give the paper its template, font, spacing, header, page size, margins and columns. */
+function paperClasses(templateId, format, editable) {
+  const f = normalizeFormat(format);
+  return [
+    'rb-paper', `rb-tpl-${templateById(templateId).id}`, `rb-font-${f.font}`, `rb-space-${f.spacing}`,
+    `rb-align-${f.align}`, `rb-page-${f.page}`, `rb-cols-${f.columns}`, f.rules ? 'rb-rules' : '', ...f.hidden.map((name) => `rb-hide-${name}`), editable ? 'is-editable' : '',
+  ].filter(Boolean).join(' ');
+}
+
+/** Puts the format on a paper: its classes, and the text size in points. */
+function applyPaperFormat(paper, templateId, format, editable) {
+  const f = normalizeFormat(format);
+  paper.className = paperClasses(templateId, format, editable);
+  paper.style.setProperty('--rb-fs', String(f.fontSize));
+  for (const [key, name] of [['marginTop', '--mt'], ['marginBottom', '--mb'], ['marginLeft', '--ml'], ['marginRight', '--mr']]) {
+    paper.style.setProperty(name, `${f[key]}mm`);
+  }
+}
+
+/** Inline editor text (with bold, italic, underline and links) as DOM nodes. */
+function inlineNodes(content) {
+  return (content ?? []).map((node) => {
+    let out = document.createTextNode(node.text ?? '');
+    for (const mark of node.marks ?? []) {
+      if (mark.type === 'bold') {
+        out = el('strong', {}, out);
+      } else if (mark.type === 'italic') {
+        out = el('em', {}, out);
+      } else if (mark.type === 'underline') {
+        out = el('u', {}, out);
+      } else if (mark.type === 'link' && safeHref(mark.attrs?.href)) {
+        out = el('a', { href: safeHref(mark.attrs.href) }, out);
+      }
+    }
+    return out;
+  });
+}
+
+/** The blocks of a custom section (paragraphs, bullet lists, tables) as DOM, for the read-only page. */
+function blockElements(nodes) {
+  return (nodes ?? []).map((node) => {
+    if (node.type === 'bulletList') {
+      return el('ul', { class: 'rb-bullets' }, ...(node.content ?? []).map((item) => el('li', {}, ...(item.content ?? []).flatMap((paragraph) => inlineNodes(paragraph.content)))));
+    }
+    if (node.type === 'table') {
+      const rows = (node.content ?? []).map((row) =>
+        el('tr', {}, ...(row.content ?? []).map((cell) => el(cell.type === 'tableHeader' ? 'th' : 'td', {}, ...blockElements(cell.content)))));
+      return el('table', { class: `rb-table rb-table-${node.attrs?.borders ?? 'none'}` }, el('tbody', {}, ...rows));
+    }
+    return el('p', {}, ...inlineNodes(node.content));
+  });
+}
+
 /** Draws a resume into an <article class="rb-paper">; fields are typed into when editable. */
 function fillPaper(paper, resume, { editable, highlight: changes, templateId, format }) {
   const f = normalizeFormat(format);
-  paper.className = [
-    'rb-paper', `rb-tpl-${templateById(templateId).id}`, `rb-font-${f.font}`, `rb-size-${f.size}`,
-    `rb-space-${f.spacing}`, `rb-align-${f.align}`, editable ? 'is-editable' : '',
-  ].filter(Boolean).join(' ');
+  applyPaperFormat(paper, templateId, format, editable);
 
   const field = (tag, path, value, className = '') => {
     const rich = isRichPath(path);
@@ -1032,7 +1529,8 @@ function fillPaper(paper, resume, { editable, highlight: changes, templateId, fo
     }
     return node;
   };
-  const section = (title, ...children) => el('section', { class: 'rb-section' }, el('h3', {}, title), ...children);
+  const section = (title, ...children) =>
+    el('section', { class: 'rb-section', 'data-node': `${title.toLowerCase()}Section` }, el('h3', {}, title), ...children);
 
   const skills = resume.skills.map((skill, i) => {
     const chip = field('li', `skills.${i}`, skill);
@@ -1045,26 +1543,29 @@ function fillPaper(paper, resume, { editable, highlight: changes, templateId, fo
     skills.push(el('li', { class: 'rb-add' }, el('button', { class: 'btn btn-ghost btn-sm', id: 'rb-add-skill', type: 'button' }, icon('plus'), 'Skill')));
   }
 
-  paper.replaceChildren(
-    el('header', { class: 'rb-head' }, field('h2', 'name', resume.name, 'rb-name'), field('p', 'contact', resume.contact, 'rb-contact')),
-    section('Summary', field('p', 'summary', resume.summary)),
-    section(
-      'Experience',
-      ...resume.experience.map((job, i) =>
-        el(
-          'div',
-          { class: 'rb-item' },
-          el('div', { class: 'rb-item-head' }, field('p', `experience.${i}.role`, job.role, 'rb-strong'), field('p', `experience.${i}.dates`, job.dates, 'rb-dates')),
-          field('p', `experience.${i}.details`, job.details),
-        ),
+  const header = el('header', { class: 'rb-head' }, field('h2', 'name', resume.name, 'rb-name'), field('p', 'contact', resume.contact, 'rb-contact'));
+  const summary = section('Summary', field('p', 'summary', resume.summary));
+  const experience = section(
+    'Experience',
+    ...resume.experience.map((job, i) =>
+      el(
+        'div',
+        { class: 'rb-item' },
+        el('div', { class: 'rb-item-head' }, field('p', `experience.${i}.role`, job.role, 'rb-strong'), field('p', `experience.${i}.dates`, job.dates, 'rb-dates')),
+        field('p', `experience.${i}.details`, job.details),
       ),
     ),
-    section(
-      'Education',
-      ...resume.education.map((school, i) =>
-        el('div', { class: 'rb-item-head' }, field('p', `education.${i}.degree`, school.degree, 'rb-strong'), field('p', `education.${i}.dates`, school.dates, 'rb-dates')),
-      ),
-    ),
-    section('Skills', el('ul', { class: 'rb-skills', id: editable ? 'rb-skill-list' : null }, ...skills)),
   );
+  const education = section(
+    'Education',
+    ...resume.education.map((school, i) =>
+      el('div', { class: 'rb-item-head' }, field('p', `education.${i}.degree`, school.degree, 'rb-strong'), field('p', `education.${i}.dates`, school.dates, 'rb-dates')),
+    ),
+  );
+  const skillsSection = section('Skills', el('ul', { class: 'rb-skills', id: editable ? 'rb-skill-list' : null }, ...skills));
+  const custom = (resume.extra ?? []).map((section) => el('section', { class: 'rb-section rb-custom' }, el('h3', {}, section.title), ...blockElements(section.body)));
+  const body = f.columns === 2
+    ? [el('div', { class: 'rb-columns' }, el('div', { class: 'rb-col-main' }, summary, experience, ...custom), el('div', { class: 'rb-col-side' }, education, skillsSection))]
+    : [summary, experience, education, skillsSection, ...custom];
+  paper.replaceChildren(el('div', { class: 'rb-sheet' }, header, ...body));
 }

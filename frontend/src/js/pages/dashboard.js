@@ -7,6 +7,7 @@ import { byId, cloneTemplate, el, field, hide, renderChips, setBusy, setText, sh
 import { readJson, writeJson } from '../core/local-store.js';
 import { getUser, requireAuth } from '../core/session.js';
 import { hydrateIcons, icon } from '../components/icons.js';
+import { mountVersionMenu } from '../components/version-menu.js';
 import { renderShell, setActive } from '../components/shell.js';
 import {
   JD_MAX_CHARS,
@@ -130,8 +131,8 @@ async function loadDashboard() {
   showTab();
 
   versionsReady.then((versions) => {
-    const analysed = versions.find((resume) => resume.id === dashboard?.resumeId);
-    setText(byId('analysed-version'), analysed ? `Analysis of version ${analysed.version}` : '');
+    // The menu in the top bar marks the version this analysis is of.
+    mountVersionMenu(byId('version-menu-slot'), versions, { currentId: dashboard?.resumeId ?? null, label: 'Analysis of' });
   });
 }
 

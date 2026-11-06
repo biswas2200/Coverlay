@@ -1,8 +1,12 @@
-// The anonymous community (preview, sample data). Each account gets one mask identity a month:
-// a key pair made on the device, stamped by Coverlay without Coverlay seeing it (a blind
-// signature), so nobody -- not us, not Google -- can link a post to an account. Posts show a
-// random handle and the hour, rounded. Points earned by posts move to the wallet in small
-// batches at random times, so amounts and timing don't point back to the post.
+// The anonymous community (preview, sample data). Every post is simply "Anonymous": there is no
+// handle, no pseudonym and no per-person mask, so nobody can link a post to an account, and
+// nobody can even tell that two posts came from the same person. In the real system each post is
+// stamped with its own one-time pass, made on the device and signed by Coverlay without Coverlay
+// seeing it (a blind signature), and carries only the topic, the company if given, the text and
+// the hour it was made. The device keeps a private tally of its own posts and points; that tally
+// never leaves it. Points earned by posts move to the wallet in small batches at random times,
+// so amounts and timing don't point back to a post. How Coverlay limits abuse (how many passes an
+// account gets, removing posts one by one) is its own internal policy and is not shown here.
 // Before a post goes up, the guard checks it for details that would identify the writer.
 // DOM-free so tests/community-rules.test.js can run it in Node.
 
@@ -22,17 +26,8 @@ export const POINTS_PER_POST = 5;
 export const MIN_POST = 20;
 export const MAX_POST = 1000;
 
-const ADJECTIVES = ['Teal', 'Quiet', 'Amber', 'Swift', 'Cobalt', 'Sage', 'Brave', 'Misty', 'Coral', 'Lunar'];
-const ANIMALS = ['Falcon', 'Otter', 'Lynx', 'Heron', 'Panda', 'Koi', 'Fox', 'Ibis', 'Gecko', 'Wren'];
-
-/** A random-looking handle from a seed (the identity's public-key hash in the real system). */
-export function maskHandle(seed) {
-  let hash = 2166136261;
-  for (const ch of String(seed)) {
-    hash = Math.imul(hash ^ ch.charCodeAt(0), 16777619) >>> 0;
-  }
-  return `${ADJECTIVES[hash % ADJECTIVES.length]} ${ANIMALS[Math.floor(hash / ADJECTIVES.length) % ANIMALS.length]}`;
-}
+/** What every post shows as its author. */
+export const ANONYMOUS = 'Anonymous';
 
 /** Posts keep only the hour they were made, so exact times can't be matched to activity. */
 export function roundToHour(at) {
@@ -94,17 +89,22 @@ export function validatePost(text, topic) {
   return null;
 }
 
-/** The identity this device holds for the month: `{ id, handle, month, points, posts }`. */
-export function newIdentity(seed, now) {
-  const month = new Date(now).toISOString().slice(0, 7);
-  return { id: `mask-${seed}`, handle: maskHandle(seed), month, points: 0, posts: 0 };
+/**
+ * What this device keeps privately about its own posting: `{ posts, points, mine }`. `mine` lists
+ * the ids of the posts this device made, so it can label them "You" on its own screen. It is
+ * never sent anywhere, and the posts themselves carry nothing that points back to it.
+ */
+export function newDeviceTally() {
+  return { posts: 0, points: 0, mine: [] };
 }
 
-export function addPost(feed, identity, { text, topic, company }, now) {
+/**
+ * A new post at the top of the feed, and the device's updated tally. The post has no author, no
+ * handle and no link to any other post: only its topic, company, text, the hour and its count.
+ */
+export function addPost(feed, device, { text, topic, company }, now) {
   const post = {
     id: `post-${now.toString(36)}-${feed.length + 1}`,
-    authorId: identity.id,
-    handle: identity.handle,
     topic,
     company: String(company ?? '').trim().slice(0, 60) || null,
     text: String(text).trim(),
@@ -113,16 +113,39 @@ export function addPost(feed, identity, { text, topic, company }, now) {
   };
   return {
     feed: [post, ...feed],
-    identity: { ...identity, points: identity.points + POINTS_PER_POST, posts: identity.posts + 1 },
+    device: { ...device, points: device.points + POINTS_PER_POST, posts: device.posts + 1, mine: [post.id, ...device.mine] },
   };
 }
 
-/** Points leave the identity for the wallet; the wallet gets them later, in a random batch. */
-export function redeemPoints(identity) {
-  if (identity.points <= 0) {
-    return { identity, credits: 0 };
+/** Whether this device made the post (shown as "You" on this screen only). */
+export function isMine(device, post) {
+  return device.mine.includes(post.id);
+}
+
+/**
+ * A saved preview from before every post was anonymous (it had a mask handle and an author id
+ * on each post) as the current shape: the handles and author ids are dropped, and the posts the
+ * old identity wrote become this device's own. Anything else comes back unchanged.
+ */
+export function migrateSaved(saved) {
+  if (!saved || !Array.isArray(saved.feed)) {
+    return null;
   }
-  return { identity: { ...identity, points: 0 }, credits: identity.points };
+  if (saved.device && Array.isArray(saved.device.mine)) {
+    return saved;
+  }
+  const identity = saved.identity ?? {};
+  const feed = saved.feed.map(({ authorId, handle, ...post }) => post);
+  const mine = saved.feed.filter((post) => identity.id && post.authorId === identity.id).map((post) => post.id);
+  return { feed, device: { posts: identity.posts ?? mine.length, points: identity.points ?? 0, mine } };
+}
+
+/** Points leave the device for the wallet; the wallet gets them later, in a random batch. */
+export function redeemPoints(device) {
+  if (device.points <= 0) {
+    return { device, credits: 0 };
+  }
+  return { device: { ...device, points: 0 }, credits: device.points };
 }
 
 export function filterFeed(feed, topic) {
@@ -131,8 +154,7 @@ export function filterFeed(feed, topic) {
 
 export function sampleFeed(now) {
   const post = (n, topic, company, text, hoursAgo, upvotes) => ({
-    id: `sample-${n}`, authorId: `sample-author-${n}`, handle: maskHandle(`sample-${n * 7}`), topic, company, text,
-    createdHour: roundToHour(now - hoursAgo * HOUR_MS), upvotes,
+    id: `sample-${n}`, topic, company, text, createdHour: roundToHour(now - hoursAgo * HOUR_MS), upvotes,
   });
   return [
     post(1, 'interviews', 'Swiggy', 'Backend round 2 was a design question: rate-limit an API for 1M users. They cared more about trade-offs than the final answer.', 3, 41),

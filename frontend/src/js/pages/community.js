@@ -1,25 +1,29 @@
 import { byId, el, setText, show } from '../core/dom.js';
 import { readJson, writeJson } from '../core/local-store.js';
 import { getUser, requireAuth } from '../core/session.js';
-import { hydrateIcons } from '../components/icons.js';
+import { hydrateIcons, icon } from '../components/icons.js';
 import { renderShell } from '../components/shell.js';
 import { PLACEHOLDER_LABELS, knownValues } from './privacy-guard-rules.js';
 import { currentResume, isSavedState, sampleResume } from './resume-builder-rules.js';
 import { addPoints, isWallet, sampleWallet, walletKey } from './wallet-rules.js';
 import {
+  ANONYMOUS,
   TOPICS,
   addPost,
   checkPost,
   filterFeed,
-  newIdentity,
+  isMine,
+  migrateSaved,
+  newDeviceTally,
   postAge,
   redeemPoints,
   sampleFeed,
   validatePost,
 } from './community-rules.js';
 
-// The community preview: an anonymous feed, posting as this month's mask (with the identity
-// check first), and moving points to the wallet. Everything lives in this browser only.
+// The community preview: a feed where every post is plain "Anonymous" (no handle, nothing that
+// ties two posts together), posting with the identity check first, this device's private tally of
+// its own posts and points, and moving points to the wallet. Everything lives in this browser only.
 
 const USER_ID = getUser()?.id ?? 'guest';
 const KEY = `coverlay.preview.community.${USER_ID}`;
@@ -42,19 +46,9 @@ function builderResume() {
 }
 
 function load() {
-  const saved = readJson(KEY);
-  if (saved && Array.isArray(saved.feed) && saved.identity?.handle) {
-    return saved;
-  }
-  // The device makes its own mask; the seed stands in for the key's hash. (A handle that a
-  // sample post already uses is rerolled, so "You" is never confused with someone else.)
-  const feed = sampleFeed(Date.now());
-  const taken = new Set(feed.map((p) => p.handle));
-  let identity = newIdentity(Math.random().toString(36).slice(2, 10), Date.now());
-  for (let i = 0; i < 20 && taken.has(identity.handle); i += 1) {
-    identity = newIdentity(Math.random().toString(36).slice(2, 10), Date.now());
-  }
-  return { feed, identity };
+  // An older preview (posts with a mask handle) is converted: handles and author ids are dropped.
+  const saved = migrateSaved(readJson(KEY));
+  return saved ?? { feed: sampleFeed(Date.now()), device: newDeviceTally() };
 }
 
 function save() {
@@ -93,19 +87,19 @@ function wire() {
     byId('post-text').focus();
   });
   byId('redeem').addEventListener('click', () => {
-    const { identity, credits } = redeemPoints(state.identity);
+    const { device, credits } = redeemPoints(state.device);
     if (!credits) {
       announce('No points to move yet.');
       return;
     }
-    state.identity = identity;
+    state.device = device;
     save();
     const key = walletKey(USER_ID);
     const saved = readJson(key);
     const wallet = isWallet(saved) ? saved : sampleWallet(Date.now());
     writeJson(key, addPoints(wallet, credits, Date.now()));
     setText(byId('redeem-note'), `${credits} points are on their way. In the preview they're in your Wallet already; the real batch arrives within a day.`);
-    renderMask();
+    renderTally();
   });
 }
 
@@ -127,12 +121,12 @@ function submitPost() {
       return;
     }
   }
-  const next = addPost(state.feed, state.identity, { text, topic: postTopic, company: byId('post-company').value }, Date.now());
+  const next = addPost(state.feed, state.device, { text, topic: postTopic, company: byId('post-company').value }, Date.now());
   state = { ...state, ...next };
   save();
   byId('compose-form').reset();
   checked = null;
-  announce(`Posted as ${state.identity.handle}. +5 points.`);
+  announce('Posted anonymously. +5 points.');
   render();
 }
 
@@ -144,19 +138,17 @@ function otherLabel(key) {
 }
 
 function render() {
-  renderMask();
+  renderTally();
   renderFilters();
   renderFeed();
 }
 
-function renderMask() {
-  const { identity } = state;
-  setText(byId('mask-handle'), identity.handle);
-  setText(byId('compose-as'), identity.handle);
-  setText(byId('post-as'), identity.handle);
-  setText(byId('mask-posts'), String(identity.posts));
-  setText(byId('mask-points'), String(identity.points));
-  byId('redeem').disabled = identity.points <= 0;
+/** This device's own tally: it is private to this browser and no post carries it. */
+function renderTally() {
+  const { device } = state;
+  setText(byId('tally-posts'), String(device.posts));
+  setText(byId('tally-points'), String(device.points));
+  byId('redeem').disabled = device.points <= 0;
 }
 
 function renderFilters() {
@@ -177,9 +169,10 @@ function renderFeed() {
       ? posts.map((post) =>
           el('li', { class: 'card community-post' },
             el('div', { class: 'community-post-head' },
-              el('span', { class: 'avatar community-avatar', 'aria-hidden': 'true' }, post.handle.split(' ').map((w) => w[0]).join('')),
+              el('span', { class: 'avatar community-avatar', 'aria-hidden': 'true' }, icon('lock')),
               el('div', {},
-                el('p', { class: 'community-post-handle' }, post.handle, post.authorId === state.identity.id ? el('span', { class: 'badge badge-violet' }, 'You') : null),
+                // Every post has the same author line. "You" is worked out on this device only, from its own list.
+                el('p', { class: 'community-post-handle' }, ANONYMOUS, isMine(state.device, post) ? el('span', { class: 'badge badge-violet', title: 'Only you can see this label' }, 'You') : null),
                 el('p', { class: 'field-hint' }, [TOPICS.find((t) => t.id === post.topic)?.label, post.company, postAge(post.createdHour, now)].filter(Boolean).join(' · ')))),
             el('p', { class: 'community-post-text' }, post.text),
             el('p', { class: 'field-hint' }, `${post.upvotes} found this useful`)))

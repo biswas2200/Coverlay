@@ -13,13 +13,21 @@ export const LEVEL_LABELS = { student: 'Student', fresher: 'Fresher', junior: '1
 export const DEFAULT_ANSWERS = { role: '', level: 'junior', style: 'simple', pages: 1 };
 
 export const TEMPLATES = [
-  { id: 'clean', name: 'Clean', blurb: 'One column with plain headings. Reads well in every ATS.', style: 'simple', pages: 1, levels: ['fresher', 'junior', 'senior'] },
-  { id: 'modern', name: 'Modern', blurb: 'An accent colour on the name and headings, still one column.', style: 'modern', pages: 1, levels: ['junior', 'senior'] },
-  { id: 'compact', name: 'Compact', blurb: 'Tighter spacing, so more fits on one page.', style: 'simple', pages: 1, levels: ['student', 'fresher'] },
-  { id: 'academic', name: 'Academic', blurb: 'Serif type and a centred header. Room for two pages.', style: 'academic', pages: 2, levels: ['student', 'senior'] },
+  { id: 'clean', name: 'Clean', blurb: 'One column with plain headings. Reads well in every ATS.', style: 'simple', pages: 1, levels: ['fresher', 'junior', 'senior'], fontSize: 11, margin: 19.1 },
+  { id: 'modern', name: 'Modern', blurb: 'An accent colour on the name and headings, still one column.', style: 'modern', pages: 1, levels: ['junior', 'senior'], fontSize: 11, margin: 19.1 },
+  { id: 'compact', name: 'Compact', blurb: 'Tighter spacing, so more fits on one page.', style: 'simple', pages: 1, levels: ['student', 'fresher'], fontSize: 10, margin: 12.7 },
+  { id: 'academic', name: 'Academic', blurb: 'Serif type and a centred header. Room for two pages.', style: 'academic', pages: 2, levels: ['student', 'senior'], fontSize: 11, margin: 19.1 },
   {
     id: 'classic', name: 'Classic', blurb: 'The LaTeX look: Computer Modern type, small-caps headings, justified text. Download as PDF only.',
-    style: 'classic', pages: 1, levels: ['student', 'fresher', 'junior', 'senior'], pdfOnly: true,
+    style: 'classic', pages: 1, levels: ['student', 'fresher', 'junior', 'senior'], pdfOnly: true, fontSize: 11, margin: 19.1,
+  },
+  {
+    id: 'sidebar', name: 'Sidebar', blurb: 'Two columns: education and skills down the side, summary and experience in the main column. Compact and easy to scan.',
+    style: 'simple', pages: 1, levels: ['student', 'fresher', 'junior'], fontSize: 10.5, margin: 15, columns: 2,
+  },
+  {
+    id: 'executive', name: 'Executive', blurb: 'Serif type, a centred header and two columns, with room for two pages.',
+    style: 'academic', pages: 2, levels: ['senior'], fontSize: 11, margin: 19.1, columns: 2, font: 'serif',
   },
 ];
 
@@ -36,12 +44,12 @@ const SAMPLE_RESUME = {
 };
 
 const SECTION_LABELS = {
-  name: 'Name', contact: 'Contact', summary: 'Summary', experience: 'Experience', education: 'Education', skills: 'Skills',
+  name: 'Name', contact: 'Contact', summary: 'Summary', experience: 'Experience', education: 'Education', skills: 'Skills', custom: 'Custom section',
 };
 
 const FIELD_LABELS = {
   name: 'Name', contact: 'Contact details', summary: 'Summary', role: 'Job title and company', dates: 'Dates',
-  details: 'What you did', degree: 'Degree and institution', skills: 'Skill',
+  details: 'What you did', degree: 'Degree and institution', skills: 'Skill', custom: 'Custom section',
 };
 
 // How a skill is usually written; anything else just gets a capital first letter.
@@ -59,28 +67,199 @@ const MAX_VERSIONS = 50;
 /** What the toolbar can set, and the default for each. Values outside these are ignored. */
 export const FORMAT_OPTIONS = {
   font: ['sans', 'serif', 'classic'],
-  size: ['s', 'm', 'l'],
   spacing: ['tight', 'normal', 'airy'],
   align: ['left', 'center'],
   bullets: [false, true],
   style: ['formal', 'concise', 'friendly', 'beginner'],
+  columns: [1, 2],
+  page: ['a4', 'letter'],
+  unit: ['cm', 'in'],
+  rules: [false, true],
 };
 
-export const DEFAULT_FORMAT = { font: 'sans', size: 'm', spacing: 'normal', align: 'left', bullets: false, style: 'formal' };
+/** The text size in points: set with the A- / A+ buttons, 8 to 14 in half steps. `fit` is the smallest Lay AI goes. */
+export const FONT_SIZE = { min: 8, max: 14, step: 0.5, fit: 9.5, default: 11 };
+
+/** The page margins, one per side, in millimetres, like Word's Page Setup. */
+export const MARGIN_KEYS = ['marginTop', 'marginBottom', 'marginLeft', 'marginRight'];
+export const MARGIN_LIMITS_MM = { min: 5, max: 50, step: 0.5 };
+
+/** Ready-made margins: Narrow is Word's 0.5 in, Wide is 1 in. */
+export const MARGIN_PRESETS = {
+  narrow: { marginTop: 12.7, marginBottom: 12.7, marginLeft: 12.7, marginRight: 12.7 },
+  moderate: { marginTop: 12.7, marginBottom: 12.7, marginLeft: 19.1, marginRight: 19.1 },
+  normal: { marginTop: 19.1, marginBottom: 19.1, marginLeft: 19.1, marginRight: 19.1 },
+  wide: { marginTop: 25.4, marginBottom: 25.4, marginLeft: 25.4, marginRight: 25.4 },
+};
+
+/** The built-in sections that can be hidden (their text is kept): what is left is the header and the experience. */
+export const HIDEABLE_SECTIONS = ['summary', 'education', 'skills'];
+
+export const DEFAULT_FORMAT = {
+  font: 'sans', fontSize: FONT_SIZE.default, spacing: 'normal', align: 'left', bullets: false, style: 'formal',
+  columns: 1, page: 'a4', unit: 'cm', rules: false, hidden: [], ...MARGIN_PRESETS.normal,
+};
 
 export const WRITING_STYLE_LABELS = { formal: 'Formal', concise: 'Concise', friendly: 'Friendly', beginner: 'Beginner' };
 
+/** A font size kept to the allowed range and to half points. */
+export function clampFontSize(size) {
+  const rounded = Math.round(Number(size) / FONT_SIZE.step) * FONT_SIZE.step;
+  return Math.min(FONT_SIZE.max, Math.max(FONT_SIZE.min, rounded));
+}
+
 /** A saved format with every unknown or missing value replaced by its default. */
 export function normalizeFormat(format) {
-  const next = { ...DEFAULT_FORMAT };
+  const next = { ...DEFAULT_FORMAT, hidden: [] };
   if (format && typeof format === 'object') {
+    if (Array.isArray(format.hidden)) {
+      next.hidden = HIDEABLE_SECTIONS.filter((name) => format.hidden.includes(name));
+    }
     for (const [key, allowed] of Object.entries(FORMAT_OPTIONS)) {
       if (allowed.includes(format[key])) {
         next[key] = format[key];
       }
     }
+    if (format.fontSize !== null && format.fontSize !== '' && Number.isFinite(Number(format.fontSize))) {
+      next.fontSize = clampFontSize(format.fontSize);
+    }
+    // An older save kept one named margin for all sides.
+    const legacy = { narrow: 'narrow', normal: 'normal', wide: 'wide' }[format.margins];
+    if (legacy) {
+      Object.assign(next, MARGIN_PRESETS[legacy]);
+    }
+    for (const key of MARGIN_KEYS) {
+      if (format[key] !== null && format[key] !== '' && Number.isFinite(Number(format[key]))) {
+        next[key] = clampMargin(format[key]);
+      }
+    }
   }
   return next;
+}
+
+/** A margin kept to the allowed range, in tenths of a millimetre. */
+export function clampMargin(mm) {
+  return Math.min(MARGIN_LIMITS_MM.max, Math.max(MARGIN_LIMITS_MM.min, Math.round(Number(mm) * 10) / 10));
+}
+
+/** The name of the preset these margins match, or 'custom'. */
+export function marginPreset(format) {
+  const found = Object.entries(MARGIN_PRESETS).find(([, preset]) => MARGIN_KEYS.every((key) => Math.abs(preset[key] - format[key]) < 0.05));
+  return found ? found[0] : 'custom';
+}
+
+/** A length in millimetres in the unit the person works in: centimetres or inches. */
+export const fromMm = (mm, unit) => (unit === 'in' ? mm / 25.4 : mm / 10);
+export const toMm = (value, unit) => Math.round((unit === 'in' ? value * 25.4 : value * 10) * 100) / 100;
+
+/** "1.9 cm" or "0.75 in". */
+export function formatLength(mm, unit) {
+  const value = fromMm(mm, unit);
+  return `${Number(value.toFixed(unit === 'in' ? 2 : 1))} ${unit}`;
+}
+
+// ---------- the page: size, margins, and fitting the resume into it ----------
+
+/** Real paper sizes, in millimetres: the preview is drawn at this size so the page count is true. */
+export const PAGE_SIZES = {
+  a4: { name: 'A4', widthMm: 210, heightMm: 297 },
+  letter: { name: 'Letter', widthMm: 215.9, heightMm: 279.4 },
+};
+
+/** CSS pixels (96 per inch) for a length in millimetres. */
+export const mmToPx = (mm) => (mm * 96) / 25.4;
+
+export function pageHeightPx(page) {
+  return mmToPx((PAGE_SIZES[page] ?? PAGE_SIZES.a4).heightMm);
+}
+
+/** How full the pages are: `used` is in pages (1.14 = one page and a bit), `over` is how far past `limit` pages. */
+export function pageUsage(contentHeightPx, page, limit) {
+  const used = contentHeightPx / pageHeightPx(page);
+  return { used, over: Math.max(0, used / limit - 1), fits: used <= limit + 0.003 };
+}
+
+const SPACING_TIGHTER = ['airy', 'normal', 'tight'];
+/** The widest any margin may stay, tried in turn: 1 in, 0.75 in, 0.5 in. Smaller margins are left alone. */
+const MARGIN_STEPS_MM = [25.4, 19.1, 12.7];
+
+/**
+ * Makes the resume fit `pages` pages by changing only how it is set, never what it says:
+ * line spacing first, then the margins, then the font size, in the gentlest order, and it
+ * stops as soon as it fits. It never makes anything bigger, never goes below the smallest
+ * readable size, and never deletes text. `measure(format)` returns the content height in
+ * pixels for a format (the page measures the real editor; the tests pass a stand-in).
+ * Returns `{ format, fits, changes, used, over }`: `changes` says in words what was tightened,
+ * and when it still does not fit, `over` is how much too long it is at the tightest setting.
+ */
+export function fitToPages(format, pages, measure) {
+  const start = normalizeFormat(format);
+  let current = start;
+  const check = () => pageUsage(measure(current), current.page, pages);
+  let usage = check();
+  const apply = (change) => {
+    current = normalizeFormat({ ...current, ...change });
+    usage = check();
+    return usage.fits;
+  };
+  const finish = () => ({ format: current, fits: usage.fits, changes: describeFitChanges(start, current), used: usage.used, over: usage.over });
+  if (usage.fits) {
+    return finish();
+  }
+  for (const spacing of SPACING_TIGHTER.slice(SPACING_TIGHTER.indexOf(current.spacing) + 1)) {
+    if (apply({ spacing })) {
+      return finish();
+    }
+  }
+  for (const limit of MARGIN_STEPS_MM) {
+    if (MARGIN_KEYS.some((key) => current[key] > limit + 0.05)) {
+      if (apply(Object.fromEntries(MARGIN_KEYS.map((key) => [key, Math.min(current[key], limit)])))) {
+        return finish();
+      }
+    }
+  }
+  while (current.fontSize - FONT_SIZE.step >= FONT_SIZE.fit - 1e-9) {
+    if (apply({ fontSize: current.fontSize - FONT_SIZE.step })) {
+      return finish();
+    }
+  }
+  return finish();
+}
+
+/** "tightened the line spacing, narrowed the margins to 12.7 mm, and reduced the text from 11 to 10 pt". */
+export function describeFitChanges(before, after) {
+  const changes = [];
+  if (before.spacing !== after.spacing) {
+    changes.push('tightened the line spacing');
+  }
+  const widest = (format) => Math.max(...MARGIN_KEYS.map((key) => format[key]));
+  if (widest(after) < widest(before) - 0.05) {
+    changes.push(`narrowed the margins to ${Number(widest(after).toFixed(1))} mm`);
+  }
+  if (before.fontSize !== after.fontSize) {
+    changes.push(`reduced the text from ${before.fontSize} to ${after.fontSize} pt`);
+  }
+  return changes;
+}
+
+/**
+ * Is this chat message a request to fit the resume on a page ("fit it on one page", "squeeze
+ * everything into 2 pages")? Returns `{ pages }` (1, 2, or null for "the page limit already
+ * set") or null. "Make it fit a DevOps role" is not one.
+ */
+export function fitRequest(prompt) {
+  const text = String(prompt ?? '').toLowerCase();
+  const verb = /\b(fit|fits|fitting|squeeze|shrink|compress|condense|cram|tighten)\b/.test(text);
+  const page = /\bpages?\b/.test(text);
+  const roleTalk = /\b(role|job|position|posting|jd|company)\b/.test(text);
+  const wholeResume = /\b(everything|all|contents?|whole|entire)\b/.test(text) && /\bresume\b|\bcv\b|\bcontents?\b|\beverything\b/.test(text);
+  if (!((page && (verb || /\b(one|1|single|two|2)[ -]pages?\b/.test(text))) || (verb && wholeResume && !roleTalk))) {
+    return null;
+  }
+  if (/\b(two|2)[ -]?pages?\b/.test(text)) {
+    return { pages: 2 };
+  }
+  return /\b(one|1|single)[ -]?pages?\b/.test(text) ? { pages: 1 } : { pages: null };
 }
 
 // ---------- rich text: bold, italic, underline and links ----------
@@ -222,6 +401,38 @@ export function sampleResume() {
   return structuredClone(SAMPLE_RESUME);
 }
 
+/** The text in some editor blocks, for the word count. */
+function blocksPlainText(nodes) {
+  const parts = [];
+  const walk = (node) => {
+    if (node.text) {
+      parts.push(node.text);
+    }
+    (node.content ?? []).forEach(walk);
+  };
+  (nodes ?? []).forEach(walk);
+  return parts.join(' ');
+}
+
+/** Word and character counts of everything on the resume, formatting ignored (for the status bar). */
+export function resumeStats(resume) {
+  const parts = [resume.name, resume.contact, resume.summary, ...resume.skills];
+  for (const section of resume.extra ?? []) {
+    parts.push(section.title, blocksPlainText(section.body));
+  }
+  for (const job of resume.experience) {
+    parts.push(job.role, job.dates, job.details);
+  }
+  for (const school of resume.education) {
+    parts.push(school.degree, school.dates);
+  }
+  const text = parts.map((part) => plainText(part)).filter(Boolean);
+  return {
+    words: text.join(' ').split(/\s+/).filter(Boolean).length,
+    characters: text.join(' ').length,
+  };
+}
+
 /** Collapses runs of whitespace (typed newlines included) and trims. */
 export function normalizeText(text) {
   return String(text ?? '').replace(/\s+/g, ' ').trim();
@@ -307,11 +518,16 @@ export function diffResume(before, after) {
   const fields = textPaths(after).filter((path) => getAt(before, path) !== getAt(after, path));
   const had = new Set(before.skills.map((s) => s.toLowerCase()));
   const has = new Set(after.skills.map((s) => s.toLowerCase()));
-  return {
+  const change = {
     fields,
     addedSkills: after.skills.filter((s) => !had.has(s.toLowerCase())),
     removedSkills: before.skills.filter((s) => !has.has(s.toLowerCase())),
   };
+  // Custom sections (titles, text, bullets, tables) are free-form, so they are compared as a whole.
+  if (JSON.stringify(before.extra ?? []) !== JSON.stringify(after.extra ?? [])) {
+    change.extraChanged = true;
+  }
+  return change;
 }
 
 // ---------- version history ----------
@@ -377,11 +593,11 @@ export function answersSummary(answers) {
 }
 
 /** The three templates that fit the answers best, best first (ties keep the list order). */
-export function suggestTemplates(answers) {
+export function suggestTemplates(answers, limit = 3) {
   const score = (t) => (t.style === answers.style ? 3 : 0) + (t.pages === answers.pages ? 2 : 0) + (t.levels.includes(answers.level) ? 1 : 0);
   return TEMPLATES.map((template, index) => ({ template, index, score: score(template) }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, 3)
+    .slice(0, limit)
     .map(({ template }) => template);
 }
 
