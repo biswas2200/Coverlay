@@ -4,7 +4,7 @@ import { byId, cloneTemplate, el, field, hide, renderChips, setBusy, setText, sh
 import { requireAuth } from '../core/session.js';
 import { validateResumeFile } from '../core/validation.js';
 import { hydrateIcons } from '../components/icons.js';
-import { renderShell, renderVersions } from '../components/shell.js';
+import { renderShell } from '../components/shell.js';
 
 // The resume analyzer: upload a PDF/DOCX as a new resume version (FR-1.5), preview it, and show
 // what was read from it. The left column is the resume as we read it (or the original PDF, for
@@ -138,7 +138,6 @@ async function openVersion(resumeId) {
   }
   shownId = resumeId;
   byId('version-select').value = resumeId;
-  renderVersions(versions, resumeId);
   try {
     history.replaceState(null, '', `?resume=${encodeURIComponent(resumeId)}`);
   } catch {

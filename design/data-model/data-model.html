@@ -759,13 +759,13 @@ html { scroll-behavior: smooth; }
         <div class="pair">
           <div class="hotel">
             <p class="label">The hotel</p>
-            <p>A guest writes a mask number on a card, seals it in a carbon-paper envelope and hands it to the desk. The desk checks the guest has a room and stamps the envelope; the stamp goes through onto the card, but the desk never sees the card.</p>
-            <p>Notes on the lounge board carry only the mask card. The stamp proves "a real guest wrote this", and nobody, not the desk, the manager or the building's owner, can tell which room. One stamp a month per guest; coupons earned by notes are stamped the same blind way.</p>
+            <p>A guest writes a note, seals a blank card in a carbon-paper envelope and hands it to the desk. The desk checks the guest has a room and stamps the envelope; the stamp goes through onto the card, but the desk never sees the card. The guest can get a few such envelopes stamped, and each is good for one note.</p>
+            <p>Every note on the lounge board is signed just "Anonymous" and carries only its own stamped card. The stamp proves "a real guest wrote this", and nobody, not the desk, the manager or the building's owner, can tell which room, or that two notes came from the same guest. Coupons earned by notes are stamped the same blind way.</p>
           </div>
           <div class="tech">
             <p class="label">In Coverlay</p>
-            <p>The phone or browser makes a key pair; the private key never leaves the device and <code>author_id</code> is the hash of the public key. Logged in, the device sends the public key <em>blinded</em>; Coverlay signs it without seeing it (RSA blind signatures, RFC 9474), once per account per month, and records only "this account got November's pass".</p>
-            <p>The device then posts without the login token, with the signature and a signature on each post. Points build up on <code>author_id</code> and turn into blind-signed tokens of one fixed value, redeemed by the account later in small random batches. If the code, the database, the signing key and Google's access all leaked together, a post still couldn't be traced: the maths prevents it.</p>
+            <p>Every post is shown as "Anonymous": there is no handle, no pseudonym and no per-person identity, so posts cannot be linked to an account <em>or to each other</em>. For each post the phone or browser makes a fresh one-time pass and, logged in, sends it <em>blinded</em>; Coverlay signs it without seeing it (RSA blind signatures, RFC 9474) and records only how many passes this account has been given, within an allowance that is Coverlay's own policy.</p>
+            <p>The device then posts without the login token, with the signed pass; Coverlay checks the signature and marks the pass spent, learning nothing about who sent it. Each accepted post lets the device collect one blind-signed reward token of a fixed value, which the account redeems later in small random batches. The device keeps its own list of its posts and a secret per post, so it can show "You" on its own screen and delete its own post; nothing on the server can find them. If the code, the database, the signing key and Google's access all leaked together, a post still couldn't be traced: the maths prevents it.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -774,15 +774,15 @@ html { scroll-behavior: smooth; }
             <tbody>
               <tr><td>Cloudflare privacypass-ts</td><td>Blind RSA tokens in the browser</td><td>Apache-2.0</td></tr>
               <tr><td>blindrsa-java</td><td>Signing and verifying on the backend</td><td>One maintainer: must pass the RFC 9474 test vectors first</td></tr>
-              <tr><td>Semaphore v4</td><td>Zero-knowledge "I'm a verified member", one identity per month</td><td>Audited; heavier, a later option</td></tr>
+              <tr><td>Semaphore v4</td><td>Zero-knowledge "I'm a verified member", with no identity at all</td><td>Audited; heavier, a later option</td></tr>
               <tr><td>Oblivious HTTP (RFC 9458) relay</td><td>Hides the user's IP from us and Google</td><td>Needs a relay run by another company; later</td></tr>
             </tbody>
           </table>
         </div>
         <div class="keeps">
-          <div class="keep"><h3>What it costs</h3><p>We can ban a mask, not the account behind it (it gets a new mask next month). We can't answer who wrote a post, even to a court. A lost device loses its mask unless the user saved its backup code.</p></div>
+          <div class="keep"><h3>What it costs</h3><p>There are no people to ban and no reputation to build: all posts sit under one "Anonymous" umbrella. Abuse is handled by removing posts one at a time and by how many passes an account gets, which is Coverlay's internal policy. We can't answer who wrote a post, even to a court. A lost device can no longer delete its old posts.</p></div>
           <div class="keep"><h3>What it can't hide</h3><p>Same address and timing: posting carries no login token, our logs keep no IP for community routes, rewards arrive at random times. The text itself: the check before posting looks for the writer's name, college and contacts.</p></div>
-          <div class="keep"><h3>Schema</h3><p><code>community.author_identities</code>, <code>posts</code> (hour only), <code>author_points</code>, <code>spent_tokens</code>; <code>post_pass_issuance</code> on the account side. No column or key joins the two.</p></div>
+          <div class="keep"><h3>Schema</h3><p><code>community.posts</code> (topic, company, text, hour, useful count, a hash of the post's delete secret), <code>spent_passes</code>, <code>spent_tokens</code>; <code>post_pass_issuance</code> (a count per account and period) on the account side. No column or key joins the two, and none joins one post to another.</p></div>
         </div>
       </section>
 
@@ -918,7 +918,7 @@ html { scroll-behavior: smooth; }
               <div class="tbl"><span class="n">analytics.<wbr>prompt_stats <span class="tag new">new</span></span><span class="c">day, intent, domain, count</span></div>
               <div class="tbl"><span class="n">analytics.<wbr>ai_samples <span class="tag new">new</span></span><span class="c">resume features and outcomes, no personal details</span></div>
               <div class="tbl"><span class="n">analytics.<wbr>search_<wbr>suggestions <span class="tag new">new</span></span><span class="c">queries 20+ people searched</span></div>
-              <div class="tbl"><span class="n">community.<wbr>posts <span class="tag new">new</span></span><span class="c">under a mask; no key to any account</span><span class="hotel-word">notes on the lounge board</span></div>
+              <div class="tbl"><span class="n">community.<wbr>posts <span class="tag new">new</span></span><span class="c">every post just "Anonymous"; no key to any account or to another post</span><span class="hotel-word">notes on the lounge board</span></div>
               <div class="tbl"><span class="n">deleted_accounts <span class="tag new">new</span></span><span class="c">subject_id, date, reason</span><span class="hotel-word">check-out ledger</span></div>
             </div>
           </div>
@@ -1058,7 +1058,7 @@ html { scroll-behavior: smooth; }
               <tr><td>Personal details in prompts and chats</td><td>Placeholders that point to the account; null after deletion</td><td>8</td></tr>
               <tr><td>Deletion failures</td><td>A durable job retried until done; "Deleted" only at the end</td><td>9</td></tr>
               <tr><td>Backups and copies</td><td>No copy may keep deleted data; restores replay the purge list</td><td>9</td></tr>
-              <tr><td>Who wrote a post</td><td>One-way: device key plus blind signature; nobody can trace it</td><td>10</td></tr>
+              <tr><td>Who wrote a post</td><td>One-way: a one-time blind-signed pass per post; nobody can trace a post to a person or to another post</td><td>10</td></tr>
               <tr><td>One account per person</td><td>One per verified phone number, stored encrypted</td><td>3, map</td></tr>
               <tr><td>AI models</td><td>3.5 Flash-Lite for reading and chat, 3.8 Flash for documents</td><td>11</td></tr>
               <tr><td>Pricing</td><td>Pay as you go; ₹60 to ₹2,000; 1 credit = ₹0.10; fee <span class="prop">10%</span></td><td>11</td></tr>

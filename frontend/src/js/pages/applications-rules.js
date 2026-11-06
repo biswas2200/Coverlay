@@ -178,3 +178,166 @@ export function sampleApplications(now) {
 export function isApplicationList(value) {
   return Array.isArray(value) && value.every((a) => a && typeof a.id === 'string' && STATUSES.some((s) => s.value === a.status));
 }
+
+// ---------- Lay AI on the board (preview: answers are worked out from the board, no AI call) ----------
+
+const PLURAL = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// What a reminder asks of the person, as a phrase that fits inside one of Lay AI's sentences.
+const TASK = {
+  apply: 'send the application',
+  follow_up: "follow up if you haven't heard back",
+  prepare: 'get ready for the interview',
+};
+const taskOf = (reminder) => TASK[reminder.kind] ?? reminder.text.toLowerCase();
+
+// Words that say what the person wants rather than which application they mean.
+const NOISE = new Set([
+  'the', 'for', 'and', 'what', 'whats', 'how', 'is', 'my', 'at', 'of', 'to', 'on', 'in', 'with', 'about', 'status', 'update',
+  'application', 'applications', 'where', 'move', 'mark', 'set', 'put', 'job', 'role', 'position', 'got', 'get', 'offer',
+  'offered', 'interview', 'applied', 'rejected', 'reject', 'preparing', 'from', 'by', 'me', 'please', 'show', 'tell', 'did',
+  'do', 'have', 'has', 'been', 'was', 'are', 'it', 'now', 'next', 'follow', 'up', 'prepare', 'prep', 'into', 'column', 'board',
+  'sent', 'submitted', 'received', 'and', 'any', 'news', 'back', 'heard', 'turned', 'down', 'selected', 'change', 'shift',
+]);
+
+const words = (text) => String(text ?? '').toLowerCase().match(/[a-z0-9+#.]{2,}/g)?.map((w) => w.replace(/^\.+|\.+$/g, '')).filter(Boolean) ?? [];
+
+/**
+ * The application a message is about, or null: the company's name counts most, then the words of
+ * the role. "status of swiggy" and "the SDE II one" both find a card; "what's due" finds none.
+ */
+export function findApplication(apps, text) {
+  const asked = words(text).filter((word) => !NOISE.has(word));
+  if (!asked.length) {
+    return null;
+  }
+  let best = null;
+  let bestScore = 0;
+  for (const app of apps) {
+    const company = new Set(words(app.company));
+    const role = new Set(words(app.role));
+    const score = asked.reduce((sum, word) => sum + (company.has(word) ? 3 : 0) + (role.has(word) ? 1 : 0), 0);
+    if (score > bestScore || (score === bestScore && score > 0 && app.updatedAt > best.updatedAt)) {
+      best = app;
+      bestScore = score;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+/** The stage a message talks about ("to interview", "I got an offer", "rejected me"), or null. */
+export function stageFromText(text) {
+  const t = String(text ?? '').toLowerCase();
+  if (/\boffer(?:ed|s)?\b|\bgot the job\b|\bselected\b/.test(t)) {
+    return 'OFFER';
+  }
+  if (/\breject(?:ed|ion)?\b|\bturned me down\b|\bdidn'?t get\b/.test(t)) {
+    return 'REJECTED';
+  }
+  if (/\binterview(?:s|ing)?\b/.test(t)) {
+    return 'INTERVIEW';
+  }
+  if (/\bapplied\b|\bsent the application\b|\bsubmitted\b/.test(t)) {
+    return 'APPLIED';
+  }
+  if (/\bpreparing\b|\bback to preparing\b/.test(t)) {
+    return 'PREPARING';
+  }
+  return null;
+}
+
+/** "You have 5 applications: 1 preparing, 2 applied, …" and the one that needs the person most. */
+export function boardSummary(apps, now) {
+  if (!apps.length) {
+    return 'Your board is empty. Use Add an application to start.';
+  }
+  const counts = boardColumns(apps).map((c) => `${c.items.length} ${c.label.toLowerCase()}`).join(', ');
+  const [first] = dueReminders(apps, now, 2);
+  const urgent = first
+    ? ` The one that needs you most is ${first.app.role} at ${first.app.company} (${taskOf(first.reminder)}, ${first.overdue ? 'due ' : ''}${dayLabel(first.reminder.dueAt, now)}).`
+    : ' Nothing is due in the next two days.';
+  return `You have ${PLURAL(apps.length, 'application')}: ${counts}.${urgent}`;
+}
+
+function describe(app, now) {
+  const since = app.appliedAt ? `you applied ${dayLabel(app.appliedAt, now)}` : `you added it ${dayLabel(app.createdAt, now)}`;
+  const resume = app.resumeVersion ? ` with resume v${app.resumeVersion}` : '';
+  const reminder = app.reminder
+    ? ` Next: ${taskOf(app.reminder)}, ${app.reminder.dueAt < now ? 'due ' : ''}${dayLabel(app.reminder.dueAt, now)}.`
+    : '';
+  return `${app.role} at ${app.company} is in ${statusLabel(app.status)}: ${since} on ${app.portal}${resume}.${reminder}`;
+}
+
+/**
+ * Lay AI's answer to a message on the Applications page, worked out from the board:
+ * `{ reply, proposal, focus }`. `proposal` is a move the person can confirm (`{ id, status }`):
+ * Lay AI never moves a card by itself. `focus` is the card the answer is about, so the page can
+ * bring it into view. Replies are short and plain, like the Lay AI style guide asks.
+ */
+export function layApplicationsReply(text, apps, now) {
+  const message = String(text ?? '').trim();
+  const lower = message.toLowerCase();
+  const app = findApplication(apps, message);
+  const stage = stageFromText(message);
+
+  const movesCard = /\b(?:move|mark|set|put|shift|change)\b/.test(lower)
+    || /\b(?:got|received|have|had)\b.*\b(?:offer|interview)\b/.test(lower)
+    || /\b(?:rejected me|turned me down|i applied|i have applied|i've applied|i submitted)\b/.test(lower);
+  if (stage && movesCard) {
+    if (!app) {
+      return { reply: `Which application? Say the company, like "move Swiggy to ${statusLabel(stage)}".`, proposal: null, focus: null };
+    }
+    if (app.status === stage) {
+      return { reply: `${app.role} at ${app.company} is already in ${statusLabel(stage)}.`, proposal: null, focus: app.id };
+    }
+    return {
+      reply: `Move ${app.role} at ${app.company} from ${statusLabel(app.status)} to ${statusLabel(stage)}? I only move it when you say yes.`,
+      proposal: { id: app.id, status: stage },
+      focus: app.id,
+    };
+  }
+
+  if (/\b(?:due|today|reminders?|what should i do|what next|what now|to do|todo)\b/.test(lower) && !app) {
+    const due = dueReminders(apps, now, 2);
+    if (!due.length) {
+      return { reply: 'Nothing is due in the next two days.', proposal: null, focus: null };
+    }
+    const lines = due.slice(0, 3).map(({ app: a, reminder, overdue }) =>
+      `${a.role} at ${a.company}: ${taskOf(reminder)} (${overdue ? 'due ' : ''}${dayLabel(reminder.dueAt, now)})`);
+    return { reply: `${due.length === 1 ? 'One thing needs' : `${PLURAL(due.length, 'thing')} need`} you. ${lines.join('. ')}.`, proposal: null, focus: due[0].app.id };
+  }
+
+  if (/\b(?:follow ?up|hasn'?t replied|haven'?t heard|no reply|not replied|silent|waiting)\b/.test(lower) && !app) {
+    const waiting = apps.filter((a) => a.status === 'APPLIED' && a.appliedAt && now - a.appliedAt >= CHECK_IN_AFTER_DAYS * DAY_MS)
+      .sort((a, b) => a.appliedAt - b.appliedAt);
+    if (!waiting.length) {
+      return { reply: 'Every application you sent is less than a week old, so there is nothing to chase yet.', proposal: null, focus: null };
+    }
+    const names = waiting.map((a) => `${a.role} at ${a.company} (${dayLabel(a.appliedAt, now)})`);
+    return { reply: `It has been a week or more with no news from ${names.join(' and ')}. A short, polite follow-up is the usual next step.`, proposal: null, focus: waiting[0].id };
+  }
+
+  if (/\b(?:summary|summari[sz]e|overview|how many|how am i doing|board)\b/.test(lower) && !app) {
+    return { reply: boardSummary(apps, now), proposal: null, focus: null };
+  }
+
+  if (/\b(?:prepare|prep|ready for)\b/.test(lower) && app) {
+    const reply = app.status === 'INTERVIEW'
+      ? `For ${app.role} at ${app.company}: read the job post again, and open resume v${app.resumeVersion ?? '?'} so your answers match what it says.`
+      : `${app.role} at ${app.company} is in ${statusLabel(app.status)}. Interview preparation starts when it moves to Interview.`;
+    return { reply, proposal: null, focus: app.id };
+  }
+
+  if (app) {
+    return { reply: describe(app, now), proposal: null, focus: app.id };
+  }
+
+  if (/\b(?:status|update|news|where|how is|how's|about|any word|heard from)\b/.test(lower)) {
+    return { reply: `I can't find that on your board. Say the company, like "status of Swiggy", or use Add an application.`, proposal: null, focus: null };
+  }
+  return {
+    reply: 'I can answer from your board: "What\'s due?", "Summarise my board", "Who hasn\'t replied?", "Status of Swiggy", "Prepare for Zerodha" or "Move Razorpay to Applied".',
+    proposal: null,
+    focus: null,
+  };
+}

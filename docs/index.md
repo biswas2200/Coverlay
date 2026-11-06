@@ -6,6 +6,11 @@ The product is a hosted cloud platform on Google Cloud Platform (GCP) with two t
 
 These docs live under `docs/` and are built with MkDocs (see the last section).
 
+!!! danger "The prototype is the source of truth"
+    The clickable prototype in `frontend/` shows what Coverlay does, and the
+    [Prototype specification](prototype-spec.md) is the **mandatory** contract that the frontend,
+    the backend and the ML service must implement. If it disagrees with any document below, it wins.
+
 !!! note "Changed in November 2026: no tiers, Gemini for every domain"
     The Free / Premium tiers have been removed: every account gets the whole product
     (all 23 domains, five role matches, AI-written suggestions, JD match, every version

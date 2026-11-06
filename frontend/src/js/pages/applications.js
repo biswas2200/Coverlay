@@ -2,6 +2,7 @@ import { byId, cloneTemplate, el, field, setText, show } from '../core/dom.js';
 import { readJson, writeJson } from '../core/local-store.js';
 import { getUser, requireAuth } from '../core/session.js';
 import { hydrateIcons } from '../components/icons.js';
+import { mountLayChat } from '../components/lay-chat.js';
 import { renderShell } from '../components/shell.js';
 import {
   PORTALS,
@@ -11,6 +12,7 @@ import {
   dayLabel,
   dueReminders,
   isApplicationList,
+  layApplicationsReply,
   moveTo,
   needsCheckIn,
   nextStatus,
@@ -21,8 +23,9 @@ import {
   validateApplication,
 } from './applications-rules.js';
 
-// The applications board preview: five columns, a move control on each card, the reminders due
-// soon, the "Did you hear back?" check-in, and what the outcome insight keeps (no names).
+// The applications board preview: five columns, cards that drag between them (or a move control
+// and button on each card, for the keyboard and touch), the reminders due soon, the "Did you
+// hear back?" check-in, what the outcome insight keeps (no names), and Lay AI answering from the board.
 
 const KEY = `coverlay.preview.applications.${getUser()?.id ?? 'guest'}`;
 // The sample analytics id and resume features the outcome record shows (no personal data).
@@ -34,6 +37,8 @@ if (requireAuth()) {
   hydrateIcons();
   renderShell('applications');
   wire();
+  wireDrag();
+  wireLay();
   render();
 }
 
@@ -103,6 +108,110 @@ function move(id, status) {
   const app = apps.find((a) => a.id === id);
   announce(`${app.role} at ${app.company} moved to ${statusLabel(status)}.`);
   render();
+  focusCard(id);
+}
+
+/** Brings a card into view and outlines it for a moment, so the person sees which one a move or an answer is about. */
+function focusCard(id) {
+  const card = byId('board').querySelector(`[data-app="${id}"]`);
+  if (!card) {
+    return;
+  }
+  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  card.scrollIntoView({ block: 'center', inline: 'center', behavior: calm ? 'auto' : 'smooth' });
+  card.classList.remove('is-moved');
+  void card.offsetWidth; // restart the outline if the card was just outlined
+  card.classList.add('is-moved');
+}
+
+/**
+ * Drag a card onto another column to move it there: the same move as the menu and the button, so
+ * dates, reminders and the check-in follow. The columns are redrawn on every change, so the
+ * listeners sit on the board and find the column under the pointer.
+ */
+function wireDrag() {
+  const board = byId('board');
+  let draggedId = null;
+  const clear = () => {
+    draggedId = null;
+    board.classList.remove('is-dragging-card');
+    for (const node of board.querySelectorAll('.is-dragging, .is-over')) {
+      node.classList.remove('is-dragging', 'is-over');
+    }
+  };
+  const columnAt = (event) => event.target.closest?.('.apps-col');
+
+  board.addEventListener('dragstart', (event) => {
+    const card = event.target.closest?.('.apps-card');
+    if (!card) {
+      return;
+    }
+    draggedId = card.dataset.app;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', draggedId);
+    card.classList.add('is-dragging');
+    board.classList.add('is-dragging-card');
+  });
+  board.addEventListener('dragend', clear);
+  board.addEventListener('dragover', (event) => {
+    const column = columnAt(event);
+    if (!draggedId || !column) {
+      return;
+    }
+    event.preventDefault();
+    const dragged = apps.find((a) => a.id === draggedId);
+    const same = dragged?.status === column.dataset.status;
+    event.dataTransfer.dropEffect = same ? 'none' : 'move';
+    for (const other of board.querySelectorAll('.is-over')) {
+      if (other !== column) {
+        other.classList.remove('is-over');
+      }
+    }
+    column.classList.toggle('is-over', !same);
+  });
+  board.addEventListener('dragleave', (event) => {
+    const column = columnAt(event);
+    if (column && !column.contains(event.relatedTarget)) {
+      column.classList.remove('is-over');
+    }
+  });
+  board.addEventListener('drop', (event) => {
+    const column = columnAt(event);
+    if (!draggedId || !column) {
+      return;
+    }
+    event.preventDefault();
+    const id = draggedId;
+    clear();
+    if (apps.find((a) => a.id === id)?.status !== column.dataset.status) {
+      move(id, column.dataset.status);
+    }
+  });
+}
+
+/** Lay AI on this page: answers from the board, and moves a card only when the person says yes. */
+function wireLay() {
+  mountLayChat({
+    sub: 'Preview: answers come from your board',
+    greeting: "Hi, I'm Lay AI. Ask me about your applications: what is due, who has not replied, or how one company is going.",
+    prompts: ["What's due?", "Who hasn't replied?", 'Summarise my board', 'Status of Swiggy', 'Move Razorpay to Applied'],
+    answer(text) {
+      const result = layApplicationsReply(text, apps, Date.now());
+      if (result.focus) {
+        focusCard(result.focus);
+      }
+      const proposal = result.proposal;
+      return {
+        reply: result.reply,
+        actions: proposal
+          ? [
+              { label: 'Move it', primary: true, run: () => { move(proposal.id, proposal.status); return `Done. It is in ${statusLabel(proposal.status)} now.`; } },
+              { label: 'Not now', run: () => 'Fine, I left it where it is.' },
+            ]
+          : [],
+      };
+    },
+  });
 }
 
 function render() {
@@ -112,7 +221,7 @@ function render() {
     ...boardColumns(apps).map((column) =>
       el(
         'section',
-        { class: `apps-col apps-col-${column.value.toLowerCase()}`, 'aria-label': column.label },
+        { class: `apps-col apps-col-${column.value.toLowerCase()}`, 'aria-label': column.label, 'data-status': column.value },
         el('h2', { class: 'apps-col-title' }, column.label, el('span', { class: 'count' }, String(column.items.length))),
         column.items.length
           ? el('ul', { class: 'apps-list' }, ...column.items.map((app) => renderCard(app, now)))
@@ -139,6 +248,7 @@ function renderDue(now) {
 function renderCard(app, now) {
   const card = cloneTemplate('app-card');
   card.dataset.app = app.id;
+  card.draggable = true;
   setText(field(card, 'role'), app.role);
   setText(field(card, 'company'), app.company);
   const since = app.appliedAt ? `Applied ${dayLabel(app.appliedAt, now)}` : `Added ${dayLabel(app.createdAt, now)}`;

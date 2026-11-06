@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 
 import {
   DEFAULT_ANSWERS,
+  FONT_SIZE,
+  HIDEABLE_SECTIONS,
+  TEMPLATES,
+  MARGIN_PRESETS,
+  clampMargin,
+  formatLength,
+  fromMm,
+  marginPreset,
+  toMm,
+  clampFontSize,
+  fitRequest,
+  fitToPages,
+  pageHeightPx,
+  pageUsage,
   addVersion,
   answersSummary,
   applyEdit,
@@ -15,6 +29,7 @@ import {
   joinList,
   normalizeText,
   relativeTime,
+  resumeStats,
   restoreVersion,
   sampleLayReply,
   sampleResume,
@@ -311,4 +326,157 @@ test('isSavedState accepts a saved format and rejects a broken one', () => {
   const saved = { step: 'editor', answers: DEFAULT_ANSWERS, fromUpload: false, templateId: 'classic', history, messages: [] };
   assert.equal(isSavedState({ ...saved, format: { font: 'classic' } }), true);
   assert.equal(isSavedState({ ...saved, format: null }), false);
+});
+
+test('resumeStats counts words and characters, ignoring formatting', () => {
+  const resume = { name: 'Jane Doe', contact: 'a@b.co', summary: 'Built <b>fast</b> APIs.', experience: [], education: [], skills: ['Java', 'SQL'] };
+  assert.deepEqual(resumeStats(resume), { words: 8, characters: 'Jane Doe a@b.co Built fast APIs. Java SQL'.length });
+  assert.deepEqual(resumeStats({ ...resume, name: '', contact: '', summary: '', skills: [] }), { words: 0, characters: 0 });
+});
+
+test('the format keeps a font size in range and the new page settings, and drops junk', () => {
+  assert.equal(normalizeFormat({ fontSize: 10.7 }).fontSize, 10.5);
+  assert.equal(normalizeFormat({ fontSize: 99 }).fontSize, FONT_SIZE.max);
+  assert.equal(normalizeFormat({ fontSize: 2 }).fontSize, FONT_SIZE.min);
+  assert.equal(normalizeFormat({ fontSize: 'big' }).fontSize, FONT_SIZE.default);
+  assert.equal(normalizeFormat({ fontSize: '' }).fontSize, FONT_SIZE.default);
+  const set = normalizeFormat({ columns: 2, page: 'letter', unit: 'in', rules: true });
+  assert.deepEqual([set.columns, set.page, set.unit, set.rules], [2, 'letter', 'in', true]);
+  assert.deepEqual([normalizeFormat({ columns: 3 }).columns, normalizeFormat({ page: 'a0' }).page, normalizeFormat({ unit: 'furlong' }).unit], [1, 'a4', 'cm']);
+  assert.equal(clampFontSize(8.2), 8);
+});
+
+// A stand-in for measuring the real editor: taller with bigger text, looser spacing, wider margins.
+const fakeMeasure = (base) => (format) => {
+  const spacing = { tight: 0.9, normal: 1, airy: 1.2 }[format.spacing];
+  const average = (format.marginTop + format.marginBottom + format.marginLeft + format.marginRight) / 4;
+  const margins = 0.88 + ((average - 12.7) / (19.1 - 12.7)) * 0.12; // 12.7 mm -> 0.88, 19.1 mm -> 1
+  return base * (format.fontSize / 11) * spacing * margins;
+};
+
+test('fitToPages leaves a resume that already fits exactly as it is', () => {
+  const result = fitToPages({}, 1, fakeMeasure(pageHeightPx('a4') * 0.8));
+  assert.equal(result.fits, true);
+  assert.deepEqual(result.changes, []);
+  assert.equal(result.format.fontSize, 11);
+});
+
+test('fitToPages tightens spacing first, then margins, then text, and stops once it fits', () => {
+  const page = pageHeightPx('a4');
+  const spacingOnly = fitToPages({}, 1, fakeMeasure(page * 1.05));
+  assert.equal(spacingOnly.fits, true);
+  assert.deepEqual(spacingOnly.changes, ['tightened the line spacing']);
+  assert.equal(spacingOnly.format.fontSize, 11);
+
+  const withMargins = fitToPages({}, 1, fakeMeasure(page * 1.2));
+  assert.equal(withMargins.fits, true);
+  assert.ok(withMargins.format.marginTop < 19.1 && withMargins.format.marginLeft < 19.1, 'margins were narrowed');
+  assert.equal(withMargins.format.fontSize, 11);
+
+  const withText = fitToPages({}, 1, fakeMeasure(page * 1.35));
+  assert.equal(withText.fits, true);
+  assert.ok(withText.format.fontSize < 11 && withText.format.fontSize >= FONT_SIZE.fit);
+  assert.match(withText.changes.join(' '), /reduced the text from 11 to/);
+});
+
+test('fitToPages never goes below the smallest readable size and says how far over it still is', () => {
+  const result = fitToPages({}, 1, fakeMeasure(pageHeightPx('a4') * 2));
+  assert.equal(result.fits, false);
+  assert.equal(result.format.fontSize, FONT_SIZE.fit);
+  assert.deepEqual([result.format.marginTop, result.format.marginBottom, result.format.marginLeft, result.format.marginRight], [12.7, 12.7, 12.7, 12.7]);
+  assert.equal(result.format.spacing, 'tight');
+  assert.ok(result.over > 0.3, `over ${result.over}`);
+});
+
+test('fitToPages never makes anything bigger, and a two-page limit gives twice the room', () => {
+  const small = fitToPages({ fontSize: 9.5, spacing: 'tight', ...MARGIN_PRESETS.narrow }, 1, fakeMeasure(pageHeightPx('a4') * 1.5));
+  assert.equal(small.fits, false);
+  assert.equal(small.format.fontSize, 9.5);
+  const two = fitToPages({}, 2, fakeMeasure(pageHeightPx('a4') * 1.5));
+  assert.equal(two.fits, true);
+  assert.deepEqual(two.changes, []);
+});
+
+test('fitToPages stops measuring after a handful of tries, whatever the content', () => {
+  let calls = 0;
+  fitToPages({ spacing: 'airy', ...MARGIN_PRESETS.wide, fontSize: 14 }, 1, (format) => { calls += 1; return fakeMeasure(1e9)(format); });
+  assert.ok(calls <= 20, `${calls} measurements`);
+});
+
+test('pageUsage reports pages used and how far over the limit', () => {
+  const page = pageHeightPx('letter');
+  assert.deepEqual(pageUsage(page * 0.5, 'letter', 1), { used: 0.5, over: 0, fits: true });
+  const over = pageUsage(page * 1.25, 'letter', 1);
+  assert.equal(over.fits, false);
+  assert.ok(Math.abs(over.over - 0.25) < 1e-9);
+  assert.equal(pageUsage(page * 1.25, 'letter', 2).fits, true);
+});
+
+test('fitRequest spots "fit it on a page" but not "fit a role"', () => {
+  assert.deepEqual(fitRequest('Fit my resume on one page'), { pages: 1 });
+  assert.deepEqual(fitRequest('make it fit on 1 page please'), { pages: 1 });
+  assert.deepEqual(fitRequest('squeeze everything into two pages'), { pages: 2 });
+  assert.deepEqual(fitRequest('fit it to the page limit'), { pages: null });
+  assert.deepEqual(fitRequest('fit all the contents in the resume'), { pages: null });
+  assert.equal(fitRequest('Make it fit a DevOps role'), null);
+  assert.equal(fitRequest('make my resume fit a senior backend job'), null);
+  assert.equal(fitRequest('Add Docker to my skills'), null);
+  assert.equal(fitRequest('Shorten my summary'), null);
+  assert.equal(fitRequest(''), null);
+});
+
+test('margins are four separate values, kept in range, and an old single margin still loads', () => {
+  const f = normalizeFormat({ marginTop: 10, marginBottom: 12.34, marginLeft: 99, marginRight: 1 });
+  assert.deepEqual([f.marginTop, f.marginBottom, f.marginLeft, f.marginRight], [10, 12.3, 50, 5]);
+  assert.deepEqual([normalizeFormat({}).marginTop, normalizeFormat({ marginTop: 'wide' }).marginTop], [19.1, 19.1]);
+  const old = normalizeFormat({ margins: 'narrow' });
+  assert.deepEqual([old.marginTop, old.marginLeft], [12.7, 12.7]);
+  assert.equal(clampMargin(0), 5);
+});
+
+test('a margin set matches a preset, or is custom', () => {
+  assert.equal(marginPreset(normalizeFormat({})), 'normal');
+  assert.equal(marginPreset(normalizeFormat(MARGIN_PRESETS.wide)), 'wide');
+  assert.equal(marginPreset(normalizeFormat(MARGIN_PRESETS.moderate)), 'moderate');
+  assert.equal(marginPreset(normalizeFormat({ ...MARGIN_PRESETS.narrow, marginLeft: 15 })), 'custom');
+});
+
+test('lengths convert between millimetres, centimetres and inches', () => {
+  assert.equal(fromMm(25.4, 'in'), 1);
+  assert.equal(fromMm(25, 'cm'), 2.5);
+  assert.equal(toMm(0.75, 'in'), 19.05);
+  assert.equal(toMm(2, 'cm'), 20);
+  assert.equal(formatLength(19.1, 'cm'), '1.9 cm');
+  assert.equal(formatLength(19.05, 'in'), '0.75 in');
+});
+
+test('fitToPages only narrows margins that are wider than the step, never widens one', () => {
+  const custom = { ...MARGIN_PRESETS.wide, marginLeft: 8, marginRight: 8 };
+  const result = fitToPages(custom, 1, fakeMeasure(pageHeightPx('a4') * 1.1));
+  assert.ok(result.format.marginLeft <= 8 && result.format.marginRight <= 8);
+  assert.ok(result.format.marginTop <= 25.4);
+});
+
+test('hidden sections are kept to the ones that can be hidden, each once', () => {
+  assert.deepEqual(normalizeFormat({}).hidden, []);
+  assert.deepEqual(normalizeFormat({ hidden: ['skills', 'experience', 'skills', 'bogus', 'summary'] }).hidden, ['summary', 'skills']);
+  assert.deepEqual(normalizeFormat({ hidden: 'skills' }).hidden, []);
+  assert.notEqual(normalizeFormat({}).hidden, normalizeFormat({}).hidden, 'each format has its own list');
+  assert.deepEqual(HIDEABLE_SECTIONS, ['summary', 'education', 'skills']);
+});
+
+test('every template says how many columns it has, and the two-column ones are offered', () => {
+  const all = suggestTemplates(DEFAULT_ANSWERS, Infinity);
+  assert.equal(all.length, TEMPLATES.length);
+  assert.deepEqual(all.filter((t) => t.columns === 2).map((t) => t.id).sort(), ['executive', 'sidebar']);
+  assert.ok(all.every((t) => [undefined, 1, 2].includes(t.columns) && t.margin >= 5 && t.fontSize >= 8));
+  assert.equal(suggestTemplates(DEFAULT_ANSWERS).length, 3, 'the default is still three');
+});
+
+test('resumeStats counts the words in custom sections, tables included', () => {
+  const resume = {
+    name: 'A', contact: '', summary: '', experience: [], education: [], skills: [],
+    extra: [{ title: 'Skills', body: [{ type: 'table', content: [{ type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Java and SQL' }] }] }] }] }] }],
+  };
+  assert.equal(resumeStats(resume).words, 1 + 1 + 3);
 });
