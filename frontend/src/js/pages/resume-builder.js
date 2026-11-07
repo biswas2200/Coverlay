@@ -7,6 +7,9 @@ import { guardText, knownValues, privacyNote, resolveText } from './privacy-guar
 import { createResumeEditor } from './resume-editor.js';
 import { docToPlainText, readingNotes, resumeToDoc, tableClass, tableStyle } from './resume-doc.js';
 import { RULER_THICKNESS, createRuler } from './resume-ruler.js';
+import { downloadBytes } from '../core/download.js';
+import { DOCX_MIME } from './docx-writer.js';
+import { buildResumeDocx, resumeDocxName } from './resume-docx.js';
 import {
   DEFAULT_ANSWERS,
   DEFAULT_FORMAT,
@@ -238,7 +241,12 @@ function wire() {
   });
 
   byId('download-pdf').addEventListener('click', () => window.print());
-  byId('download-docx').addEventListener('click', () => show(byId('docx-note')));
+  byId('download-docx').addEventListener('click', () => {
+    const resume = currentResume(state.history);
+    downloadBytes(buildResumeDocx(resume, { format: state.format, templateId: state.templateId }), resumeDocxName(resume), DOCX_MIME);
+    show(byId('docx-note'));
+    announce('Your Word file is downloading.');
+  });
   byId('back-to-editor').addEventListener('click', () => goTo('editor'));
 
   document.addEventListener('keydown', (event) => {

@@ -934,6 +934,29 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .letters-paper.is-gemini { background: #ffffff; }
 .letters-gemini-note { margin-bottom: 12px; }
 .letters-doc .field-hint { margin-top: 10px; }
+/* The draft is the editing surface: one editor inside the paper, with a toolbar above it. */
+.letters-toolbar { --tb-h: 34px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; margin-bottom: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.letters-toolbar-end { margin-left: auto; padding-right: 0; }
+.letters-subject-field { margin-bottom: 12px; }
+.letters-paper:focus-within { outline: 2px solid var(--text); outline-offset: 3px; }
+.letters-paper .letters-doc-editor { display: grid; gap: 14px; min-height: 12em; outline: none; cursor: text; }
+.letters-paper .letters-doc-editor p { margin: 0; }
+.letters-paper a { text-decoration: underline; }
+.letters-paper .preserve-lines { white-space: pre-line; }
+/* Send it from Gmail: connect, choose what to attach, save a draft or send. */
+.letters-mail { display: grid; gap: 14px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
+.letters-mail h3 { font-size: 15px; }
+.letters-mail .field-hint { margin-top: 0; }
+.letters-mail-connect, .letters-mail-ready { display: grid; gap: 12px; justify-items: start; }
+.letters-mail-ready { justify-items: stretch; }
+.letters-mail-account { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13.5px; }
+.letters-attach { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; }
+.letters-attach legend { padding: 0 6px; font-size: 13px; font-weight: 700; }
+.letters-attach-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.letters-attach-row label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.letters-attach-row .select { width: 96px; }
+.letters-mail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.letters-mail-confirm { display: grid; gap: 10px; }
 .letters-lead { margin-bottom: 12px; font-size: 13.5px; }
 
 /* ---------- community (preview) ---------- */

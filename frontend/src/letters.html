@@ -58,11 +58,84 @@
                 <button class="btn btn-ghost btn-sm" id="toggle-gemini" type="button" aria-pressed="false"><i data-icon="eye"></i>What Gemini sees</button>
                 <button class="btn btn-secondary btn-sm" id="copy-draft" type="button">Copy</button>
                 <button class="btn btn-primary btn-sm" id="print-draft" type="button"><i data-icon="file"></i>PDF</button>
+                <button class="btn btn-primary btn-sm" id="docx-draft" type="button"><i data-icon="file"></i>DOCX</button>
               </div>
             </div>
             <p class="alert alert-info letters-gemini-note" id="gemini-note" hidden>This is the draft as Gemini gets and writes it: placeholders, no personal details. Your screen fills them in.</p>
-            <div class="letters-paper" id="letter-paper"></div>
-            <p class="field-hint" id="length-note"></p>
+            <div class="letters-toolbar" id="letter-toolbar" role="toolbar" aria-label="Edit the draft" aria-controls="letter-editor">
+              <div class="rb-tool-group" role="group" aria-label="History">
+                <button class="rb-tool" type="button" data-letter-cmd="undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><i data-icon="undo"></i></button>
+                <button class="rb-tool" type="button" data-letter-cmd="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><i data-icon="redo"></i></button>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Text style">
+                <button class="rb-tool" type="button" data-letter-cmd="bold" aria-pressed="false" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
+                <button class="rb-tool" type="button" data-letter-cmd="italic" aria-pressed="false" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
+                <button class="rb-tool" type="button" data-letter-cmd="underline" aria-pressed="false" aria-label="Underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <button class="rb-tool" type="button" data-letter-cmd="link" aria-label="Add a link" title="Add a link"><i data-icon="link"></i></button>
+              </div>
+              <div class="rb-tool-group letters-toolbar-end">
+                <button class="btn btn-ghost btn-sm" id="letter-reset" type="button" title="Throw away your edits and write the draft again from the template">Start from the template again</button>
+              </div>
+            </div>
+            <form class="rb-linkbar" id="letter-linkbar" hidden>
+              <label for="letter-link-url">Link for the selected text</label>
+              <input class="input" id="letter-link-url" placeholder="linkedin.com/in/your-name or you@email.com" autocomplete="off" />
+              <button class="btn btn-primary btn-sm" type="submit">Add link</button>
+              <button class="btn btn-ghost btn-sm" id="letter-link-cancel" type="button">Cancel</button>
+              <p class="field-hint" id="letter-link-error"></p>
+            </form>
+            <div class="field letters-subject-field" id="subject-field" hidden>
+              <label for="letter-subject">Subject</label>
+              <input class="input" id="letter-subject" maxlength="200" autocomplete="off" />
+            </div>
+            <div class="letters-paper" id="letter-paper">
+              <div id="letter-editor"></div>
+              <div id="letter-gemini" hidden></div>
+            </div>
+            <p class="field-hint"><span id="length-note"></span> · <span id="letter-saved"></span></p>
+
+            <section class="letters-mail" id="mail-panel" aria-labelledby="mail-title" hidden>
+              <h3 id="mail-title">Send it from your Gmail</h3>
+              <p class="field-hint">Coverlay puts this email, your resume and your cover letter into one message in your own Gmail, so there is nothing to download and attach by hand. Only Gmail for now; Outlook and other mail services come later.</p>
+              <div class="letters-mail-connect" id="mail-connect">
+                <button class="btn btn-primary" id="mail-connect-btn" type="button">Connect Gmail</button>
+                <p class="field-hint">Coverlay asks Google for permission to save drafts and to send the messages you choose. It cannot read your inbox, and you can disconnect at any time.</p>
+              </div>
+              <div class="letters-mail-ready" id="mail-ready" hidden>
+                <p class="letters-mail-account"><span id="mail-account"></span><button class="btn btn-ghost btn-sm" id="mail-disconnect" type="button">Disconnect</button></p>
+                <div class="field">
+                  <label for="mail-to">To</label>
+                  <input class="input" id="mail-to" type="email" maxlength="254" autocomplete="off" placeholder="recruiter@company.com" />
+                  <p class="field-hint">Needed to send. A draft can wait for it.</p>
+                </div>
+                <fieldset class="letters-attach">
+                  <legend>Attach</legend>
+                  <div class="letters-attach-row">
+                    <label><input type="checkbox" id="attach-resume" /> <span>Resume</span></label>
+                    <label class="sr-only" for="attach-resume-format">Resume format</label>
+                    <select class="select" id="attach-resume-format"><option value="pdf">PDF</option><option value="docx">DOCX</option></select>
+                  </div>
+                  <div class="letters-attach-row">
+                    <label><input type="checkbox" id="attach-cover" /> <span id="attach-cover-label">Cover letter</span></label>
+                    <label class="sr-only" for="attach-cover-format">Cover letter format</label>
+                    <select class="select" id="attach-cover-format"><option value="pdf">PDF</option><option value="docx">DOCX</option></select>
+                  </div>
+                  <p class="field-hint" id="attach-note"></p>
+                </fieldset>
+                <div class="letters-mail-actions">
+                  <button class="btn btn-primary" id="mail-draft" type="button">Save as Gmail draft</button>
+                  <button class="btn btn-secondary" id="mail-send" type="button">Send with Gmail</button>
+                </div>
+                <div class="alert alert-info letters-mail-confirm" id="mail-confirm" role="alertdialog" aria-labelledby="mail-confirm-text" hidden>
+                  <p id="mail-confirm-text"></p>
+                  <div class="letters-mail-actions">
+                    <button class="btn btn-primary btn-sm" id="mail-send-now" type="button">Send now</button>
+                    <button class="btn btn-ghost btn-sm" id="mail-send-cancel" type="button">Cancel</button>
+                  </div>
+                </div>
+                <p class="field-hint" id="mail-result" role="status"></p>
+              </div>
+            </section>
           </article>
 
           <article class="card letters-suggest" aria-labelledby="suggest-title">

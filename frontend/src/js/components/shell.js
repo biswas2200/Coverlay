@@ -22,7 +22,7 @@ export const NAV_GROUPS = [
     items: [
       { key: 'overview', label: 'Overview', icon: 'home', href: 'dashboard.html#overview' },
       { key: 'resume', label: 'Resume analyzer', icon: 'file', href: 'upload.html' },
-      { key: 'builder', label: 'Resume Builder', icon: 'sparkle', href: 'resume-builder.html', preview: true },
+      { key: 'builder', label: 'Builder', icon: 'sparkle', href: 'resume-builder.html', preview: true },
       { key: 'letters', label: 'Letters & emails', icon: 'mail', href: 'letters.html', preview: true },
       { key: 'matches', label: 'Role matches', icon: 'target', href: 'dashboard.html#matches' },
       { key: 'jd', label: 'JD match', icon: 'briefcase', href: 'dashboard.html#jd' },
