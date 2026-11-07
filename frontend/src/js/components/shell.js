@@ -101,7 +101,7 @@ export function renderShell(active) {
   };
   paintAdmin();
 
-  const signOut = el('button', { class: 'sb-link', type: 'button' }, icon('logout'), 'Sign out');
+  const signOut = el('button', { class: 'sb-link sb-signout', type: 'button' }, icon('logout'), 'Sign out');
   signOut.addEventListener('click', () => {
     clearSession();
     location.href = 'login.html';

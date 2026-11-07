@@ -76,9 +76,10 @@ A resume is one JSON object. Every version of a resume is a complete copy of it.
 - **RB-DATA-02** `name`, every `dates`, and every skill are **plain text**. `contact`, `summary`,
   every `role`, every `details` and every `degree` are **rich text** (RB-DATA-03). Whitespace in
   every field is collapsed to single spaces and trimmed on save.
-- **RB-DATA-03** Rich text is a string using only `<b>`, `<i>`, `<u>` and `<a href="…">`, with `&`,
+- **RB-DATA-03** Rich text is a string using only `<b>`, `<i>`, `<u>`, `<a href="…">` and
+  `<font color="#rrggbb">` (RB-FMT-06), with `&`,
   `<` and `>` in the text escaped as `&amp;`, `&lt;`, `&gt;`. Nothing else is stored. The
-  canonical nesting order is `<a><u><b><i>text</i></b></u></a>`; two spellings of the same
+  canonical nesting order is `<a><font><u><b><i>text</i></b></u></font></a>`; two spellings of the same
   formatting MUST compare equal, and a field the person did not edit MUST keep its exact original
   string.
 - **RB-DATA-04** A link target MUST be `http:`, `https:`, `mailto:` or `tel:`. A bare domain such as
@@ -99,27 +100,45 @@ A resume is one JSON object. Every version of a resume is a complete copy of it.
 |---|---|
 | paragraph | `{type:"paragraph", content:[inline…]}` |
 | bullet list | `{type:"bulletList", content:[{type:"listItem", content:[paragraph]}…]}` |
-| table | `{type:"table", attrs:{borders:"none"\|"rows"\|"light"\|"all"}, content:[tableRow…]}` |
+| table | `{type:"table", attrs:{borders:"all"\|"light"\|"rows", borderWidth, borderStyle:"solid"\|"dashed"\|"dotted", cellPadding, cellGap}, content:[tableRow…]}` (RB-BLOCK-04) |
 | table row | `{type:"tableRow", content:[tableHeader\|tableCell…]}` |
 | table cell | `{type:"tableHeader"\|"tableCell", attrs:{colspan, rowspan, colwidth}, content:[paragraph\|bulletList…]}` |
-| inline text | `{type:"text", text, marks?:[{type:"bold"}\|{type:"italic"}\|{type:"underline"}\|{type:"link", attrs:{href}}]}` |
+| inline text | `{type:"text", text, marks?:[{type:"bold"}\|{type:"italic"}\|{type:"underline"}\|{type:"textColor", attrs:{color}}\|{type:"link", attrs:{href}}]}` |
 
 - **RB-BLOCK-01** The backend MUST validate `extra` against exactly this list and reject (or strip)
   any other node type, mark, or attribute, and apply RB-DATA-04 to every `href`. Cells MUST NOT
   contain tables (no nesting). A section MUST have a non-empty title of at most 80 characters.
 - **RB-BLOCK-02** A cell attribute that is only a default (`colspan` 1, `rowspan` 1,
   `colwidth` null) MUST NOT make two tables compare different.
-- **RB-BLOCK-03** A new table section has 2 to 4 columns, a header row (`Technical skills`,
-  `Soft skills`, `Tools`, `Languages` in that order), one body row of empty bullet lists, and
-  `borders: "none"`. This is the "table with the borders set to none" people build in Word for
-  side-by-side lists, and it is a first-class feature.
-- **RB-BLOCK-04** `borders` means: `none` draws nothing; `rows` draws a line under each row;
-  `light` a thin grey grid; `all` a full black grid. While **editing**, a `none` table shows faint
-  dotted guides so the cells can be found; the guides MUST NOT appear in the finished resume, in
-  an old version view, in print, or in an export.
+- **RB-BLOCK-03** A new table section is an empty grid, like the table Word or Docs inserts: the
+  title `New section` (as for any new section), 2 to 4 columns, two rows, every cell one empty
+  paragraph, **visible lines** (a full grid, 1 pt, solid, as in RB-BLOCK-04) and no header row.
+  Nothing is filled in, headed or suggested: no headings, no example text, and no mention of
+  what the columns are for in the "Add section" list, which reads `Table: 2 columns`,
+  `Table: 3 columns`, `Table: 4 columns`. The person types whatever they want. A row with no
+  text adds no line to the ATS reading order (RB-ATS). "Insert table" in a text section makes
+  the same plain grid.
+- **RB-BLOCK-04** **A table's look is five attributes**, each always valid (RB-BLOCK-06):
+  `borders` is which lines are drawn: `all` a full grid in black, `light` a full grid in grey, `rows` a
+  line under each row; `borderWidth` is the line width in points, 0 to 6 in steps of 0.25 (default 1);
+  `borderStyle` is `solid`, `dashed` (a line with breaks) or `dotted`; `cellPadding` is the space inside each
+  cell, 0 to 12 pt in steps of 0.5 (default 4); `cellGap` is the space between cells, 0 to 12 pt in steps of 0.5
+  (default 0, which joins the lines; above 0 every cell is boxed on its own, as with "allow spacing between
+  cells" in Word). **A `borderWidth` of 0 draws nothing: the table is still there, with its cells and its
+  text. This is the "table with the borders set to none" people build in Word for side-by-side lists, and
+  it is a first-class feature** (and it needs no separate "none" setting). While **editing**, a table with
+  width 0 shows faint dotted guides so the cells can be found; the guides MUST NOT appear in the finished
+  resume, in an old version view, in print, or in an export. A dashed line gets longer dashes as the width
+  grows. A table's look has no effect on the ATS reading order.
 - **RB-BLOCK-05** Custom sections come after the built-in ones in one-column layout, and after
   Experience in the main column in two-column layout. They can be moved up or down past each
   other and deleted.
+- **RB-BLOCK-06** A table attribute outside its limits MUST be brought inside them (rounded to the step), a
+  word that is not on the list MUST be replaced by the default, and an empty or non-numeric number MUST be the
+  default, not 0. A table saved with `borders: "none"` (an earlier version of the prototype) MUST be read as
+  `borders: "all"` with `borderWidth: 0`, which looks the same; an explicit `borderWidth` wins over it.
+  A table with only some of the attributes is the same table as one with the rest at their defaults, so an
+  untouched section is never counted as edited.
 
 ### 2.3 The format (RB-FMT)
 
@@ -128,7 +147,7 @@ and is **not versioned**: changing the font size does not create a version.
 
 | Key | Values | Default |
 |---|---|---|
-| `font` | `sans`, `serif`, `classic` (CMU Serif, the LaTeX look) | `sans` |
+| `font` | `sans` (Plus Jakarta Sans), `serif` (Georgia), `classic` (CMU Serif, the LaTeX look) | `sans` |
 | `fontSize` | 8 to 14 points, steps of 0.5 | 11 |
 | `spacing` | `tight`, `normal`, `airy` | `normal` |
 | `align` (header) | `left`, `center` | `left` |
@@ -154,6 +173,15 @@ and is **not versioned**: changing the font size does not create a version.
   not be hidden.
 - **RB-FMT-05** A template sets `fontSize`, all four margins, `columns` and `font` when it is chosen
   (RB-TPL-02). The person can change each afterwards.
+- **RB-FMT-06** **Text colour.** Selected text (or the text typed next) in any field that takes formatting can be
+  coloured from the toolbar: the **A** button, with a bar in the colour at the caret, opens a palette of
+  `Automatic (black)`, the nine colours of `TEXT_COLORS` (dark grey, navy, blue, teal, green, purple, red, orange,
+  brown) and a custom colour. A colour is stored as `<font color="#rrggbb">` (RB-DATA-03) or as the
+  `textColor` mark, always lower-case `#rrggbb` (a `#rgb` is spelled out). **A colour MUST have a contrast ratio of at
+  least 4.5 against white** (WCAG, relative luminance); the backend MUST drop any other colour value (a name, `rgb()`,
+  a pale or white hex) and keep the text, and the prototype refuses a pale custom colour with "That colour is too
+  light to read on white paper." This keeps text from being made invisible, which the ML service would treat as hidden
+  text (guardrail `no_hidden_text`). Colour has no effect on the ATS reading order, and a PDF export MUST keep it.
 
 ### 2.4 Versions (RB-VER)
 
@@ -218,7 +246,7 @@ The resume is edited **in place on the page**, by clicking and typing, in a real
 - **RB-EDIT-02** One-line fields (name, dates, role, degree, skills): Enter ends the edit. Skills
   and bullets: Enter starts a new one; Backspace at the start of one (an empty one included) joins it to the one before. Pasting keeps the
   words only, as one line: no fonts, colours, line breaks or tables from Word or a web page.
-- **RB-EDIT-03** Bold, italic, underline and link work from the toolbar, from Ctrl+B, Ctrl+I and
+- **RB-EDIT-03** Bold, italic, underline, text colour (RB-FMT-06) and link work from the toolbar, from Ctrl+B, Ctrl+I and
   Ctrl+U, and from a small floating bar that appears above selected text in a field that takes
   formatting. Undo and redo (Ctrl+Z, Ctrl+Shift+Z) work across the whole editing session.
 - **RB-EDIT-04** The text size has A- and A+ buttons and a number box, in points (RB-FMT).
@@ -238,8 +266,11 @@ The resume is edited **in place on the page**, by clicking and typing, in a real
   columns. The new section's title is selected so typing renames it.
 - **RB-SEC-02** When the caret is in a custom section a tool bar shows: Move up, Move down, Delete
   section, and Insert table (when the caret is not in a table). In a table it shows: add or delete
-  a column or row, merge cells, split a cell, header row on or off, the borders menu (RB-BLOCK-04),
-  and Delete table. A tool that cannot apply is disabled.
+  a column or row, merge cells, split a cell, header row on or off, and Delete table; and, in a second
+  group, the table's look (RB-BLOCK-04): which lines (full grid, light grid, row lines), the line style (solid,
+  dashed, dotted), and number boxes in points for the line **Width** (0 hides the lines), the cell **Padding**
+  and the **Gap** between cells. A box shows the value that was kept when it was changed (a width of 9 shows
+  6). A tool that cannot apply is disabled.
 - **RB-SEC-03** Every structural change is committed as a version at once (`You edited Custom section`).
 - **RB-SEC-04** Table columns have equal width. Dragging column edges is not part of the prototype.
 
@@ -374,12 +405,21 @@ never what it says**. It is a deterministic algorithm, not a language model.
 
 - **RB-UI-01** One theme: a white page, black text and borders, greys for fills, **Fira Mono** for every character
   of the interface. No dark mode, and no colour for meaning (no green or red): status is carried by words,
-  borders and solid versus outlined badges. The resume itself is white paper; a template may colour its own
-  headings.
+  borders and solid versus outlined badges. The exceptions are **Sign out**, which turns red (`#b3261e` on a
+  pale red fill) when pointed at or focused because it ends the session, and the swatches of the text colour
+  palette (RB-FMT-06), which are the choices themselves. The documents the person makes are not interface: the
+  resume paper, the letters and the analyzer's view of the resume use the document fonts of RB-EXP-03, not Fira
+  Mono (a monospace body does not read as a resume). The resume is white paper; a template may colour its own headings.
 - **RB-UI-02** The toolbar has two rows with every control the same height and centred on the row: row one for
-  text (undo and redo; font and size; bold, italic, underline, link; bullets, header alignment, spacing), row two
-  for the page and content (add section; columns, page limit, Page setup, Fit to page; writing style at the
-  right). The section and table tools sit in a bar of the same kind below it.
+  text (undo and redo; font and size; bold, italic, underline, text colour, link; bullets, header alignment, spacing), row two
+  for the page and content (add section; columns, page limit, Page setup, Fit to page; then writing style). The
+  section and table tools sit in a bar of the same kind below it. **Every group is laid out from the left, one
+  after another, and none is pinned to the right edge**: a group pinned to the right jumps sideways whenever the
+  Lay AI panel opens or closes and floats far from the tools it belongs with. Each row stays on one line when the
+  toolbar is wide enough (about 980 px of content), the groups divided by thin lines. The width that counts is the
+  toolbar's own, so opening the Lay AI panel narrows it; below that width the groups wrap like words, with no
+  dividing lines. A group never changes height or its place in the row's order. "Add section" has a fixed width,
+  so the options in its list never widen the row.
 - **RB-UI-03** The sidebar has three parts: the account and brand fixed at the top, the navigation in the middle
   (the only part that scrolls, with the admin links at its end for administrators), and **Report a bug** and
   **Sign out pinned at the bottom** so they are always visible and never scroll away.
@@ -398,12 +438,14 @@ never what it says**. It is a deterministic algorithm, not a language model.
   paper size set to the format's page and zero page margin, so the format's margins are the page margins) and
   **Download DOCX**. Classic is PDF only.
 - **RB-EXP-02** The real PDF and DOCX MUST reproduce the page: paper size, the four margins, columns, font and size,
-  spacing, bold, italic, underline, links, bullets, tables with their borders (none, rows, light, all), hidden
+  spacing, bold, italic, underline, text colours, links, bullets, tables with their borders (none, rows, light, all), hidden
   sections left out, section lines on or off. The PDF MUST have a text layer in the reading order of RB-ATS-01 and
   MUST NOT put contact details in a page header or footer. A two-column DOCX MUST use real section columns, not text
-  boxes. A `none` table MUST be a real table with its borders set to none, so it stays editable in Word.
-- **RB-EXP-03** Fonts: `sans` and `serif` are the system sans and Georgia; `classic` is CMU Serif (Typst with New Computer
-  Modern for the PDF). The exported file embeds its fonts.
+  boxes. A table MUST be a real table with its line style, width, cell padding and cell spacing as set; a width
+  of 0 MUST be a real table with its borders set to none (0 pt), so it stays editable in Word.
+- **RB-EXP-03** Fonts: `sans` is Plus Jakarta Sans, with the section headings and dates in JetBrains Mono; `serif` is
+  Georgia; `classic` is CMU Serif (Typst with New Computer Modern for the PDF). The exported file embeds its fonts.
+  The same Plus Jakarta Sans is the type of the other documents (letters, the analyzer's view of the resume).
 
 ### 6.3 The applications board (RB-APP)
 
@@ -586,7 +628,7 @@ prototype's test, never rewritten.
 
 1. Pick a template (including a two-column one), type in every field, make text bold and add a link, and see one version per field.
 2. Drag a margin on the ruler, set margins in Page setup in centimetres and then inches, and see the page count change.
-3. Add a table section with the borders hidden, type Technical and Soft skills side by side, switch the borders on and off, and hide the built-in Skills.
+3. Add a table section (its lines are visible), type Technical and Soft skills side by side, set the line width to 0 to hide the lines (the table stays) and back to 1, try the dashed and dotted lines, change the padding and the gap, and hide the built-in Skills.
 4. Open "How an ATS reads this" and read the table as plain text.
 5. Make the resume too long, press Fit to page, then ask Lay AI to fit it on one page; with far too much text, see it stop at 9.5 pt and say so, deleting nothing.
 6. Ask Lay AI to add a skill that is below the fold and watch the page scroll to it.

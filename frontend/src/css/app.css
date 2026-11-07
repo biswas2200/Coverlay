@@ -24,6 +24,8 @@
   --red: #000000;
   --red-soft: #c9c9c9;
   --violet-soft: #e8e8e8;
+  --signout: #b3261e; /* the one colour in the interface: Sign out on hover (5.6:1 on its tint) */
+  --signout-soft: #fde8e8;
   --lay: #000000;
   --lay-soft: #e8e8e8;
   --shadow-sm: 2px 2px 0 #000000;
@@ -32,6 +34,10 @@
   --radius-sm: 9px;
   --font: "Fira Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --mono: "Fira Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  /* The documents the person is making (resume, letters) keep the type they had before the interface moved to
+     Fira Mono: a monospace body does not read as a resume. Headings and dates stay in the mono face. */
+  --paper-font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --paper-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --sidebar-w: 264px;
   color-scheme: light;
 }
@@ -247,6 +253,8 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .sb-scroll > .sb-link { margin-top: 2px; }
 .sb-foot { flex: none; display: grid; gap: 2px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); background: var(--surface); }
 .sb-foot .sb-link { width: 100%; background: none; border: 0; cursor: pointer; text-align: left; }
+/* Sign out ends the session, so it warns in red when pointed at or focused. */
+.sb-foot .sb-link.sb-signout:hover, .sb-foot .sb-link.sb-signout:focus-visible { background: var(--signout-soft); color: var(--signout); }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
 .topbar {
@@ -361,7 +369,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .seg button:disabled { cursor: not-allowed; opacity: 0.5; }
 .paper {
   min-height: 460px; padding: 34px 30px; border-radius: 10px; background: #fff; color: #1b1d22;
-  border: 1px solid var(--border); box-shadow: var(--shadow); font-size: 12.5px; line-height: 1.55;
+  border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--paper-font); font-size: 12.5px; line-height: 1.55;
 }
 .paper-tag { font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: #6b7080; text-align: center; }
 .paper h2 { margin-top: 6px; font-size: 22px; text-align: center; color: #111; }
@@ -557,7 +565,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
   width: var(--page-w); min-height: var(--page-h); box-sizing: border-box; padding: var(--mt) var(--mr) var(--mb) var(--ml);
   border: 1px solid #d4d4d4; border-radius: 3px; background: #ffffff; color: #111111;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 10px 28px rgb(0 0 0 / 0.10);
-  font-size: calc(var(--rb-fs) * 1pt); line-height: 1.5;
+  font-family: var(--paper-font); font-size: calc(var(--rb-fs) * 1pt); line-height: 1.5;
 }
 .rb-page-a4 { --page-w: 210mm; --page-h: 297mm; }
 .rb-page-letter { --page-w: 215.9mm; --page-h: 279.4mm; }
@@ -573,11 +581,11 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .rb-name { font-size: 1.9em; }
 .rb-contact { margin-top: 4px; color: #4b5263; }
 .rb-section { margin-top: 1.25em; }
-.rb-section h3, .rb-section[data-title]::before { margin-bottom: 0.55em; font: 700 0.82em/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: #4b5263; }
+.rb-section h3, .rb-section[data-title]::before { margin-bottom: 0.55em; font: 700 0.82em/1.4 var(--paper-mono); letter-spacing: 0.12em; text-transform: uppercase; color: #4b5263; }
 .rb-item { display: grid; gap: 4px; }
 .rb-item-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; }
 .rb-strong { font-weight: 700; }
-.rb-dates { font: 400 0.86em/1.8 var(--mono); color: #6b7280; }
+.rb-dates { font: 400 0.86em/1.8 var(--paper-mono); color: #6b7280; }
 .rb-skills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rb-skills .rb-field { padding: 3px 10px; border-radius: 7px; background: #f1f1f1; font-weight: 500; font-size: 0.93em; }
 .rb-skills .rb-add .btn { min-height: 28px; color: #4b5263; }
@@ -693,6 +701,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 /* the formatting toolbar */
 .rb-toolbar {
   --tb-h: 34px;
+  container: rb-toolbar / inline-size; /* the rows react to the toolbar's own width, not the window's: the Lay AI panel narrows it */
   position: relative; z-index: 6; display: grid; gap: 8px;
   width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--surface); box-shadow: var(--shadow-sm);
@@ -701,11 +710,19 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .rb-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; min-width: 0; }
 .rb-tool-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: var(--tb-h); padding: 0 12px; border-left: 1px solid var(--border); }
 .rb-tool-group:first-child { padding-left: 0; border-left: 0; }
-.rb-tool-style { margin-left: auto; gap: 8px; padding-right: 0; font-size: 13px; color: var(--muted); }
+.rb-tool-style { gap: 8px; padding-right: 0; font-size: 13px; color: var(--muted); } /* flows after Fit to page: pinned to the right it jumped sideways whenever the Lay AI panel opened or closed */
 .rb-tool-style label { font-weight: 600; }
 .rb-toolbar .select, .rb-toolbar .input, .rb-toolbar .btn, .rb-toolbar .rb-tool { height: var(--tb-h); min-height: var(--tb-h); box-sizing: border-box; }
 .rb-toolbar .select, .rb-toolbar .input { padding-top: 0; padding-bottom: 0; font-size: 13px; }
 .rb-toolbar .btn { padding: 0 12px; font-size: 13px; white-space: nowrap; }
+/* A select is as wide as its longest option; "Add section" gets a fixed width so its list never widens the row
+   and Writing style stays on row two instead of wrapping to a row of its own. */
+.rb-toolbar #add-section { width: 150px; }
+/* Too narrow for each row to fit on one line: groups wrap like words, with no separators (a separator would
+   land at the start of a line). */
+@container rb-toolbar (max-width: 980px) {
+  .rb-tool-group { padding: 0 10px 0 0; border-left: 0; }
+}
 .rb-tool {
   display: grid; place-items: center; min-width: 34px; padding: 0 8px; border: 1px solid transparent;
   border-radius: 8px; background: none; color: var(--text); font-size: 15px; cursor: pointer;
@@ -713,6 +730,28 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .rb-tool:hover { background: var(--surface-2); border-color: var(--border); }
 .rb-tool[aria-pressed="true"] { background: var(--lay-soft); color: var(--lay); border-color: transparent; }
 .rb-tool .icon { width: 17px; height: 17px; }
+/* Text colour: an A with a bar in the colour at the caret, and a small palette under it. */
+.rb-color { position: relative; display: inline-flex; }
+.rb-tool-color { align-content: center; gap: 2px; padding: 0 6px; }
+.rb-color-a { font: 700 15px/1 var(--font); }
+.rb-color-bar { width: 16px; height: 3px; border-radius: 2px; background: var(--picked, #000000); box-shadow: 0 0 0 1px #00000026; }
+.rb-colors {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; display: grid; gap: 10px; width: 236px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.rb-colors[hidden] { display: none; }
+.rb-colors-auto { width: 100%; justify-content: center; }
+.rb-colors-auto[aria-pressed="true"] { background: var(--lay-soft); }
+.rb-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.rb-swatch { aspect-ratio: 1; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--swatch); cursor: pointer; }
+.rb-swatch:hover { outline: 2px solid var(--text); outline-offset: 1px; }
+.rb-swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.rb-colors-custom { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.rb-colors-custom input { width: 44px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; }
+.rb-colors-note { margin: 0; min-height: 0; font-size: 12.5px; color: var(--muted); }
+.rb-colors-note:empty { display: none; }
+/* The palette hangs below the toolbar, so the toolbar must stack above the section tools bar under it. */
+.rb-toolbar:has(.rb-colors:not([hidden])) { z-index: 12; }
 .rb-linkbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding: 10px 12px;
   border: 1px solid var(--accent); border-radius: 12px; background: var(--accent-soft);
@@ -806,7 +845,6 @@ textarea.input { resize: vertical; line-height: 1.5; }
   .lay-fab { right: 16px; bottom: 16px; }
 }
 @media (max-width: 600px) {
-  .rb-tool-style { margin-left: 0; }
   .rb-tool-group + .rb-tool-group { padding-left: 0; border-left: 0; }
 }
 /* ---------- shared bits for the preview pages ---------- */
@@ -886,7 +924,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .letters-cost { font-size: 13px; color: var(--muted); }
 .letters-paper {
   display: grid; gap: 14px; padding: 32px 34px; border-radius: 8px; background: #ffffff; color: #1b1f27;
-  border: 1px solid var(--border); box-shadow: var(--shadow); font-size: 15px; line-height: 1.6;
+  border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--paper-font); font-size: 15px; line-height: 1.6;
 }
 .letters-p { border-radius: 4px; outline: 1px dashed transparent; outline-offset: 3px; }
 .letters-p[contenteditable]:hover { outline-color: #000000; }
@@ -1068,6 +1106,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
   body * { visibility: hidden; }
   #final-paper, #final-paper *, #letter-paper, #letter-paper * { visibility: visible; }
   #final-paper, #letter-paper { position: absolute; left: 0; top: 0; border: 0; box-shadow: none; }
+  #final-paper *, #letter-paper * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* keep the text colours the person chose */
   #letter-paper { width: 100%; padding: 0; }
   #final-paper { transform: none !important; left: 0 !important; background-image: none !important; }
   .rb-page-wrap { width: auto !important; height: auto !important; }
@@ -1170,17 +1209,19 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .rb-mini-executive { justify-items: stretch; }
 .rb-tpl-sidebar .rb-col-side { padding-right: 1em; border-right: 0.6pt solid #111111; }
 
-/* Custom sections and their tables. A table with borders "none" is the "table with no borders"
-   trick: the cells line things up but draw nothing, except faint guides while you edit. */
+/* Custom sections and their tables. The look comes from three variables on the table (see tableStyle() in
+   resume-doc.js): --tw line width, --ts line style, --tp space inside a cell; the table's own style also sets
+   the space between cells. Width 0 is the "table with no borders" trick: the cells line things up but draw
+   nothing, except faint guides while you edit. */
 .rb-paper table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0.2em 0; }
-.rb-paper th, .rb-paper td { padding: 0.25em 0.6em 0.25em 0; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+.rb-paper th, .rb-paper td { padding: var(--tp, 4pt); vertical-align: top; text-align: left; overflow-wrap: anywhere; }
 .rb-paper th { font-weight: 700; }
 .rb-paper td p, .rb-paper th p { margin: 0; }
 .rb-paper td ul, .rb-paper th ul { margin: 0; }
-.rb-table-rows td, .rb-table-rows th { border-bottom: 0.5pt solid #8a8a8a; }
-.rb-table-light td, .rb-table-light th { padding-left: 0.6em; border: 0.5pt solid #bdbdbd; }
-.rb-table-all td, .rb-table-all th { padding-left: 0.6em; border: 1pt solid #111111; }
-.rb-paper.is-editable .rb-table-none td, .rb-paper.is-editable .rb-table-none th { outline: 1px dotted #c4c4c4; outline-offset: -1px; }
+.rb-table-rows td, .rb-table-rows th { border-bottom: var(--tw, 1pt) var(--ts, solid) #8a8a8a; }
+.rb-table-light td, .rb-table-light th { border: var(--tw, 1pt) var(--ts, solid) #bdbdbd; }
+.rb-table-all td, .rb-table-all th { border: var(--tw, 1pt) var(--ts, solid) #111111; }
+.rb-paper.is-editable .rb-table-hidden td, .rb-paper.is-editable .rb-table-hidden th { outline: 1px dotted #c4c4c4; outline-offset: -1px; }
 .rb-paper .selectedCell { background: #e6e6e6; }
 .rb-custom > p, .rb-custom > ul { margin-top: 0.2em; }
 .rb-paper .rb-bullets { display: grid; gap: 0.15em; padding-left: 1.2em; list-style: disc; }
@@ -1194,6 +1235,9 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .rb-context { position: relative; top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; }
 .rb-context .rb-tool-group { padding-top: 0; padding-bottom: 0; }
 .rb-tool-label { font: 700 12.5px/1 var(--mono); }
+/* A number box with its name before it and its unit after it, in the table bar. */
+.rb-num { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.rb-num .input { width: 64px; padding: 0 8px; }
 .rb-reading-notes { display: grid; gap: 6px; margin: 0; padding-left: 18px; font-size: 13.5px; }
 .rb-reading-text { max-height: 46vh; margin: 0; padding: 12px; overflow: auto; border: 1px solid #000000; border-radius: 10px; background: #f6f6f6; font: 500 12.5px/1.5 var(--mono); white-space: pre-wrap; }
 
@@ -1224,7 +1268,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .vmenu-foot .icon { width: 16px; height: 16px; }
 
 /* A narrow window: no separators, they would start a wrapped line. */
-@media (max-width: 1100px) { .rb-tool-group { padding: 0 10px 0 0; border-left: 0; } .rb-tool-style { margin-left: 0; } }
+@media (max-width: 1100px) { .rb-tool-group { padding: 0 10px 0 0; border-left: 0; } }
 
 /* Lay AI as a floating chat on pages other than the Resume Builder: a panel docked to the right edge. */
 .lay-panel.lay-dock { position: fixed; top: 16px; right: 16px; bottom: 16px; z-index: 60; width: min(400px, calc(100vw - 32px)); height: auto; min-height: 0; }

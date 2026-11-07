@@ -7,7 +7,7 @@
     <link rel="icon" href="favicon.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="css/app.css" />
   </head>
   <body class="app">
@@ -129,6 +129,15 @@
                 <button class="rb-tool" type="button" data-cmd="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
                 <button class="rb-tool" type="button" data-cmd="italic" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
                 <button class="rb-tool" type="button" data-cmd="underline" aria-label="Underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <div class="rb-color">
+                  <button class="rb-tool rb-tool-color" type="button" id="color-btn" data-cmd="color" aria-label="Text colour" aria-haspopup="true" aria-expanded="false" aria-controls="rb-colors" title="Text colour"><span class="rb-color-a" aria-hidden="true">A</span><span class="rb-color-bar" aria-hidden="true"></span></button>
+                  <div class="rb-colors" id="rb-colors" role="group" aria-label="Text colour" hidden>
+                    <button class="btn btn-secondary btn-sm rb-colors-auto" type="button" id="color-auto" aria-pressed="true">Automatic (black)</button>
+                    <div class="rb-swatches" id="color-swatches"></div>
+                    <label class="rb-colors-custom" for="color-custom"><span>Custom colour</span><input type="color" id="color-custom" value="#1d4ed8" /></label>
+                    <p class="rb-colors-note" id="color-note" role="status"></p>
+                  </div>
+                </div>
                 <button class="rb-tool" type="button" data-cmd="link" aria-label="Add a link" title="Add a link"><i data-icon="link"></i></button>
               </div>
               <div class="rb-tool-group" role="group" aria-label="Paragraph">
@@ -149,11 +158,11 @@
               <div class="rb-toolbar-row" role="group" aria-label="Page and content">
               <div class="rb-tool-group" role="group" aria-label="Insert">
                 <label class="sr-only" for="add-section">Add a section</label>
-                <select class="select" id="add-section" title="Add a section: text, bullets, or a table for side-by-side lists">
+                <select class="select" id="add-section" title="Add a section">
                   <option value="">+ Add section…</option>
                   <option value="text">Text section</option>
                   <option value="bullets">Bullet list section</option>
-                  <option value="table-2">Table: 2 columns (Technical | Soft skills)</option>
+                  <option value="table-2">Table: 2 columns</option>
                   <option value="table-3">Table: 3 columns</option>
                   <option value="table-4">Table: 4 columns</option>
                 </select>
@@ -199,14 +208,27 @@
                 <button class="btn btn-secondary btn-sm" type="button" data-table="mergeCells" title="Select cells by dragging across them, then merge">Merge</button>
                 <button class="btn btn-secondary btn-sm" type="button" data-table="splitCell">Split</button>
                 <button class="btn btn-secondary btn-sm" type="button" data-table="toggleHeaderRow">Header row</button>
-                <label class="sr-only" for="ctx-borders">Table borders</label>
-                <select class="select" id="ctx-borders" title="Table borders. None hides them, like a Word table set to no borders.">
-                  <option value="none">Borders: none (hidden)</option>
-                  <option value="rows">Borders: row lines</option>
-                  <option value="light">Borders: light grid</option>
-                  <option value="all">Borders: full grid</option>
-                </select>
                 <button class="btn btn-secondary btn-sm" type="button" data-table="deleteTable">Delete table</button>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Table lines and spacing" id="ctx-look" hidden>
+                <label class="sr-only" for="ctx-borders">Which lines</label>
+                <select class="select" id="ctx-borders" title="Which lines are drawn">
+                  <option value="all">Lines: full grid</option>
+                  <option value="light">Lines: light grid</option>
+                  <option value="rows">Lines: row lines</option>
+                </select>
+                <label class="sr-only" for="ctx-style">Line style</label>
+                <select class="select" id="ctx-style" title="Line style">
+                  <option value="solid">Solid line</option>
+                  <option value="dashed">Dashed line</option>
+                  <option value="dotted">Dotted line</option>
+                </select>
+                <label class="rb-num" for="ctx-width"><span>Width</span>
+                  <input class="input" id="ctx-width" type="number" inputmode="decimal" min="0" max="6" step="0.25" title="Line width in points. 0 hides the lines; the table stays." /><span>pt</span></label>
+                <label class="rb-num" for="ctx-padding"><span>Padding</span>
+                  <input class="input" id="ctx-padding" type="number" inputmode="decimal" min="0" max="12" step="0.5" title="Space inside each cell, in points" /><span>pt</span></label>
+                <label class="rb-num" for="ctx-gap"><span>Gap</span>
+                  <input class="input" id="ctx-gap" type="number" inputmode="decimal" min="0" max="12" step="0.5" title="Space between cells, in points. 0 joins the lines." /><span>pt</span></label>
               </div>
             </div>
             <form class="rb-linkbar" id="rb-linkbar" hidden>

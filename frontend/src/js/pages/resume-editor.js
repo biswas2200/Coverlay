@@ -1,9 +1,11 @@
 import {
-  Bold, BulletList, Decoration, DecorationSet, Document, Editor, Extension, Gapcursor, Italic, Link, ListItem, Node, Paragraph,
+  Bold, BulletList, Decoration, DecorationSet, Document, Editor, Extension, Gapcursor, Italic, Link, ListItem, Mark, Node, Paragraph,
   Plugin, PluginKey, Table, TableCell, TableHeader, TableRow, Text, TextSelection, Underline, UndoRedo, mergeAttributes,
 } from '../../vendor/tiptap.js';
-import { getAt, normalizeText, safeHref } from './resume-builder-rules.js';
-import { SECTION_TITLES, listFields, newSection, resumeFromDoc, resumeToDoc } from './resume-doc.js';
+import { getAt, normalizeText, safeColor, safeHref } from './resume-builder-rules.js';
+import {
+  SECTION_TITLES, TABLE_DEFAULTS, listFields, newSection, normalizeTableAttrs, resumeFromDoc, resumeToDoc, tableClass, tableStyle,
+} from './resume-doc.js';
 
 // The editable resume: a Tiptap (ProseMirror) editor whose document is shaped like a resume,
 // so a person can only type into the fields, never break the layout. resume-doc.js converts
@@ -14,7 +16,26 @@ import { SECTION_TITLES, listFields, newSection, resumeFromDoc, resumeToDoc } fr
 // bundled once into ../../vendor/tiptap.js (see frontend/vendor-build), so the page keeps
 // its no-build-step setup.
 
-const RICH_MARKS = 'bold italic underline link';
+const RICH_MARKS = 'bold italic underline link textColor';
+
+/**
+ * Text colour: one `#rrggbb` per run of text, only ever one that safeColor() accepts (dark enough to
+ * read on white paper). Stored in the resume as <font color="#rrggbb">, in a custom section as this mark.
+ */
+const TextColor = Mark.create({
+  name: 'textColor',
+  addAttributes() {
+    return {
+      color: {
+        default: null,
+        parseHTML: (element) => safeColor(element.getAttribute('data-text-color')),
+        renderHTML: (attributes) => (attributes.color ? { 'data-text-color': attributes.color, style: `color: ${attributes.color}` } : {}),
+      },
+    };
+  },
+  parseHTML: () => [{ tag: 'span[data-text-color]' }],
+  renderHTML: ({ HTMLAttributes }) => ['span', HTMLAttributes, 0],
+});
 const RICH_TYPES = new Set(['contact', 'summary', 'role', 'details', 'bullets', 'degree', 'customSection']);
 
 // ---------- the schema ----------
@@ -58,23 +79,36 @@ const ResumeDocument = Document.extend({
   content: 'header (summarySection experienceSection educationSection skillsSection customSection* | columns)',
 });
 
-// A custom section's blocks: paragraphs, bullet lists and tables. A table here is the "table with
-// no borders" people build in Word to put skills side by side: its borders can be hidden, ruled
-// by row, light or full, and the cells are only ever paragraphs and bullets.
+// A custom section's blocks: paragraphs, bullet lists and tables. A table here starts as a plain grid
+// with visible lines; its line width (0 hides the lines, like the "table with no borders" people
+// build in Word to put skills side by side), style and spacing can be changed, and the cells are
+// only ever paragraphs and bullets. The look is five attributes, normalized in resume-doc.js.
 const CUSTOM_BLOCKS = '(paragraph | bulletList | table)+';
 const CELL_BLOCKS = '(paragraph | bulletList)+';
+
+/** One table attribute: its default, and how it reads from and writes to `data-*` (the look itself is classes and style). */
+const tableAttribute = (key, name, number) => ({
+  default: TABLE_DEFAULTS[key],
+  parseHTML: (element) => (number ? Number(element.getAttribute(name)) : element.getAttribute(name)) ?? TABLE_DEFAULTS[key],
+  renderHTML: (attributes) => ({ [name]: String(attributes[key]) }),
+});
+
 const ResumeTable = Table.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
-      borders: {
-        default: 'none',
-        parseHTML: (element) => element.getAttribute('data-borders') ?? 'none',
-        renderHTML: (attributes) => ({ 'data-borders': attributes.borders, class: `rb-table rb-table-${attributes.borders}` }),
-      },
+      borders: tableAttribute('borders', 'data-borders', false),
+      borderWidth: tableAttribute('borderWidth', 'data-border-width', true),
+      borderStyle: tableAttribute('borderStyle', 'data-border-style', false),
+      cellPadding: tableAttribute('cellPadding', 'data-cell-padding', true),
+      cellGap: tableAttribute('cellGap', 'data-cell-gap', true),
     };
   },
-  // Tiptap's own table view never redraws the table when an attribute such as `borders` changes, and
+  // The look is drawn by the same two functions as the finished page uses, so they cannot disagree.
+  renderHTML({ node, HTMLAttributes }) {
+    return ['table', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { class: tableClass(node.attrs), style: tableStyle(node.attrs) }), ['tbody', 0]];
+  },
+  // Tiptap's own table view never redraws the table when an attribute such as `borderWidth` changes, and
   // column dragging is off here anyway, so the table is drawn from the schema like any other node.
   addNodeView() {
     return null;
@@ -145,6 +179,7 @@ const schemaExtensions = [
   Bold,
   Italic,
   Underline,
+  TextColor,
   Link.configure({
     openOnClick: false,
     autolink: false,
@@ -452,6 +487,21 @@ export function createResumeEditor(host, { onTyping, onSelection, onFocus, onBlu
     canRedo: () => editor.can().redo(),
     toggle: (mark) => editor.chain().focus().toggleMark(mark).run(),
     isActive: (mark) => editor.isActive(mark),
+    /** The colour of the text at the caret as `#rrggbb`, or null when it has none (automatic, black). */
+    currentColor: () => safeColor(editor.getAttributes('textColor').color),
+    /**
+     * Colours the selected text (or the next text typed, with only a caret). `null` clears the colour.
+     * Returns false, and changes nothing, for a colour that safeColor() refuses.
+     */
+    setColor(hex) {
+      const color = hex === null ? null : safeColor(hex);
+      if (hex !== null && !color) {
+        return false;
+      }
+      const chain = editor.chain().focus();
+      (color ? chain.setMark('textColor', { color }) : chain.unsetMark('textColor')).run();
+      return true;
+    },
     hasSelection: () => !editor.state.selection.empty,
     /** Links the selected text, or inserts `label` as the link when nothing is selected. */
     setLink(href, label) {
@@ -479,7 +529,7 @@ export function createResumeEditor(host, { onTyping, onSelection, onFocus, onBlu
     },
     // ----- custom sections and their tables -----
 
-    /** Where the caret is among the custom sections: `{ index, count, title, inTable, borders }`, or null outside one. */
+    /** Where the caret is among the custom sections: `{ index, count, title, inTable, table }` (`table` is the table's look, or null), or null outside one. */
     sectionState() {
       const found = currentSection();
       if (!found) {
@@ -491,12 +541,12 @@ export function createResumeEditor(host, { onTyping, onSelection, onFocus, onBlu
         count: all.length,
         title: found.node.firstChild.textContent,
         inTable: Boolean(found.table),
-        borders: found.table?.attrs.borders ?? null,
+        table: found.table ? normalizeTableAttrs(found.table.attrs) : null,
       };
     },
     /**
      * Adds a custom section ('text', 'bullets' or 'table' with `columns` columns) after the
-     * others, and selects its title so typing renames it. Tables start with their borders hidden.
+     * others, and selects its title so typing renames it. Tables start as a plain grid with visible lines.
      */
     addSection(kind, columns) {
       const { doc } = editor.state;
@@ -550,8 +600,22 @@ export function createResumeEditor(host, { onTyping, onSelection, onFocus, onBlu
       return TABLE_COMMANDS.includes(name) ? editor.chain().focus()[name]().run() : false;
     },
     canTable: (name) => TABLE_COMMANDS.includes(name) && editor.can()[name](),
-    setTableBorders: (borders) => editor.chain().focus().updateAttributes('table', { borders }).run(),
-    insertTable: (rows, columns) => editor.chain().focus().insertTable({ rows, cols: columns, withHeaderRow: true }).run(),
+    /**
+     * Changes the look of the table the caret is in: any of `borders`, `borderWidth`, `borderStyle`, `cellPadding`,
+     * `cellGap`. Values outside the limits are brought inside them; what changed is returned as the table now is.
+     */
+    setTableLook(changes) {
+      const table = currentSection()?.table;
+      if (!table) {
+        return null;
+      }
+      const look = normalizeTableAttrs({ ...table.attrs, ...changes });
+      // No focus() here: the person may be stepping a number box with the arrow keys, and focus must stay in it.
+      editor.chain().updateAttributes('table', look).run();
+      return look;
+    },
+    /** A plain grid with no header row, like the one Word inserts, with visible lines. */
+    insertTable: (rows, columns) => editor.chain().focus().insertTable({ rows, cols: columns, withHeaderRow: false }).run(),
     destroy: () => editor.destroy(),
   };
 }

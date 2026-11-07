@@ -262,13 +262,14 @@ export function fitRequest(prompt) {
   return /\b(one|1|single)[ -]?pages?\b/.test(text) ? { pages: 1 } : { pages: null };
 }
 
-// ---------- rich text: bold, italic, underline and links ----------
-// Text fields keep their formatting as a tiny subset of HTML -- <b>, <i>, <u> and
-// <a href="..."> around escaped text -- so a version is still one string and the diff, the
-// history and the tests stay simple. The page never assigns it as HTML: parseInline() turns it
-// into segments that are built with textContent. Links are only ever http(s), mailto or tel.
+// ---------- rich text: bold, italic, underline, links and text colour ----------
+// Text fields keep their formatting as a tiny subset of HTML -- <b>, <i>, <u>,
+// <a href="..."> and <font color="#rrggbb"> around escaped text -- so a version is still one
+// string and the diff, the history and the tests stay simple. The page never assigns it as HTML:
+// parseInline() turns it into segments that are built with textContent. Links are only ever
+// http(s), mailto or tel; a colour is only ever a #rrggbb that can be read on white paper.
 
-const TAG = /<(\/?)(b|i|u|a)(?:\s+href="([^"<>]*)")?>/g;
+const TAG = /<(\/?)(b|i|u|a|font)(?:\s+(?:href|color)="([^"<>]*)")?>/g;
 const STYLE_OF = { b: 'bold', i: 'italic', u: 'underline' };
 const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"' };
 
@@ -299,20 +300,67 @@ export function safeHref(raw) {
   return null;
 }
 
-/** The markup as segments: `[{ text, bold?, italic?, underline?, href? }]`. */
+// The text colours on offer, a few that print well on white paper. "Automatic" (no colour) is black.
+// Every one passes safeColor(); a test checks it.
+export const TEXT_COLORS = [
+  { name: 'Dark grey', hex: '#4b5563' },
+  { name: 'Navy', hex: '#1e3a8a' },
+  { name: 'Blue', hex: '#1d4ed8' },
+  { name: 'Teal', hex: '#0f766e' },
+  { name: 'Green', hex: '#15803d' },
+  { name: 'Purple', hex: '#6d28d9' },
+  { name: 'Red', hex: '#b91c1c' },
+  { name: 'Orange', hex: '#c2410c' },
+  { name: 'Brown', hex: '#78350f' },
+];
+
+/** The least contrast against white a text colour may have (WCAG AA for body text). */
+export const MIN_TEXT_CONTRAST = 4.5;
+
+/** How well `#rrggbb` reads on white paper: 1 (invisible) to 21 (black). Not a colour: 0. */
+export function contrastOnWhite(hex) {
+  const match = /^#([0-9a-f]{6})$/i.exec(String(hex ?? '').trim());
+  if (!match) {
+    return 0;
+  }
+  const [r, g, b] = [0, 2, 4].map((at) => {
+    const channel = parseInt(match[1].slice(at, at + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05);
+}
+
+/**
+ * A text colour that is safe to store: `#rgb` or `#rrggbb`, written as lower-case `#rrggbb`, and
+ * dark enough to read on white paper. Anything else is null. The contrast rule keeps text from
+ * being made white or pale, which the ML service would have to treat as hidden text.
+ */
+export function safeColor(raw) {
+  let text = String(raw ?? '').trim().toLowerCase();
+  if (/^#[0-9a-f]{3}$/.test(text)) {
+    text = `#${[...text.slice(1)].map((digit) => digit + digit).join('')}`;
+  }
+  return /^#[0-9a-f]{6}$/.test(text) && contrastOnWhite(text) >= MIN_TEXT_CONTRAST ? text : null;
+}
+
+/** The markup as segments: `[{ text, bold?, italic?, underline?, href?, color? }]`. */
 export function parseInline(markup) {
   const source = String(markup ?? '');
   const segments = [];
-  const open = []; // [{ tag, href }]
+  const open = []; // [{ tag, value }]: a link's address or a colour
   const push = (raw) => {
     if (!raw) {
       return;
     }
     const segment = { text: unescapeMarkup(raw) };
-    for (const { tag, href } of open) {
+    for (const { tag, value } of open) {
       if (tag === 'a') {
-        if (href) {
-          segment.href = href;
+        if (value) {
+          segment.href = value;
+        }
+      } else if (tag === 'font') {
+        if (value) {
+          segment.color = value;
         }
       } else {
         segment[STYLE_OF[tag]] = true;
@@ -331,7 +379,8 @@ export function parseInline(markup) {
         open.splice(at, 1);
       }
     } else {
-      open.push({ tag, href: tag === 'a' ? safeHref(unescapeMarkup(href ?? '')) : null });
+      const attribute = unescapeMarkup(href ?? '');
+      open.push({ tag, value: tag === 'a' ? safeHref(attribute) : tag === 'font' ? safeColor(attribute) : null });
     }
   }
   push(source.slice(last));
@@ -360,6 +409,10 @@ export function serializeSegments(segments) {
       if (segment.underline) {
         out = `<u>${out}</u>`;
       }
+      const color = segment.color ? safeColor(segment.color) : null;
+      if (color) {
+        out = `<font color="${color}">${out}</font>`;
+      }
       const href = segment.href ? safeHref(segment.href) : null;
       if (href) {
         out = `<a href="${escapeMarkup(href)}">${out}</a>`;
@@ -374,7 +427,7 @@ export function mergeSegments(segments) {
   const out = [];
   for (const segment of segments) {
     const last = out.at(-1);
-    const same = last && ['bold', 'italic', 'underline', 'href'].every((k) => (last[k] ?? null) === (segment[k] ?? null));
+    const same = last && ['bold', 'italic', 'underline', 'href', 'color'].every((k) => (last[k] ?? null) === (segment[k] ?? null));
     if (same) {
       last.text += segment.text;
     } else if (segment.text) {

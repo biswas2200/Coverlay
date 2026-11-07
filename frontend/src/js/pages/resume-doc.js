@@ -1,4 +1,4 @@
-import { mergeSegments, normalizeText, parseInline, safeHref, sentences, serializeSegments } from './resume-builder-rules.js';
+import { mergeSegments, normalizeText, parseInline, safeColor, safeHref, sentences, serializeSegments } from './resume-builder-rules.js';
 
 // The resume as an editor document, and back. The Resume Builder keeps the resume as plain
 // fields (name, contact, summary, jobs, schools, skills) and every version is one of those
@@ -20,14 +20,76 @@ import { mergeSegments, normalizeText, parseInline, safeHref, sentences, seriali
 // experience in the main column: `customSection(sectionTitle, (paragraph | bulletList | table)+)`.
 // Their body is free-form (paragraphs, bullets, tables), kept as editor blocks.
 // Text inside `contact`, `summary`, `role`, `details`, `bullet` and `degree` can be bold,
-// italic, underlined or a link; everything else is plain text.
+// italic, underlined, coloured or a link; everything else is plain text.
 
 const MARK_FOR = { bold: 'bold', italic: 'italic', underline: 'underline' };
 
 export const SECTION_TITLES = { summarySection: 'Summary', experienceSection: 'Experience', educationSection: 'Education', skillsSection: 'Skills' };
 
-/** How the cells of a new table are headed: the usual resume split. */
-const TABLE_HEADINGS = ['Technical skills', 'Soft skills', 'Tools', 'Languages'];
+/** A new table has this many rows, like the one Word or Docs inserts. */
+const NEW_TABLE_ROWS = 2;
+
+// ---------- table look ----------
+// A table starts as a plain grid with visible lines, like one inserted in Word. Its look is five
+// attributes: which lines (`borders`), their `borderWidth` in points, their `borderStyle`, the space
+// inside each cell (`cellPadding`) and between cells (`cellGap`). A width of 0 draws nothing: the
+// table is still there, with its cells, and that is the "table with no borders" trick from Word.
+
+export const TABLE_DEFAULTS = { borders: 'all', borderWidth: 1, borderStyle: 'solid', cellPadding: 4, cellGap: 0 };
+export const TABLE_OPTIONS = { borders: ['all', 'light', 'rows'], borderStyle: ['solid', 'dashed', 'dotted'] };
+export const TABLE_LIMITS = {
+  borderWidth: { min: 0, max: 6, step: 0.25 },
+  cellPadding: { min: 0, max: 12, step: 0.5 },
+  cellGap: { min: 0, max: 12, step: 0.5 },
+};
+
+function clampStep(value, { min, max, step }, fallback) {
+  const number = typeof value === 'string' && value.trim() === '' ? NaN : Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Number((Math.round(Math.min(max, Math.max(min, number)) / step) * step).toFixed(2));
+}
+
+/**
+ * Every table attribute, valid. Anything else becomes its default. Tables saved before the width
+ * existed used `borders: "none"`: they become a full grid of width 0, which looks the same.
+ */
+export function normalizeTableAttrs(attrs) {
+  const given = attrs ?? {};
+  const hidden = given.borders === 'none';
+  return {
+    borders: TABLE_OPTIONS.borders.includes(given.borders) ? given.borders : TABLE_DEFAULTS.borders,
+    borderWidth: hidden && given.borderWidth === undefined ? 0 : clampStep(given.borderWidth, TABLE_LIMITS.borderWidth, TABLE_DEFAULTS.borderWidth),
+    borderStyle: TABLE_OPTIONS.borderStyle.includes(given.borderStyle) ? given.borderStyle : TABLE_DEFAULTS.borderStyle,
+    cellPadding: clampStep(given.cellPadding, TABLE_LIMITS.cellPadding, TABLE_DEFAULTS.cellPadding),
+    cellGap: clampStep(given.cellGap, TABLE_LIMITS.cellGap, TABLE_DEFAULTS.cellGap),
+  };
+}
+
+/** The classes of a table: its lines, and `rb-table-hidden` when they have no width (the editor shows guides). */
+export function tableClass(attrs) {
+  const table = normalizeTableAttrs(attrs);
+  return `rb-table rb-table-${table.borders}${table.borderWidth === 0 ? ' rb-table-hidden' : ''}`;
+}
+
+/** The inline style of a table, from numbers and fixed words only: the cells read these three variables. */
+export function tableStyle(attrs) {
+  const table = normalizeTableAttrs(attrs);
+  return `--tw: ${table.borderWidth}pt; --ts: ${table.borderStyle}; --tp: ${table.cellPadding}pt; `
+    + `border-collapse: ${table.cellGap > 0 ? 'separate' : 'collapse'}; border-spacing: ${table.cellGap}pt`;
+}
+
+/** Blocks with every table's attributes normalized (so an old table opens with the look it had). */
+function withTableAttrs(nodes) {
+  return nodes.map((node) => {
+    const next = node.type === 'table' ? { ...node, attrs: normalizeTableAttrs(node.attrs) } : { ...node };
+    if (node.content) {
+      next.content = withTableAttrs(node.content);
+    }
+    return next;
+  });
+}
 
 const textBlock = (type, text) => (text ? { type, content: [{ type: 'text', text }] } : { type });
 const cellOf = (type, blocks) => ({ type, attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: blocks });
@@ -35,23 +97,22 @@ const listOf = (...items) => ({ type: 'bulletList', content: items.map((text) =>
 
 /**
  * A new custom section: 'text' (a paragraph), 'bullets' (a list) or 'table' with `columns`
- * columns (2 to 4) and the borders hidden, the way people build side-by-side skills in Word
- * (a table with the borders set to none). Written the way the editor writes it back, so a
- * section nobody has touched never looks edited.
+ * columns (2 to 4), a plain grid with visible lines. Its borders can be hidden afterwards by
+ * setting their width to 0, the way people build side-by-side skills in Word. Written the way
+ * the editor writes it back, so a section nobody has touched never looks edited.
  */
 export function newSection(kind, columns = 2) {
   if (kind === 'table') {
+    // An empty grid with a plain title, like a table inserted in Word: nothing is filled in or
+    // suggested, the person types whatever they want in the cells.
     const count = Math.min(4, Math.max(2, Math.round(columns)));
-    const headings = TABLE_HEADINGS.slice(0, count);
+    const row = () => ({ type: 'tableRow', content: Array.from({ length: count }, () => cellOf('tableCell', [textBlock('paragraph', '')])) });
     return {
-      title: 'Skills',
+      title: 'New section',
       body: [{
         type: 'table',
-        attrs: { borders: 'none' },
-        content: [
-          { type: 'tableRow', content: headings.map((text) => cellOf('tableHeader', [textBlock('paragraph', text)])) },
-          { type: 'tableRow', content: headings.map(() => cellOf('tableCell', [listOf('')])) },
-        ],
+        attrs: normalizeTableAttrs({}),
+        content: Array.from({ length: NEW_TABLE_ROWS }, row),
       }],
     };
   }
@@ -61,9 +122,13 @@ export function newSection(kind, columns = 2) {
 /** The same blocks without the attributes that are only defaults, so two spellings of one table compare equal. */
 function stripDefaults(node) {
   const out = { type: node.type };
-  const attrs = Object.fromEntries(
-    Object.entries(node.attrs ?? {}).filter(([key, value]) => !((key === 'colspan' || key === 'rowspan') && value === 1) && !(key === 'colwidth' && value === null)),
-  );
+  // A table's attributes are compared whole and normalized: a table saved with only some of them, or the old
+  // `borders: "none"`, is the same table as the editor writes back.
+  const attrs = node.type === 'table'
+    ? normalizeTableAttrs(node.attrs)
+    : Object.fromEntries(
+      Object.entries(node.attrs ?? {}).filter(([key, value]) => !((key === 'colspan' || key === 'rowspan') && value === 1) && !(key === 'colwidth' && value === null)),
+    );
   if (Object.keys(attrs).length) {
     out.attrs = attrs;
   }
@@ -108,6 +173,9 @@ function textNodes(value, rich) {
         marks.push({ type });
       }
     }
+    if (segment.color) {
+      marks.push({ type: 'textColor', attrs: { color: segment.color } });
+    }
     if (segment.href) {
       marks.push({ type: 'link', attrs: { href: segment.href } });
     }
@@ -131,6 +199,11 @@ function segmentsOf(node) {
           const href = safeHref(mark.attrs?.href);
           if (href) {
             segment.href = href;
+          }
+        } else if (mark.type === 'textColor') {
+          const color = safeColor(mark.attrs?.color);
+          if (color) {
+            segment.color = color;
           }
         } else if (mark.type in MARK_FOR) {
           segment[mark.type] = true;
@@ -177,7 +250,7 @@ export function resumeToDoc(resume, { bullets = false, columns = 1 } = {}) {
   const header = { type: 'header', content: [block('name', resume.name, false), block('contact', resume.contact, true)] };
   const custom = (resume.extra ?? []).map((section) => ({
     type: 'customSection',
-    content: [block('sectionTitle', section.title, false), ...(section.body?.length ? structuredClone(section.body) : [{ type: 'paragraph' }])],
+    content: [block('sectionTitle', section.title, false), ...(section.body?.length ? withTableAttrs(structuredClone(section.body)) : [{ type: 'paragraph' }])],
   }));
 
   const body = columns === 2
@@ -333,7 +406,12 @@ export function docToPlainText(doc, { hidden = [] } = {}) {
       } else if (node.type === 'bulletList') {
         kids(node).forEach((item) => lines.push(`- ${listItemText(item)}`));
       } else if (node.type === 'table') {
-        kids(node).forEach((row) => lines.push(kids(row).map(cellText).join(' | ')));
+        kids(node).forEach((row) => {
+          const cells = kids(row).map(cellText);
+          if (cells.some(Boolean)) { // an empty row has no text for a parser to read
+            lines.push(cells.join(' | '));
+          }
+        });
       }
     }
   };

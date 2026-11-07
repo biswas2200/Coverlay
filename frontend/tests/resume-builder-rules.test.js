@@ -196,7 +196,10 @@ test('isSavedState accepts a saved builder and rejects junk', () => {
 import {
   DEFAULT_FORMAT,
   MARKET_SAMPLE,
+  MIN_TEXT_CONTRAST,
+  TEXT_COLORS,
   applySuggestion,
+  contrastOnWhite,
   escapeMarkup,
   isRichPath,
   mergeSegments,
@@ -204,6 +207,7 @@ import {
   parseInline,
   plainText,
   roleFromPrompt,
+  safeColor,
   safeHref,
   sentences,
   serializeSegments,
@@ -232,6 +236,51 @@ test('parseInline drops unsafe links and survives broken markup', () => {
   assert.deepEqual(parseInline('stray</b> text'), [{ text: 'stray' }, { text: ' text' }]);
   assert.deepEqual(parseInline('<script>x</script>'), [{ text: '<script>x</script>' }], 'unknown tags are just text');
   assert.deepEqual(parseInline(''), []);
+});
+
+test('a text colour is stored as <font color="#rrggbb"> and comes back as the same colour', () => {
+  const segments = [
+    { text: 'Led ' },
+    { text: 'payments', color: '#1d4ed8', bold: true },
+    { text: ' and ' },
+    { text: 'a site', color: '#b91c1c', href: 'https://example.com' },
+  ];
+  const markup = serializeSegments(segments);
+  assert.equal(markup, 'Led <font color="#1d4ed8"><b>payments</b></font> and <a href="https://example.com"><font color="#b91c1c">a site</font></a>');
+  assert.deepEqual(parseInline(markup), segments);
+  assert.equal(plainText(markup), 'Led payments and a site');
+  // Neighbours with the same colour join; different colours do not.
+  assert.deepEqual(mergeSegments([{ text: 'a', color: '#1d4ed8' }, { text: 'b', color: '#1d4ed8' }, { text: 'c', color: '#b91c1c' }]),
+    [{ text: 'ab', color: '#1d4ed8' }, { text: 'c', color: '#b91c1c' }]);
+});
+
+test('safeColor keeps only #rrggbb that can be read on white paper', () => {
+  assert.equal(safeColor('#1D4ED8'), '#1d4ed8', 'lower-cased');
+  assert.equal(safeColor('#a00'), '#aa0000', 'a short form is spelled out');
+  assert.equal(safeColor(' #000000 '), '#000000');
+  for (const refused of ['#ffffff', '#fff', '#eeeeee', '#cccccc', '#ffff00', 'red', 'rgb(0,0,0)', '#12345', '#1234567', 'url(x)', '"><b>', '', null, undefined]) {
+    assert.equal(safeColor(refused), null, String(refused));
+  }
+});
+
+test('every colour on offer is readable on white, and there are no repeats', () => {
+  assert.equal(contrastOnWhite('#ffffff'), 1);
+  assert.ok(Math.abs(contrastOnWhite('#000000') - 21) < 0.01);
+  assert.equal(contrastOnWhite('blue'), 0);
+  for (const { name, hex } of TEXT_COLORS) {
+    assert.ok(contrastOnWhite(hex) >= MIN_TEXT_CONTRAST, `${name} ${hex} has contrast ${contrastOnWhite(hex).toFixed(2)}`);
+    assert.equal(safeColor(hex), hex, name);
+  }
+  assert.equal(new Set(TEXT_COLORS.map((c) => c.hex)).size, TEXT_COLORS.length);
+});
+
+test('markup cannot hide text: a white or pale colour, or a colour that is not a hex, is dropped', () => {
+  assert.deepEqual(parseInline('<font color="#ffffff">hidden</font>'), [{ text: 'hidden' }]);
+  assert.deepEqual(parseInline('<font color="#fefefe"><b>pale</b></font>'), [{ text: 'pale', bold: true }]);
+  assert.deepEqual(parseInline('<font color="red">named</font>'), [{ text: 'named' }]);
+  assert.deepEqual(parseInline('<font color="#ffffff"><font color="#1d4ed8">x</font></font>'), [{ text: 'x', color: '#1d4ed8' }]);
+  assert.equal(serializeSegments([{ text: 'x', color: '#ffffff' }]), 'x', 'saving drops an unreadable colour too');
+  assert.equal(serializeSegments([{ text: 'x', color: 'javascript:1' }]), 'x');
 });
 
 test('safeHref allows http(s), mailto and tel, and completes bare domains', () => {

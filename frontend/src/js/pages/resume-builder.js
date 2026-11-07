@@ -5,7 +5,7 @@ import { hydrateIcons, icon } from '../components/icons.js';
 import { renderShell } from '../components/shell.js';
 import { guardText, knownValues, privacyNote, resolveText } from './privacy-guard-rules.js';
 import { createResumeEditor } from './resume-editor.js';
-import { docToPlainText, readingNotes, resumeToDoc } from './resume-doc.js';
+import { docToPlainText, readingNotes, resumeToDoc, tableClass, tableStyle } from './resume-doc.js';
 import { RULER_THICKNESS, createRuler } from './resume-ruler.js';
 import {
   DEFAULT_ANSWERS,
@@ -51,6 +51,7 @@ import {
   templateById,
   versionsNewestFirst,
   watchHint,
+  TEXT_COLORS,
 } from './resume-builder-rules.js';
 
 // The Resume Builder preview: a clickable prototype with sample data. Steps: start questions ->
@@ -383,7 +384,7 @@ function wireToolbar() {
   byId('fmt-bullets').addEventListener('click', () => setFormat('bullets', !state.format.bullets));
   // Pressing a tool must not take the selection out of the field being edited.
   toolbar.addEventListener('mousedown', (event) => {
-    if (event.target.closest('.rb-tool')) {
+    if (event.target.closest('.rb-tool, .rb-swatch, .rb-colors-auto')) {
       event.preventDefault();
     }
   });
@@ -395,6 +396,68 @@ function wireToolbar() {
   });
   byId('rb-linkbar').addEventListener('submit', addLink);
   byId('link-cancel').addEventListener('click', closeLinkBar);
+  wireColors();
+}
+
+// ---------- text colour ----------
+
+/** The palette is built from TEXT_COLORS, so the rules file stays the one list of what is on offer. */
+function wireColors() {
+  const panel = byId('rb-colors');
+  byId('color-swatches').replaceChildren(...TEXT_COLORS.map(({ name, hex }) => {
+    const swatch = el('button', { class: 'rb-swatch', type: 'button', title: name, 'aria-label': name, 'aria-pressed': 'false', 'data-color': hex });
+    swatch.style.setProperty('--swatch', hex);
+    return swatch;
+  }));
+  panel.addEventListener('click', (event) => {
+    const swatch = event.target.closest('.rb-swatch');
+    if (swatch) {
+      applyColor(swatch.dataset.color);
+    }
+  });
+  byId('color-auto').addEventListener('click', () => applyColor(null));
+  byId('color-custom').addEventListener('change', (event) => applyColor(event.target.value));
+  document.addEventListener('pointerdown', (event) => {
+    if (!panel.hidden && !event.target.closest('.rb-color')) {
+      closeColors();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !panel.hidden) {
+      closeColors();
+      editor.focus();
+    }
+  });
+}
+
+function toggleColors() {
+  const opening = byId('rb-colors').hidden;
+  show(byId('rb-colors'), opening);
+  byId('color-btn').setAttribute('aria-expanded', String(opening));
+  setText(byId('color-note'), '');
+  if (opening) {
+    const current = editor.currentColor();
+    for (const swatch of byId('rb-colors').querySelectorAll('.rb-swatch')) {
+      swatch.setAttribute('aria-pressed', String(swatch.dataset.color === current));
+    }
+    byId('color-auto').setAttribute('aria-pressed', String(current === null));
+  }
+}
+
+function closeColors() {
+  show(byId('rb-colors'), false);
+  byId('color-btn').setAttribute('aria-expanded', 'false');
+}
+
+/** Colours the selected text; `null` is "Automatic". A colour too pale to read on white paper is refused. */
+function applyColor(hex) {
+  if (!editor.setColor(hex)) {
+    setText(byId('color-note'), 'That colour is too light to read on white paper. Pick a darker one.');
+    return;
+  }
+  closeColors();
+  updateToolState();
+  announce(hex === null ? 'Text colour removed. Click outside the field to keep it.' : 'Text colour changed. Click outside the field to keep it.');
 }
 
 function setFormat(key, value) {
@@ -416,11 +479,15 @@ function runCommand(command) {
   const field = editor.currentField();
   if (!field?.rich) {
     announce('Click into your summary, experience or contact line first, then use the toolbar.');
-    flashHint('Click into a field first, then pick bold, italic, underline or a link.');
+    flashHint('Click into a field first, then pick bold, italic, underline, a colour or a link.');
     return;
   }
   if (command === 'link') {
     openLinkBar();
+    return;
+  }
+  if (command === 'color') {
+    toggleColors();
     return;
   }
   editor.toggle(command);
@@ -433,6 +500,9 @@ function updateToolState() {
     const command = tool.dataset.cmd;
     if (command === 'undo' || command === 'redo') {
       tool.disabled = !(command === 'undo' ? editor.canUndo() : editor.canRedo());
+    } else if (command === 'color') {
+      // The bar under the A shows the colour of the text at the caret (black when it has none).
+      tool.style.setProperty('--picked', (rich && editor.currentColor()) || '#000000');
     } else if (command !== 'link') {
       tool.setAttribute('aria-pressed', String(rich && editor.isActive(command)));
     }
@@ -809,11 +879,20 @@ function wireSections() {
     updateContext();
     updateStatus();
   });
-  byId('ctx-borders').addEventListener('change', (event) => {
-    editor.setTableBorders(event.target.value);
-    commitEditor();
-    updateContext();
-  });
+  // The table's lines and spacing: each control sets one attribute; the editor brings a value into its limits
+  // and updateContext() shows the value that was kept.
+  const tableLook = { 'ctx-borders': 'borders', 'ctx-style': 'borderStyle', 'ctx-width': 'borderWidth', 'ctx-padding': 'cellPadding', 'ctx-gap': 'cellGap' };
+  for (const [id, key] of Object.entries(tableLook)) {
+    const control = byId(id);
+    control.addEventListener('change', () => {
+      const look = editor.setTableLook({ [key]: control.value });
+      if (look) {
+        control.value = String(look[key]); // show what was kept, e.g. 9 pt of width becomes 6
+      }
+      commitEditor();
+      updateContext();
+    });
+  }
 
   byId('open-reading-order').addEventListener('click', () => {
     commitEditor();
@@ -837,9 +916,18 @@ function updateContext() {
   byId('ctx-up').disabled = at.index <= 0;
   byId('ctx-down').disabled = at.index >= at.count - 1;
   show(byId('ctx-table'), at.inTable);
+  show(byId('ctx-look'), at.inTable);
   show(byId('ctx-insert'), !at.inTable);
   if (at.inTable) {
-    byId('ctx-borders').value = at.borders;
+    // Not while the person is typing in a number box: that would rewrite what they have half typed.
+    const typing = document.activeElement?.closest?.('#ctx-look input');
+    byId('ctx-borders').value = at.table.borders;
+    byId('ctx-style').value = at.table.borderStyle;
+    for (const [id, key] of [['ctx-width', 'borderWidth'], ['ctx-padding', 'cellPadding'], ['ctx-gap', 'cellGap']]) {
+      if (!typing || typing.id !== id) {
+        byId(id).value = String(at.table[key]);
+      }
+    }
     for (const button of byId('ctx-table').querySelectorAll('[data-table]')) {
       button.disabled = !editor.canTable(button.dataset.table);
     }
@@ -1440,6 +1528,9 @@ function richNodes(markup) {
     if (segment.underline) {
       node = el('u', {}, node);
     }
+    if (segment.color) {
+      node = el('span', { style: `color: ${segment.color}` }, node); // parseInline only returns a vetted #rrggbb
+    }
     if (segment.href) {
       node = el('a', { href: segment.href, target: '_blank', rel: 'noopener noreferrer' }, node);
     }
@@ -1494,7 +1585,7 @@ function blockElements(nodes) {
     if (node.type === 'table') {
       const rows = (node.content ?? []).map((row) =>
         el('tr', {}, ...(row.content ?? []).map((cell) => el(cell.type === 'tableHeader' ? 'th' : 'td', {}, ...blockElements(cell.content)))));
-      return el('table', { class: `rb-table rb-table-${node.attrs?.borders ?? 'none'}` }, el('tbody', {}, ...rows));
+      return el('table', { class: tableClass(node.attrs), style: tableStyle(node.attrs) }, el('tbody', {}, ...rows));
     }
     return el('p', {}, ...inlineNodes(node.content));
   });
