@@ -25,9 +25,11 @@ test('a grace deletion waits 14 days and can be undone until then', () => {
 
 test('every step runs, a failing step is retried, and "Deleted" comes only at the end', () => {
   let job = startDeletion({ mode: 'now', deletePosts: true }, NOW);
-  assert.deepEqual(job.steps.map((s) => s.name), ['files', 'search', 'posts', 'account']);
+  assert.deepEqual(job.steps.map((s) => s.name), ['files', 'search', 'posts', 'connections', 'account'], 'the connected apps are disconnected before the account rows go');
+  assert.match(job.steps.find((s) => s.name === 'connections').label, /access revoked and sign-in tokens deleted/);
+  assert.deepEqual(startDeletion({ mode: 'now', deletePosts: false }, NOW).steps.map((s) => s.name), ['files', 'search', 'connections', 'account']);
   const seen = [];
-  for (let i = 0; i < 10 && job.status !== 'done'; i += 1) {
+  for (let i = 0; i < 12 && job.status !== 'done'; i += 1) {
     job = advanceDeletion(job, { failing: ['search'] });
     seen.push(deletionStatusText(job, NOW));
   }

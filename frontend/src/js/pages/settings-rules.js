@@ -31,11 +31,13 @@ export const EXPORT_CONTENTS = [
   'Your Lay AI chats',
   'Your applications and reminders',
   'Your wallet history',
+  'Which apps you connected (never their sign-in tokens)',
 ];
 
 const STEPS = [
   { name: 'files', label: 'Uploaded resume files' },
   { name: 'search', label: 'Search index entries' },
+  { name: 'connections', label: 'Connected apps: access revoked and sign-in tokens deleted' },
   { name: 'account', label: 'Account rows: resumes, versions, chats, applications, wallet' },
 ];
 

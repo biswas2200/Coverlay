@@ -935,12 +935,29 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .letters-gemini-note { margin-bottom: 12px; }
 .letters-doc .field-hint { margin-top: 10px; }
 /* The draft is the editing surface: one editor inside the paper, with a toolbar above it. */
-.letters-toolbar { --tb-h: 34px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; margin-bottom: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.letters-toolbar-end { margin-left: auto; padding-right: 0; }
+/* One row: tools on the left, the state of the text and Start over at the right end. Too narrow for that, the groups wrap
+   like words with no dividers (a divider would start a line), as in the Builder's toolbar. */
+.letters-toolbar {
+  container: letters-toolbar / inline-size;
+  --tb-h: 34px; position: sticky; top: 8px; z-index: 6; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px 0;
+  margin-bottom: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.letters-toolbar .letters-toolbar-end { display: flex; align-items: center; gap: 8px; min-width: 0; margin-left: auto; padding: 0; border-left: 0; }
+.letters-saved { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--muted); }
+.letters-saved:empty { display: none; }
+.letters-toolbar .btn { white-space: nowrap; }
+@container letters-toolbar (max-width: 470px) {
+  .letters-toolbar { flex-wrap: wrap; }
+  .letters-toolbar .rb-tool-group { padding: 0 10px 0 0; border-left: 0; }
+  .letters-toolbar .letters-toolbar-end { margin-left: 0; }
+}
+.letters-edit-hint { margin-bottom: 10px; padding: 8px 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface-2); font-size: 13.5px; }
 .letters-subject-field { margin-bottom: 12px; }
 .letters-paper:focus-within { outline: 2px solid var(--text); outline-offset: 3px; }
 .letters-paper .letters-doc-editor { display: grid; gap: 14px; min-height: 12em; outline: none; cursor: text; }
-.letters-paper .letters-doc-editor p { margin: 0; }
+.letters-paper .letters-doc-editor p { margin: 0; border-radius: 4px; }
+/* The paragraph under the pointer is outlined, like a field of the resume in the Builder: this is the editor. */
+.letters-paper .letters-doc-editor p:hover { outline: 1px dashed #8a8a8a; outline-offset: 4px; }
 .letters-paper a { text-decoration: underline; }
 .letters-paper .preserve-lines { white-space: pre-line; }
 /* Send it from Gmail: connect, choose what to attach, save a draft or send. */
@@ -958,6 +975,13 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .letters-mail-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .letters-mail-confirm { display: grid; gap: 10px; }
 .letters-lead { margin-bottom: 12px; font-size: 13.5px; }
+/* The suggestions: the title (and, once decided, its badge), the sentence, then the buttons under it at the left. */
+.letters-suggest { position: sticky; top: 8px; }
+.letters-suggest .lay-suggest-item { gap: 8px; }
+.letters-suggest .lay-suggest-top { flex-wrap: nowrap; align-items: flex-start; justify-content: space-between; }
+.letters-suggest .lay-suggest-top strong { min-width: 0; overflow-wrap: anywhere; }
+.letters-suggest .lay-suggest-top .badge { flex: none; margin-left: 0; }
+.letters-suggest .lay-suggest-actions { margin-left: 0; gap: 8px; }
 
 /* ---------- community (preview) ---------- */
 .community { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
@@ -1317,3 +1341,13 @@ textarea.input { resize: vertical; line-height: 1.5; }
   100% { outline: 3px solid transparent; outline-offset: 3px; }
 }
 @media (prefers-reduced-motion: reduce) { .apps-card.is-moved { animation: none; outline: 3px solid #000000; outline-offset: 3px; } }
+
+/* Settings: connected apps. */
+.settings-apps { display: grid; }
+.settings-app { display: grid; justify-items: start; gap: 6px; padding: 14px 0; border-top: 1px solid var(--border); }
+.settings-app:first-child { border-top: 0; padding-top: 4px; }
+.settings-app-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; width: 100%; }
+.settings-app-name { display: grid; gap: 2px; }
+.settings-app-text { margin: 0; font-size: 13.5px; }
+.settings-app .field-hint { margin: 0; }
+.settings-app.is-planned, .settings-app.is-unavailable { opacity: 0.85; }

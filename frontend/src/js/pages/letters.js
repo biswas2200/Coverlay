@@ -11,6 +11,7 @@ import { buildLetterDocx, letterDocxName } from './letter-docx.js';
 import { createLetterEditor } from './letter-editor.js';
 import { blocksPlain, blocksText, blocksToDoc, docToBlocks } from './letter-doc.js';
 import { SAMPLE_GMAIL, attachmentName, buildMailRequest, mailSummary } from './mail-rules.js';
+import { connectionsKey, isConnected, normalizeConnections, setConnected } from './connections-rules.js';
 import {
   LETTER_TYPES,
   SAMPLE_JOBS,
@@ -36,6 +37,7 @@ import {
 
 const USER_ID = getUser()?.id ?? 'guest';
 const KEY = `coverlay.preview.letters.${USER_ID}`;
+const CONNECTIONS_KEY = connectionsKey(USER_ID); // shared with Settings > Connected apps
 const SAVE_DELAY = 350;
 const saved = readJson(`coverlay.resumeBuilder.${USER_ID}`);
 const resume = builderResume();
@@ -58,15 +60,30 @@ function builderResume() {
 function fresh() {
   return {
     type: 'cover', templateId: 'standard', coverTemplateId: 'standard', jobId: SAMPLE_JOBS[0].id, recipient: '', decided: {}, docs: {}, gemini: false,
-    mail: { connected: false, to: '', attachResume: true, resumeFormat: 'pdf', attachCover: true, coverFormat: 'pdf' },
+    mail: { to: '', attachResume: true, resumeFormat: 'pdf', attachCover: true, coverFormat: 'pdf' },
   };
 }
 
 function load() {
   const found = readJson(KEY);
-  return found && typeof found === 'object' && LETTER_TYPES.some((t) => t.id === found.type)
+  const loaded = found && typeof found === 'object' && LETTER_TYPES.some((t) => t.id === found.type)
     ? { ...fresh(), ...found, docs: found.docs && typeof found.docs === 'object' ? found.docs : {}, mail: { ...fresh().mail, ...(found.mail ?? {}) } }
     : fresh();
+  // Before the Settings page had Connected apps, this page kept "connected" itself: move it to the shared state.
+  if (loaded.mail.connected) {
+    setGmail(true);
+  }
+  delete loaded.mail.connected;
+  return loaded;
+}
+
+/** Whether Gmail is connected: the one state Settings and this page share, read each time so a change in the other shows here. */
+function gmailConnected() {
+  return isConnected(normalizeConnections(readJson(CONNECTIONS_KEY)), 'gmail');
+}
+
+function setGmail(on) {
+  writeJson(CONNECTIONS_KEY, setConnected(normalizeConnections(readJson(CONNECTIONS_KEY)), 'gmail', on));
 }
 
 function save() {
@@ -212,7 +229,7 @@ function addLink(event) {
 
 function disarmReset() {
   resetArmed = false;
-  setText(byId('letter-reset'), 'Start from the template again');
+  setText(byId('letter-reset'), 'Start over');
 }
 
 // ---------- the page ----------
@@ -317,7 +334,7 @@ function wire() {
     }
     if (!resetArmed) {
       resetArmed = true;
-      setText(byId('letter-reset'), 'Click again to discard your edits');
+      setText(byId('letter-reset'), 'Discard edits?');
       setTimeout(disarmReset, 4000);
       return;
     }
@@ -409,6 +426,7 @@ function renderDoc() {
   byId('toggle-gemini').setAttribute('aria-pressed', String(gemini));
   show(byId('gemini-note'), gemini);
   show(byId('letter-toolbar'), !gemini);
+  show(byId('edit-hint'), !gemini);
   show(byId('letter-linkbar'), false);
   show(byId('letter-editor'), !gemini);
   show(byId('subject-field'), !gemini && state.type === 'email');
@@ -422,7 +440,7 @@ function renderDoc() {
       .map((text) => el('p', { class: 'letters-p preserve-lines' }, ...placeholderNodes(text))));
   }
   updateLength();
-  setText(byId('letter-saved'), state.docs[docKey()] ? 'All changes kept' : 'Click in the text to edit it.');
+  setText(byId('letter-saved'), state.docs[docKey()] ? 'All changes kept' : '');
 }
 
 /** Placeholder text with each {placeholder} marked, for "What Gemini sees". */
@@ -441,14 +459,15 @@ function renderSuggestions() {
   list.replaceChildren(
     ...items.map((item) => {
       const decided = state.decided[`${state.type}.${item.id}`];
-      const status = decided === 'added' ? el('span', { class: 'badge badge-green' }, icon('check'), 'Added')
-        : decided === 'skipped' ? el('span', { class: 'badge' }, 'Skipped')
-          : el('span', { class: 'lay-suggest-actions' },
-            el('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-decide': item.id, 'data-action': 'add' }, 'Add'),
-            el('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-decide': item.id, 'data-action': 'skip' }, 'Skip'));
+      const badge = decided === 'added' ? el('span', { class: 'badge badge-green' }, icon('check'), 'Added')
+        : decided === 'skipped' ? el('span', { class: 'badge' }, 'Skipped') : null;
+      const actions = decided ? null : el('span', { class: 'lay-suggest-actions' },
+        el('button', { class: 'btn btn-primary btn-sm', type: 'button', 'data-decide': item.id, 'data-action': 'add' }, 'Add'),
+        el('button', { class: 'btn btn-ghost btn-sm', type: 'button', 'data-decide': item.id, 'data-action': 'skip' }, 'Skip'));
       return el('li', { class: `lay-suggest-item is-${decided ?? 'open'}` },
-        el('div', { class: 'lay-suggest-top' }, el('strong', {}, item.label), status),
-        el('p', { class: 'lay-diff-new' }, `+ ${item.text}`));
+        el('div', { class: 'lay-suggest-top' }, el('strong', {}, item.label), badge),
+        el('p', { class: 'lay-diff-new' }, `+ ${item.text}`),
+        actions);
     }),
   );
 }
@@ -478,13 +497,13 @@ function wireMail() {
     renderMail();
   };
   byId('mail-connect-btn').addEventListener('click', () => {
-    state.mail.connected = true;
+    setGmail(true);
     setText(byId('mail-result'), '');
     changed();
     announce(`Gmail connected as ${SAMPLE_GMAIL}.`);
   });
   byId('mail-disconnect').addEventListener('click', () => {
-    state.mail.connected = false;
+    setGmail(false);
     setText(byId('mail-result'), '');
     changed();
     announce('Gmail disconnected.');
@@ -549,8 +568,9 @@ function renderMail() {
     return;
   }
   const mail = state.mail;
-  show(byId('mail-connect'), !mail.connected);
-  show(byId('mail-ready'), mail.connected);
+  const connected = gmailConnected();
+  show(byId('mail-connect'), !connected);
+  show(byId('mail-ready'), connected);
   setText(byId('mail-account'), `Gmail: ${SAMPLE_GMAIL}`);
   byId('mail-to').value = mail.to;
   byId('attach-resume').checked = mail.attachResume;

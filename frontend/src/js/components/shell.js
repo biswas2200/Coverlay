@@ -90,7 +90,7 @@ export function renderShell(active) {
 
   // Only administrators see the review queue and the team dashboards; the backend enforces it either way.
   const insightsLink = el('a', { class: 'sb-link', href: 'admin-insights.html', 'data-nav': 'admin-insights', hidden: true },
-    icon('chart'), 'Team insights', el('span', { class: 'sb-tag' }, 'Preview'));
+    icon('chart'), 'Team insights', el('span', { class: 'sb-tag' }, 'Mock-up'));
   const adminLink = el('a', { class: 'sb-link', href: 'admin-bugs.html', 'data-nav': 'admin-bugs', hidden: true },
     icon('check'), 'Bug reports (admin)');
   const adminLabel = el('p', { class: 'sb-label', hidden: true }, 'Admin');

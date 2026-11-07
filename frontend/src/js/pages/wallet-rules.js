@@ -134,6 +134,28 @@ export function addPoints(wallet, points, at) {
   };
 }
 
+/**
+ * The history as the page lists it, newest first, with repeats folded into one row: every entry of the same kind
+ * and label on the same calendar day (thirteen Lay AI messages in one afternoon) becomes
+ * `{ kind, label, credits, count, at }` with the credits added up and `at` the latest. Without it a busy week of chat
+ * would be a list of identical rows. The balance is untouched: it is the sum of every entry, grouped or not.
+ */
+export function groupHistory(history) {
+  const groups = new Map();
+  for (const entry of history) {
+    const key = `${new Date(entry.at).toDateString()}|${entry.kind}|${entry.label}`;
+    const found = groups.get(key);
+    if (found) {
+      found.credits += entry.credits;
+      found.count += 1;
+      found.at = Math.max(found.at, entry.at);
+    } else {
+      groups.set(key, { kind: entry.kind, label: entry.label, credits: entry.credits, count: 1, at: entry.at });
+    }
+  }
+  return [...groups.values()];
+}
+
 /** A believable starting wallet for the preview: one ₹60 recharge, partly spent. */
 export function sampleWallet(now) {
   const day = 24 * 60 * 60 * 1000;

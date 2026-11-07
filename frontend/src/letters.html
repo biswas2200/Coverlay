@@ -62,6 +62,7 @@
               </div>
             </div>
             <p class="alert alert-info letters-gemini-note" id="gemini-note" hidden>This is the draft as Gemini gets and writes it: placeholders, no personal details. Your screen fills them in.</p>
+            <p class="letters-edit-hint" id="edit-hint"><strong>Edit it right here.</strong> Click anywhere in the draft and type. The toolbar stays with you as you scroll.</p>
             <div class="letters-toolbar" id="letter-toolbar" role="toolbar" aria-label="Edit the draft" aria-controls="letter-editor">
               <div class="rb-tool-group" role="group" aria-label="History">
                 <button class="rb-tool" type="button" data-letter-cmd="undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><i data-icon="undo"></i></button>
@@ -74,7 +75,8 @@
                 <button class="rb-tool" type="button" data-letter-cmd="link" aria-label="Add a link" title="Add a link"><i data-icon="link"></i></button>
               </div>
               <div class="rb-tool-group letters-toolbar-end">
-                <button class="btn btn-ghost btn-sm" id="letter-reset" type="button" title="Throw away your edits and write the draft again from the template">Start from the template again</button>
+                <span class="letters-saved" id="letter-saved" role="status"></span>
+                <button class="btn btn-ghost btn-sm" id="letter-reset" type="button" title="Throw away your edits and write the draft again from the template">Start over</button>
               </div>
             </div>
             <form class="rb-linkbar" id="letter-linkbar" hidden>
@@ -92,14 +94,14 @@
               <div id="letter-editor"></div>
               <div id="letter-gemini" hidden></div>
             </div>
-            <p class="field-hint"><span id="length-note"></span> · <span id="letter-saved"></span></p>
+            <p class="field-hint" id="length-note"></p>
 
             <section class="letters-mail" id="mail-panel" aria-labelledby="mail-title" hidden>
               <h3 id="mail-title">Send it from your Gmail</h3>
               <p class="field-hint">Coverlay puts this email, your resume and your cover letter into one message in your own Gmail, so there is nothing to download and attach by hand. Only Gmail for now; Outlook and other mail services come later.</p>
               <div class="letters-mail-connect" id="mail-connect">
                 <button class="btn btn-primary" id="mail-connect-btn" type="button">Connect Gmail</button>
-                <p class="field-hint">Coverlay asks Google for permission to save drafts and to send the messages you choose. It cannot read your inbox, and you can disconnect at any time.</p>
+                <p class="field-hint">Coverlay asks Google for permission to save drafts and to send the messages you choose. It cannot read your inbox, and you can disconnect at any time, here or in <a href="settings.html">Settings, Connected apps</a>.</p>
               </div>
               <div class="letters-mail-ready" id="mail-ready" hidden>
                 <p class="letters-mail-account"><span id="mail-account"></span><button class="btn btn-ghost btn-sm" id="mail-disconnect" type="button">Disconnect</button></p>
