@@ -95,6 +95,11 @@ Next up is exporting those weights as versioned release snapshots — see
 
 ## Documentation
 
+**Read first: [`docs/prototype-spec.md`](docs/prototype-spec.md).** The clickable prototype in
+`frontend/` is the source of truth for what Coverlay does, and that document is the mandatory
+contract the frontend, the backend and the ML service implement when the full application is
+built. Where it disagrees with an older design document, it wins.
+
 Full docs live in [`docs/`](docs/) in this repository, as a MkDocs + Material
 site (`mkdocs.yml` at the repo root). To preview or check it:
 

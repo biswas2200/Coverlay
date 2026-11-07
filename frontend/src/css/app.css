@@ -5,65 +5,43 @@
    (login, register) and the app shell (sidebar + main) used by upload and dashboard. */
 
 :root {
-  --bg: #f4f4f6;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f8f8fa;
-  --border: #e4e4e9;
-  --border-strong: #d2d2da;
-  --text: #15171c;
-  --muted: #5c6270;
-  --faint: #8a8f9c;
-  --accent: #3b5bdb;
-  --accent-hover: #2f4bc0;
-  --accent-soft: #e8edff;
+  --surface-2: #f3f3f3;
+  --border: #000000;
+  --border-strong: #000000;
+  --text: #000000;
+  --muted: #3d3d3d;
+  --faint: #5e5e5e;
+  --accent: #000000;
+  --accent-hover: #3a3a3a;
+  --accent-soft: #e8e8e8;
   --on-accent: #ffffff;
-  --green: #18794e;
-  --green-soft: #e3f5ea;
-  --amber: #a14d07;
-  --amber-soft: #fff1dd;
-  --red: #c4302b;
-  --red-soft: #fde8e7;
-  --violet-soft: #f1e9ff;
-  --lay: #6d3fd6;
-  --lay-soft: #efe9ff;
-  --shadow-sm: 0 1px 2px rgb(16 18 27 / 0.05);
-  --shadow: 0 1px 2px rgb(16 18 27 / 0.04), 0 8px 24px rgb(16 18 27 / 0.06);
+  --green: #000000;
+  --green-soft: #e8e8e8;
+  --amber: #2b2b2b;
+  --amber-soft: #dadada;
+  --red: #000000;
+  --red-soft: #c9c9c9;
+  --violet-soft: #e8e8e8;
+  --signout: #b3261e; /* the one colour in the interface: Sign out on hover (5.6:1 on its tint) */
+  --signout-soft: #fde8e8;
+  --lay: #000000;
+  --lay-soft: #e8e8e8;
+  --shadow-sm: 2px 2px 0 #000000;
+  --shadow: 4px 4px 0 #000000;
   --radius: 14px;
   --radius-sm: 9px;
-  --font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font: "Fira Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --mono: "Fira Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  /* The documents the person is making (resume, letters) keep the type they had before the interface moved to
+     Fira Mono: a monospace body does not read as a resume. Headings and dates stay in the mono face. */
+  --paper-font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --paper-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --sidebar-w: 264px;
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1115;
-    --surface: #171a20;
-    --surface-2: #1d2128;
-    --border: #2a2f38;
-    --border-strong: #3a404b;
-    --text: #eceef2;
-    --muted: #a6acb8;
-    --faint: #7d8492;
-    --accent: #7c95ff;
-    --accent-hover: #93a8ff;
-    --accent-soft: #1f2747;
-    --on-accent: #0f1115;
-    --green: #5fd398;
-    --green-soft: #15301f;
-    --amber: #f3b06b;
-    --amber-soft: #3a2810;
-    --red: #ff8a84;
-    --red-soft: #3d1a19;
-    --violet-soft: #2a2140;
-    --lay: #b69cff;
-    --lay-soft: #2a2140;
-    --shadow-sm: none;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-    color-scheme: dark;
-  }
-}
 
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -72,7 +50,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 400 15px/1.55 var(--font);
+  font: 500 15px/1.55 var(--font);
   -webkit-font-smoothing: antialiased;
 }
 [hidden] { display: none !important; }
@@ -109,7 +87,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .badge {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px;
-  font: 500 11.5px/1.5 var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+  font: 700 11.5px/1.5 var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
   background: var(--surface-2); color: var(--muted); border: 1px solid var(--border);
   /* "3 new" or "Jobs tracked" must not break across two lines on a narrow card; the row
      around the badges wraps instead. */
@@ -154,7 +132,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; letter-spacing: -0.01em; }
 .brand:hover { color: var(--text); }
-.brand-mark { width: 30px; height: 30px; flex: none; }
+.brand-mark { height: 38px; width: auto; flex: none; }
 
 /* ---------- cards ---------- */
 .card {
@@ -241,8 +219,8 @@ textarea.input { resize: vertical; line-height: 1.5; }
 /* ---------- app shell (upload, dashboard) ---------- */
 .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100dvh; }
 .sidebar {
-  position: sticky; top: 0; height: 100dvh; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 6px; padding: 18px 14px;
+  position: sticky; top: 0; height: 100dvh; overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px; padding: 18px 14px 12px;
   background: var(--surface); border-right: 1px solid var(--border);
 }
 .sb-top { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 12px; }
@@ -254,7 +232,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 }
 .avatar {
   display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px;
-  background: linear-gradient(135deg, #c7d2fe, #f5d0fe); color: #312e81; font-weight: 700; font-size: 14px;
+  background: linear-gradient(135deg, #dadada, #8a8a8a); color: #000000; font-weight: 700; font-size: 14px;
 }
 .sb-email { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-label { padding: 14px 10px 6px; font: 500 11px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
@@ -271,15 +249,12 @@ textarea.input { resize: vertical; line-height: 1.5; }
   font: 500 10px/1.5 var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
 }
 .sb-nav .sb-label:first-child { padding-top: 4px; }
-.sb-versions { display: grid; gap: 2px; }
-.sb-version { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--muted); font-size: 13.5px; }
-.sb-version:hover { background: var(--surface-2); color: var(--text); }
-.sb-version[aria-current="true"] { color: var(--text); font-weight: 600; }
-.sb-dot { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--accent); flex: none; }
-.sb-version .when { margin-left: auto; font: 400 12px/1 var(--mono); color: var(--faint); }
-.sb-empty { padding: 4px 10px; color: var(--faint); font-size: 13px; }
-.sb-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+.sb-scroll { flex: 1; min-height: 0; margin: 0 -8px; padding: 0 8px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.sb-scroll > .sb-link { margin-top: 2px; }
+.sb-foot { flex: none; display: grid; gap: 2px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); background: var(--surface); }
 .sb-foot .sb-link { width: 100%; background: none; border: 0; cursor: pointer; text-align: left; }
+/* Sign out ends the session, so it warns in red when pointed at or focused. */
+.sb-foot .sb-link.sb-signout:hover, .sb-foot .sb-link.sb-signout:focus-visible { background: var(--signout-soft); color: var(--signout); }
 
 .main { min-width: 0; display: flex; flex-direction: column; }
 .topbar {
@@ -293,6 +268,8 @@ textarea.input { resize: vertical; line-height: 1.5; }
   background: var(--surface); border: 1px solid var(--border-strong); cursor: pointer;
 }
 .content { display: grid; gap: 20px; padding: 8px 32px 40px; max-width: 1280px; width: 100%; }
+/* The Resume Builder uses the whole window: the page, its toolbar and the Lay AI panel. */
+.content-wide { max-width: none; }
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgb(10 12 18 / 0.45); }
 
 /* tabs under the topbar */
@@ -392,7 +369,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .seg button:disabled { cursor: not-allowed; opacity: 0.5; }
 .paper {
   min-height: 460px; padding: 34px 30px; border-radius: 10px; background: #fff; color: #1b1d22;
-  border: 1px solid var(--border); box-shadow: var(--shadow); font-size: 12.5px; line-height: 1.55;
+  border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--paper-font); font-size: 12.5px; line-height: 1.55;
 }
 .paper-tag { font: 500 10.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: #6b7080; text-align: center; }
 .paper h2 { margin-top: 6px; font-size: 22px; text-align: center; color: #111; }
@@ -576,43 +553,56 @@ textarea.input { resize: vertical; line-height: 1.5; }
 
 /* the editor: resume on the left; with Lay AI open, the panel takes the right column */
 .rb-editor { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
-.rb-editor.panel-open { grid-template-columns: minmax(0, 1fr) 380px; }
+.rb-editor.panel-open { grid-template-columns: minmax(0, 1fr) var(--lay-w, clamp(380px, 24vw, 520px)); }
 .rb-stage { position: relative; display: grid; justify-items: center; gap: 12px; min-width: 0; }
-.rb-hint { width: min(780px, 100%); font-size: 13.5px; }
-.rb-viewing { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; width: min(780px, 100%); }
+.rb-hint { width: 100%; max-width: 1100px; font-size: 13.5px; }
+.rb-viewing { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; }
 .rb-viewing-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* the resume itself: always white paper, in light and dark mode alike */
 .rb-paper {
-  width: min(780px, 100%); padding: 44px 48px; border: 1px solid var(--border); border-radius: 6px;
-  background: #ffffff; color: #1b1f27; box-shadow: var(--shadow); font-size: 14.5px; line-height: 1.55;
+  --rb-fs: 11; --page-w: 210mm; --page-h: 297mm; --mt: 19.1mm; --mb: 19.1mm; --ml: 19.1mm; --mr: 19.1mm;
+  width: var(--page-w); min-height: var(--page-h); box-sizing: border-box; padding: var(--mt) var(--mr) var(--mb) var(--ml);
+  border: 1px solid #d4d4d4; border-radius: 3px; background: #ffffff; color: #111111;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 10px 28px rgb(0 0 0 / 0.10);
+  font-family: var(--paper-font); font-size: calc(var(--rb-fs) * 1pt); line-height: 1.5;
 }
+.rb-page-a4 { --page-w: 210mm; --page-h: 297mm; }
+.rb-page-letter { --page-w: 215.9mm; --page-h: 279.4mm; }
+/* More than one page: a line where each page ends. The text is not re-flowed around it. */
+.rb-paper.is-multipage {
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--page-h) - 3px), #8a8a8a calc(var(--page-h) - 3px), #8a8a8a var(--page-h));
+}
+/* The page is drawn at its true size, then scaled to fit the column (the script sets the size). */
+.rb-page-wrap { position: relative; width: 100%; overflow-x: auto; overflow-y: hidden; }
+.rb-page-wrap > .rb-paper { position: absolute; top: 0; left: 0; transform-origin: top left; }
+.rb-sheet { display: block; }
 .rb-head { padding-bottom: 12px; margin-bottom: 4px; border-bottom: 2px solid #1b1f27; }
-.rb-name { font-size: 28px; }
+.rb-name { font-size: 1.9em; }
 .rb-contact { margin-top: 4px; color: #4b5263; }
-.rb-section { margin-top: 18px; }
-.rb-section h3 { margin-bottom: 8px; font: 700 12px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: #4b5263; }
+.rb-section { margin-top: 1.25em; }
+.rb-section h3, .rb-section[data-title]::before { margin-bottom: 0.55em; font: 700 0.82em/1.4 var(--paper-mono); letter-spacing: 0.12em; text-transform: uppercase; color: #4b5263; }
 .rb-item { display: grid; gap: 4px; }
 .rb-item-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; }
 .rb-strong { font-weight: 700; }
-.rb-dates { font: 400 12.5px/1.8 var(--mono); color: #6b7280; }
+.rb-dates { font: 400 0.86em/1.8 var(--paper-mono); color: #6b7280; }
 .rb-skills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.rb-skills .rb-field { padding: 3px 10px; border-radius: 7px; background: #eef1f8; font-weight: 500; font-size: 13.5px; }
+.rb-skills .rb-field { padding: 3px 10px; border-radius: 7px; background: #f1f1f1; font-weight: 500; font-size: 0.93em; }
 .rb-skills .rb-add .btn { min-height: 28px; color: #4b5263; }
 .rb-field { border-radius: 4px; outline: 1px dashed transparent; outline-offset: 3px; transition: outline-color 120ms, background-color 400ms; }
-.rb-paper.is-editable .rb-field { outline-color: #c6d0f5; cursor: text; }
-.rb-paper.is-editable .rb-field:hover { outline-color: #7c95ff; }
-.rb-paper.is-editable .rb-field:focus { outline: 2px solid #3b5bdb; background: #f4f6ff; }
-.rb-paper .rb-field.is-changed { background: #dcfce7; outline: 1px dashed #22a05a; }
-.rb-paper .rb-skills .rb-field.is-changed { background: #c9f2d8; }
+.rb-paper.is-editable .rb-field { outline-color: #c8c8c8; cursor: text; }
+.rb-paper.is-editable .rb-field:hover { outline-color: #000000; }
+.rb-doc:focus .rb-field.is-current { outline: 2px solid #000000; background: #f7f7f7; }
+.rb-paper .rb-field.is-changed { background: #ececec; outline: 1px dashed #000000; }
+.rb-paper .rb-skills .rb-field.is-changed { background: #e2e2e2; }
 .rb-tpl-modern .rb-head { border-bottom-color: #3b5bdb; }
-.rb-tpl-modern .rb-name, .rb-tpl-modern .rb-section h3 { color: #3b5bdb; }
-.rb-tpl-compact { padding: 30px 34px; font-size: 13.5px; line-height: 1.45; }
-.rb-tpl-compact .rb-section { margin-top: 12px; }
-.rb-tpl-compact .rb-name { font-size: 24px; }
-.rb-tpl-academic { font-family: Georgia, "Times New Roman", serif; }
-.rb-tpl-academic .rb-head { text-align: center; border-bottom-width: 1px; }
-.rb-tpl-academic .rb-section h3 { font-family: Georgia, "Times New Roman", serif; font-size: 13px; letter-spacing: 0.08em; }
+.rb-tpl-modern .rb-name, .rb-tpl-modern .rb-section h3, .rb-tpl-modern .rb-section[data-title]::before { color: #3b5bdb; }
+.rb-tpl-compact { line-height: 1.4; }
+.rb-tpl-compact .rb-section { margin-top: 0.85em; }
+.rb-tpl-compact .rb-name { font-size: 1.65em; }
+.rb-tpl-academic, .rb-tpl-executive { font-family: Georgia, "Times New Roman", serif; }
+.rb-tpl-academic .rb-head, .rb-tpl-executive .rb-head { text-align: center; border-bottom-width: 1px; }
+.rb-tpl-academic .rb-section h3, .rb-tpl-academic .rb-section[data-title]::before, .rb-tpl-executive .rb-section h3, .rb-tpl-executive .rb-section[data-title]::before { font-family: Georgia, "Times New Roman", serif; font-size: 0.9em; letter-spacing: 0.08em; }
 
 /* the Lay AI pointer: follows the user's caret, animation only */
 .rb-pointer {
@@ -620,7 +610,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
   pointer-events: none; opacity: 0; transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 160ms;
 }
 .rb-pointer.is-visible { opacity: 1; }
-.rb-pointer svg { width: 18px; height: 18px; fill: #7c4dff; stroke: #ffffff; stroke-width: 1.5; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25)); }
+.rb-pointer svg { width: 18px; height: 18px; fill: #000000; stroke: #ffffff; stroke-width: 1.5; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25)); }
 
 /* the floating Lay AI button: floats, its ring spins, and it says "Hi!" */
 .lay-fab {
@@ -628,15 +618,12 @@ textarea.input { resize: vertical; line-height: 1.5; }
   padding: 0; border: 0; background: none; cursor: pointer; animation: lay-float 3.2s ease-in-out infinite;
 }
 .lay-orb {
-  position: relative; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #c4b5fd, #6d3fd6); color: #ffffff;
-  box-shadow: 0 10px 24px rgb(109 63 214 / 0.35);
+  position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 12px;
+  background: #000000; box-shadow: 0 10px 24px rgb(0 0 0 / 0.28), 0 0 0 1px rgb(255 255 255 / 0.18);
 }
-.lay-orb::before {
-  content: ""; position: absolute; inset: -6px; border-radius: 50%;
-  border: 2px dashed rgb(109 63 214 / 0.55); animation: lay-spin 7s linear infinite;
-}
-.lay-orb .icon { width: 26px; height: 26px; }
+.lay-mark { display: block; width: 100%; height: 100%; }
+.lay-tri { transform-box: fill-box; transform-origin: center; transition: transform 0.35s ease; }
+.lay-fab[aria-expanded="true"] .lay-tri { transform: rotate(180deg); }
 .lay-name {
   padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface);
   color: var(--text); font: 600 12px/1.3 var(--font); box-shadow: var(--shadow-sm);
@@ -646,7 +633,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
   border: 1px solid var(--border); background: var(--surface); color: var(--lay); font-weight: 700;
   box-shadow: var(--shadow); white-space: nowrap; animation: lay-hi 5s ease forwards;
 }
-.lay-fab:hover .lay-orb { box-shadow: 0 12px 28px rgb(109 63 214 / 0.5); }
+.lay-fab:hover .lay-orb { box-shadow: 0 12px 28px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(255 255 255 / 0.3); }
 .lay-fab:focus-visible { outline: none; }
 .lay-fab:focus-visible .lay-orb { outline: 3px solid var(--accent); outline-offset: 6px; }
 @keyframes lay-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -659,15 +646,14 @@ textarea.input { resize: vertical; line-height: 1.5; }
 
 /* the Lay AI panel: Chat and Versions */
 .lay-panel {
-  position: sticky; top: 16px; display: flex; flex-direction: column; height: calc(100dvh - 120px); min-height: 480px;
+  position: sticky; top: 16px; display: flex; flex-direction: column; height: var(--lay-h, calc(100dvh - 120px)); min-height: 420px;
   overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow);
 }
 .lay-panel-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-.lay-avatar {
-  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; flex: none;
-  background: radial-gradient(circle at 35% 30%, #c4b5fd, #6d3fd6); color: #ffffff;
-}
-.lay-avatar .icon { width: 18px; height: 18px; }
+.lay-avatar { display: block; width: 34px; height: 34px; border-radius: 8px; flex: none; overflow: hidden; background: #000000; }
+/* chat open: the triangle is upside down; it flips over as the panel opens */
+.lay-avatar .lay-tri { transform: rotate(180deg); animation: lay-flip 0.45s ease; }
+@keyframes lay-flip { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
 .lay-title { font-weight: 700; }
 .lay-sub { font-size: 12.5px; color: var(--muted); }
 .lay-close { display: grid; margin-left: auto; width: 36px; height: 36px; }
@@ -714,23 +700,60 @@ textarea.input { resize: vertical; line-height: 1.5; }
 
 /* the formatting toolbar */
 .rb-toolbar {
-  position: sticky; top: 8px; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
-  width: min(780px, 100%); padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px;
+  --tb-h: 34px;
+  container: rb-toolbar / inline-size; /* the rows react to the toolbar's own width, not the window's: the Lay AI panel narrows it */
+  position: relative; z-index: 6; display: grid; gap: 8px;
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--surface); box-shadow: var(--shadow-sm);
 }
-.rb-tool-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.rb-tool-group + .rb-tool-group { padding-left: 12px; border-left: 1px solid var(--border); }
-.rb-tool-style { margin-left: auto; gap: 8px; font-size: 13px; color: var(--muted); }
+/* Two rows (text, then page and content); every control is the same height and centred on the row. */
+.rb-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; min-width: 0; }
+.rb-tool-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: var(--tb-h); padding: 0 12px; border-left: 1px solid var(--border); }
+.rb-tool-group:first-child { padding-left: 0; border-left: 0; }
+.rb-tool-style { gap: 8px; padding-right: 0; font-size: 13px; color: var(--muted); } /* flows after Fit to page: pinned to the right it jumped sideways whenever the Lay AI panel opened or closed */
 .rb-tool-style label { font-weight: 600; }
+.rb-toolbar .select, .rb-toolbar .input, .rb-toolbar .btn, .rb-toolbar .rb-tool { height: var(--tb-h); min-height: var(--tb-h); box-sizing: border-box; }
+.rb-toolbar .select, .rb-toolbar .input { padding-top: 0; padding-bottom: 0; font-size: 13px; }
+.rb-toolbar .btn { padding: 0 12px; font-size: 13px; white-space: nowrap; }
+/* A select is as wide as its longest option; "Add section" gets a fixed width so its list never widens the row
+   and Writing style stays on row two instead of wrapping to a row of its own. */
+.rb-toolbar #add-section { width: 150px; }
+/* Too narrow for each row to fit on one line: groups wrap like words, with no separators (a separator would
+   land at the start of a line). */
+@container rb-toolbar (max-width: 980px) {
+  .rb-tool-group { padding: 0 10px 0 0; border-left: 0; }
+}
 .rb-tool {
-  display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid transparent;
+  display: grid; place-items: center; min-width: 34px; padding: 0 8px; border: 1px solid transparent;
   border-radius: 8px; background: none; color: var(--text); font-size: 15px; cursor: pointer;
 }
 .rb-tool:hover { background: var(--surface-2); border-color: var(--border); }
 .rb-tool[aria-pressed="true"] { background: var(--lay-soft); color: var(--lay); border-color: transparent; }
 .rb-tool .icon { width: 17px; height: 17px; }
+/* Text colour: an A with a bar in the colour at the caret, and a small palette under it. */
+.rb-color { position: relative; display: inline-flex; }
+.rb-tool-color { align-content: center; gap: 2px; padding: 0 6px; }
+.rb-color-a { font: 700 15px/1 var(--font); }
+.rb-color-bar { width: 16px; height: 3px; border-radius: 2px; background: var(--picked, #000000); box-shadow: 0 0 0 1px #00000026; }
+.rb-colors {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; display: grid; gap: 10px; width: 236px; padding: 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.rb-colors[hidden] { display: none; }
+.rb-colors-auto { width: 100%; justify-content: center; }
+.rb-colors-auto[aria-pressed="true"] { background: var(--lay-soft); }
+.rb-swatches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.rb-swatch { aspect-ratio: 1; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--swatch); cursor: pointer; }
+.rb-swatch:hover { outline: 2px solid var(--text); outline-offset: 1px; }
+.rb-swatch[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.rb-colors-custom { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.rb-colors-custom input { width: 44px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; }
+.rb-colors-note { margin: 0; min-height: 0; font-size: 12.5px; color: var(--muted); }
+.rb-colors-note:empty { display: none; }
+/* The palette hangs below the toolbar, so the toolbar must stack above the section tools bar under it. */
+.rb-toolbar:has(.rb-colors:not([hidden])) { z-index: 12; }
 .rb-linkbar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: min(780px, 100%); padding: 10px 12px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding: 10px 12px;
   border: 1px solid var(--accent); border-radius: 12px; background: var(--accent-soft);
 }
 .rb-linkbar label { font-weight: 600; font-size: 13.5px; }
@@ -740,27 +763,25 @@ textarea.input { resize: vertical; line-height: 1.5; }
 /* what the toolbar sets on the paper */
 .rb-paper a { color: #2f4bc0; text-decoration: underline; }
 .rb-font-serif { font-family: Georgia, "Times New Roman", serif; }
-.rb-font-serif .rb-section h3 { font-family: Georgia, "Times New Roman", serif; }
+.rb-font-serif .rb-section h3, .rb-font-serif .rb-section[data-title]::before { font-family: Georgia, "Times New Roman", serif; }
 .rb-font-classic { font-family: "CMU Serif", "Latin Modern Roman", "Computer Modern", Georgia, serif; }
-.rb-font-classic .rb-section h3, .rb-font-classic .rb-dates { font-family: "CMU Serif", "Latin Modern Roman", Georgia, serif; }
-.rb-size-s { font-size: 13px; }
-.rb-size-l { font-size: 16px; }
-.rb-space-tight { line-height: 1.38; }
-.rb-space-tight .rb-section { margin-top: 11px; }
+.rb-font-classic .rb-section h3, .rb-font-classic .rb-section[data-title]::before, .rb-font-classic .rb-dates { font-family: "CMU Serif", "Latin Modern Roman", Georgia, serif; }
+.rb-space-tight { line-height: 1.32; }
+.rb-space-tight .rb-section { margin-top: 0.75em; }
 .rb-space-airy { line-height: 1.75; }
-.rb-space-airy .rb-section { margin-top: 26px; }
+.rb-space-airy .rb-section { margin-top: 1.8em; }
 .rb-align-center .rb-head { text-align: center; }
 .rb-bullets { display: grid; gap: 3px; padding-left: 18px; list-style: disc; }
 .rb-bullets li { padding-left: 2px; }
 
 /* Classic: the LaTeX look (small-caps headings over a rule, justified and hyphenated text) */
-.rb-tpl-classic { padding: 52px 56px; color: #111111; }
+.rb-tpl-classic { color: #111111; }
 .rb-tpl-classic .rb-head { text-align: center; border-bottom: 0; padding-bottom: 4px; }
-.rb-tpl-classic .rb-name { font-size: 30px; font-weight: 700; font-variant: small-caps; letter-spacing: 0.02em; }
+.rb-tpl-classic .rb-name { font-size: 2.05em; font-weight: 700; font-variant: small-caps; letter-spacing: 0.02em; }
 .rb-tpl-classic .rb-contact { color: #111111; }
-.rb-tpl-classic .rb-section h3 {
+.rb-tpl-classic .rb-section h3, .rb-tpl-classic .rb-section[data-title]::before {
   margin-bottom: 6px; padding-bottom: 2px; border-bottom: 0.6px solid #111111;
-  font-size: 15px; font-weight: 500; font-variant: small-caps; letter-spacing: 0.04em; text-transform: none; color: #111111;
+  font-size: 1.03em; font-weight: 500; font-variant: small-caps; letter-spacing: 0.04em; text-transform: none; color: #111111;
 }
 .rb-tpl-classic .rb-section p { text-align: justify; hyphens: auto; }
 .rb-tpl-classic .rb-dates { color: #111111; font-style: italic; }
@@ -774,15 +795,15 @@ textarea.input { resize: vertical; line-height: 1.5; }
 /* the Lay AI cursor: label, plus a short tip while it watches */
 .rb-pointer-body { display: grid; justify-items: start; gap: 4px; margin-top: 7px; }
 .rb-pointer-label {
-  padding: 2px 8px; border-radius: 999px; background: #7c4dff; color: #ffffff;
+  padding: 2px 8px; border-radius: 999px; background: #000000; color: #ffffff;
   font: 600 11.5px/1.5 var(--font); white-space: nowrap;
 }
 .rb-pointer-hint {
-  max-width: 230px; padding: 6px 10px; border-radius: 10px; border: 1px solid #d9ccff; background: #f6f2ff;
-  color: #3b2a7a; font: 500 12.5px/1.4 var(--font); box-shadow: var(--shadow);
+  max-width: 230px; padding: 6px 10px; border-radius: 10px; border: 1px solid #000000; background: #ffffff;
+  color: #000000; font: 500 12.5px/1.4 var(--font); box-shadow: var(--shadow);
 }
-.rb-pointer.is-editing .rb-pointer-label { background: #18794e; }
-.rb-pointer.is-editing svg { fill: #18794e; }
+.rb-pointer.is-editing .rb-pointer-label { background: #555555; }
+.rb-pointer.is-editing svg { fill: #555555; }
 
 /* suggest mode in the chat: add only what is true */
 .lay-msg.lay-suggest { max-width: 100%; display: grid; gap: 10px; }
@@ -811,8 +832,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .lay-stored dd { margin: 2px 0 0; overflow-wrap: anywhere; }
 
 @media (max-width: 1100px) {
-  .rb-editor.panel-open { grid-template-columns: minmax(0, 1fr) 340px; }
-  .rb-paper { padding: 32px 28px; }
+  .rb-editor.panel-open { grid-template-columns: minmax(0, 1fr) var(--lay-w, 340px); }
 }
 @media (max-width: 900px) {
   .rb-editor.panel-open { grid-template-columns: minmax(0, 1fr); }
@@ -825,14 +845,11 @@ textarea.input { resize: vertical; line-height: 1.5; }
   .lay-fab { right: 16px; bottom: 16px; }
 }
 @media (max-width: 600px) {
-  .rb-paper, .rb-tpl-classic { padding: 24px 18px; }
-  .rb-name { font-size: 23px; }
-  .rb-tool-style { margin-left: 0; }
   .rb-tool-group + .rb-tool-group { padding-left: 0; border-left: 0; }
 }
 /* ---------- shared bits for the preview pages ---------- */
 .btn-danger { background: var(--red); color: #ffffff; }
-.btn-danger:hover { background: #a82722; color: #ffffff; }
+.btn-danger:hover { background: #3a3a3a; color: #ffffff; }
 
 /* ---------- wallet (preview) ---------- */
 .wallet-top { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
@@ -907,14 +924,14 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .letters-cost { font-size: 13px; color: var(--muted); }
 .letters-paper {
   display: grid; gap: 14px; padding: 32px 34px; border-radius: 8px; background: #ffffff; color: #1b1f27;
-  border: 1px solid var(--border); box-shadow: var(--shadow); font-size: 15px; line-height: 1.6;
+  border: 1px solid var(--border); box-shadow: var(--shadow); font-family: var(--paper-font); font-size: 15px; line-height: 1.6;
 }
 .letters-p { border-radius: 4px; outline: 1px dashed transparent; outline-offset: 3px; }
-.letters-p[contenteditable]:hover { outline-color: #c6d0f5; }
-.letters-p[contenteditable]:focus { outline: 2px solid #3b5bdb; background: #f4f6ff; }
+.letters-p[contenteditable]:hover { outline-color: #000000; }
+.letters-p[contenteditable]:focus { outline: 2px solid #000000; background: #f3f3f3; }
 .letters-subject { padding-bottom: 10px; border-bottom: 1px solid #e3e3e8; font-weight: 600; }
-.letters-ph { padding: 0 4px; border-radius: 5px; background: #efe9ff; color: #5b34c4; font-size: 0.86em; }
-.letters-paper.is-gemini { background: #fbfaff; }
+.letters-ph { padding: 0 4px; border-radius: 5px; background: #e8e8e8; color: #000000; font-size: 0.86em; }
+.letters-paper.is-gemini { background: #ffffff; }
 .letters-gemini-note { margin-bottom: 12px; }
 .letters-doc .field-hint { margin-top: 10px; }
 .letters-lead { margin-bottom: 12px; font-size: 13.5px; }
@@ -939,7 +956,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .community-feed { display: grid; gap: 12px; }
 .community-post { display: grid; gap: 10px; }
 .community-post-head { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px; align-items: center; }
-.community-avatar { background: linear-gradient(135deg, #c4b5fd, #99f6e4); color: #312e81; font-size: 13px; }
+.community-avatar { background: linear-gradient(135deg, #dadada, #8a8a8a); color: #000000; font-size: 13px; }
 .community-post-handle { display: flex; align-items: center; gap: 8px; font-weight: 700; }
 .community-post-text { font-size: 15px; }
 .community-handle { margin: 6px 0 12px; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--lay); }
@@ -996,10 +1013,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 /* ---------- team insights (preview): charts ---------- */
 /* Single-hue bars use --viz-1; the splits use the first categorical slots in fixed order.
    Both sets checked with the dataviz validator on these surfaces (light #fff, dark #171a20). */
-:root { --viz-1: #3b5bdb; --viz-c1: #2a78d6; --viz-c2: #eb6834; --viz-c3: #1baf7a; --viz-c4: #eda100; --viz-c5: #e87ba4; --viz-track: #eef0f6; --status-good: #0ca30c; --status-warning: #fab219; --status-critical: #d03b3b; }
-@media (prefers-color-scheme: dark) {
-  :root { --viz-1: #3987e5; --viz-c1: #3987e5; --viz-c2: #d95926; --viz-c3: #199e70; --viz-c4: #c98500; --viz-c5: #d55181; --viz-track: #232831; }
-}
+:root { --viz-1: #000000; --viz-c1: #000000; --viz-c2: #4d4d4d; --viz-c3: #8a8a8a; --viz-c4: #b8b8b8; --viz-c5: #d9d9d9; --viz-track: #e8e8e8; --status-good: #000000; --status-warning: #6b6b6b; --status-critical: #000000; }
 .insights-scope { margin-top: -8px; font-size: 13.5px; }
 .insights-kpis, .insights-health { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .insights-health { grid-template-columns: repeat(5, minmax(0, 1fr)); }
@@ -1037,9 +1051,9 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .viz-thin > span:last-child { border-radius: 0 999px 999px 0; }
 .viz-tall { display: flex; gap: 2px; height: 28px; }
 .viz-tall > span { display: flex; align-items: center; min-width: 4px; padding-left: 6px; border-radius: 4px; }
-.viz-tall-label { font-size: 12px; font-weight: 700; color: #ffffff; white-space: nowrap; }
-.viz-tall > .viz-c4 .viz-tall-label { color: #0b0b0b; }
-@media (prefers-color-scheme: dark) { .viz-tall > .viz-c4 .viz-tall-label { color: #ffffff; } }
+.viz-tall-label { font-size: 12px; font-weight: 700; color: #000000; white-space: nowrap; }
+.viz-tall > .viz-c1 .viz-tall-label, .viz-tall > .viz-c2 .viz-tall-label { color: #ffffff; }
+.viz-tall > .viz-c3 .viz-tall-label, .viz-tall > .viz-c4 .viz-tall-label, .viz-tall > .viz-c5 .viz-tall-label { color: #000000; }
 .viz-meter { height: 10px; border-radius: 999px; background: var(--viz-track); overflow: hidden; }
 .viz-meter > span { display: block; height: 100%; border-radius: 999px; background: var(--viz-1); }
 .viz-meter-sm { display: inline-block; width: 70px; height: 6px; margin-left: 8px; vertical-align: middle; }
@@ -1091,5 +1105,192 @@ textarea.input { resize: vertical; line-height: 1.5; }
 @media print {
   body * { visibility: hidden; }
   #final-paper, #final-paper *, #letter-paper, #letter-paper * { visibility: visible; }
-  #final-paper, #letter-paper { position: absolute; left: 0; top: 0; width: 100%; padding: 0; border: 0; box-shadow: none; }
+  #final-paper, #letter-paper { position: absolute; left: 0; top: 0; border: 0; box-shadow: none; }
+  #final-paper *, #letter-paper * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* keep the text colours the person chose */
+  #letter-paper { width: 100%; padding: 0; }
+  #final-paper { transform: none !important; left: 0 !important; background-image: none !important; }
+  .rb-page-wrap { width: auto !important; height: auto !important; }
 }
+
+/* Black and white icons: a black tile with a white glyph. A failed check is the inverse
+   (white tile, black outline) and a partial one is grey, so status never depends on hue. */
+.feature .feature-icon, .file-icon, .lock-icon, .check.pass .check-icon {
+  background: #000000; color: #ffffff; border: 1.5px solid #000000;
+}
+.check.fail .check-icon { background: #ffffff; color: #000000; border: 1.5px solid #000000; }
+.check.partial .check-icon { background: #8a8a8a; color: #000000; border: 1.5px solid #000000; }
+.badge-red { background: #000000; color: #ffffff; }
+.badge { border-color: #000000; }
+.badge-blue, .badge-green, .badge-amber, .badge-red, .badge-violet { border: 1px solid #000000; }
+.card, .auth-card { border-width: 1.5px; }
+
+/* The editor (Tiptap) inside the paper: the document's section titles are drawn from data-title
+   so they cannot be typed over, and an emptied skill chip stays a visible target. */
+.rb-doc { outline: none; white-space: pre-wrap; word-wrap: break-word; }
+.rb-section[data-title]::before { content: attr(data-title); display: block; user-select: none; pointer-events: none; }
+.rb-doc .rb-skills .rb-field { min-width: 2.4em; }
+.rb-doc .rb-skills .rb-add { list-style: none; }
+.rb-doc .rb-field a { cursor: text; }
+
+/* The floating toolbar above selected text, and the status bar under the page. */
+.rb-bubble {
+  position: absolute; left: 0; top: 0; z-index: 8; display: flex; gap: 2px; padding: 4px;
+  border-radius: 10px; background: #000000; box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+.rb-bubble .rb-tool { min-width: 32px; height: 30px; color: #ffffff; border-color: transparent; background: transparent; }
+.rb-bubble .rb-tool:hover { background: #333333; }
+.rb-bubble .rb-tool[aria-pressed="true"] { background: #ffffff; color: #000000; }
+.rb-statusbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; width: 100%;
+  padding: 0 2px; color: var(--muted); font: 500 12.5px/1.5 var(--mono);
+}
+.rb-statusbar .rb-engine { margin-left: auto; color: var(--faint); }
+
+/* Two columns: a narrow side column (education, skills) beside the main one (summary, experience). */
+.rb-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.15fr); column-gap: 2em; align-items: start; }
+.rb-col-side { grid-column: 1; grid-row: 1; min-width: 0; }
+.rb-col-main { grid-column: 2; grid-row: 1; min-width: 0; }
+.rb-columns .rb-section:first-child { margin-top: 1em; }
+.rb-col-side .rb-item-head { display: grid; gap: 0; }
+.rb-col-side .rb-dates { text-align: left; }
+
+/* The size box in the toolbar, the page note, the status bar's page figure and the resize handles. */
+.rb-size-input { width: 64px; padding: 0 6px; text-align: center; font: 600 13px/1 var(--mono); }
+.rb-pages { font-weight: 700; color: var(--text); }
+.rb-pages.is-over { padding: 0 8px; border-radius: 6px; background: #000000; color: #ffffff; }
+.lay-resize { position: absolute; z-index: 3; background: transparent; touch-action: none; }
+.lay-resize-x { left: 0; top: 0; bottom: 0; width: 8px; cursor: col-resize; }
+.lay-resize-y { left: 0; right: 0; bottom: 0; height: 8px; cursor: row-resize; }
+.lay-resize:hover, .lay-resize:focus-visible, .lay-resize.is-dragging { background: rgb(0 0 0 / 0.22); outline: none; }
+@media (max-width: 900px) { .lay-resize { display: none; } }
+.rb-fit-note { width: 100%; padding: 8px 12px; border: 1.5px solid #000000; border-radius: 10px; background: #ffffff; font-size: 13.5px; }
+@media (min-width: 1300px) { .rb-toolbar { position: sticky; top: 8px; } }
+
+/* The rulers: a scale in cm or inches, margins shaded, a handle on each margin to drag. */
+.rb-ruler { position: absolute; z-index: 4; background: #ffffff; border: 1px solid #c8c8c8; user-select: none; touch-action: none; }
+.rb-ruler[hidden] { display: none; }
+.rb-ruler-svg { display: block; }
+.rb-ruler-shade { fill: #e4e4e4; }
+.rb-ruler-tick { stroke: #555555; stroke-width: 1; fill: none; shape-rendering: crispEdges; }
+.rb-ruler-tick-minor { stroke: #9a9a9a; }
+.rb-ruler-label { fill: #333333; font: 600 9px/1 var(--mono); }
+.rb-ruler-handle { position: absolute; background: #000000; z-index: 2; }
+.rb-ruler-x .rb-ruler-handle { top: -1px; bottom: -1px; width: 5px; margin-left: -2.5px; cursor: col-resize; }
+.rb-ruler-y .rb-ruler-handle { left: -1px; right: -1px; height: 5px; margin-top: -2.5px; cursor: row-resize; }
+.rb-ruler-handle:hover, .rb-ruler-handle:focus-visible, .rb-ruler-handle.is-dragging { background: #000000; outline: 2px solid #000000; outline-offset: 2px; }
+.rb-ruler-handle::after {
+  content: attr(data-tip); position: absolute; display: none; padding: 2px 6px; border-radius: 6px; background: #000000; color: #ffffff;
+  font: 600 11px/1.4 var(--mono); white-space: nowrap; pointer-events: none;
+}
+.rb-ruler-x .rb-ruler-handle::after { left: 50%; top: 100%; transform: translate(-50%, 6px); }
+.rb-ruler-y .rb-ruler-handle::after { left: 100%; top: 50%; transform: translate(6px, -50%); }
+.rb-ruler-handle:hover::after, .rb-ruler-handle:focus-visible::after, .rb-ruler-handle.is-dragging::after { display: block; }
+
+/* The Page setup dialog. */
+.rb-dialog { width: min(520px, 94vw); padding: 0; border: 1.5px solid #000000; border-radius: 14px; background: #ffffff; color: #000000; box-shadow: 4px 4px 0 #000000; }
+.rb-dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+.rb-dialog-form { display: grid; gap: 14px; padding: 18px 20px 20px; }
+.rb-dialog-form fieldset { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 12px; margin: 0; padding: 12px 14px; border: 1px solid #000000; border-radius: 10px; }
+.rb-dialog-form legend { padding: 0 6px; font-weight: 700; }
+.rb-margin-grid { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px 12px; }
+.rb-check { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.rb-dialog-actions { display: flex; justify-content: flex-end; }
+
+/* "Draw a line under section headings" (Page setup). */
+.rb-rules .rb-section h3, .rb-rules .rb-section[data-title]::before { padding-bottom: 0.2em; border-bottom: 0.6pt solid #111111; }
+
+/* The template page: a filter by columns, and thumbnails for the two-column templates. */
+.rb-filter { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn[aria-pressed="true"].btn-secondary { background: #000000; border-color: #000000; color: #ffffff; }
+.rb-mini-sidebar, .rb-mini-executive { grid-template-columns: 34% minmax(0, 1fr); column-gap: 10px; }
+.rb-mini-sidebar span, .rb-mini-executive span { width: auto !important; margin-top: 0 !important; }
+.rb-mini-sidebar span:nth-child(1), .rb-mini-executive span:nth-child(1) { grid-column: 1 / -1; width: 50% !important; }
+.rb-mini-sidebar span:nth-child(odd):not(:first-child), .rb-mini-executive span:nth-child(odd):not(:first-child) { background: #8f98ab; }
+.rb-mini-executive { justify-items: stretch; }
+.rb-tpl-sidebar .rb-col-side { padding-right: 1em; border-right: 0.6pt solid #111111; }
+
+/* Custom sections and their tables. The look comes from three variables on the table (see tableStyle() in
+   resume-doc.js): --tw line width, --ts line style, --tp space inside a cell; the table's own style also sets
+   the space between cells. Width 0 is the "table with no borders" trick: the cells line things up but draw
+   nothing, except faint guides while you edit. */
+.rb-paper table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0.2em 0; }
+.rb-paper th, .rb-paper td { padding: var(--tp, 4pt); vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+.rb-paper th { font-weight: 700; }
+.rb-paper td p, .rb-paper th p { margin: 0; }
+.rb-paper td ul, .rb-paper th ul { margin: 0; }
+.rb-table-rows td, .rb-table-rows th { border-bottom: var(--tw, 1pt) var(--ts, solid) #8a8a8a; }
+.rb-table-light td, .rb-table-light th { border: var(--tw, 1pt) var(--ts, solid) #bdbdbd; }
+.rb-table-all td, .rb-table-all th { border: var(--tw, 1pt) var(--ts, solid) #111111; }
+.rb-paper.is-editable .rb-table-hidden td, .rb-paper.is-editable .rb-table-hidden th { outline: 1px dotted #c4c4c4; outline-offset: -1px; }
+.rb-paper .selectedCell { background: #e6e6e6; }
+.rb-custom > p, .rb-custom > ul { margin-top: 0.2em; }
+.rb-paper .rb-bullets { display: grid; gap: 0.15em; padding-left: 1.2em; list-style: disc; }
+.rb-paper .rb-bullets li p { margin: 0; }
+.ProseMirror-gapcursor { display: none; pointer-events: none; position: absolute; }
+.ProseMirror-gapcursor:after { content: ""; display: block; position: absolute; top: -2px; width: 20px; border-top: 1px solid #000000; animation: gap-blink 1.1s steps(2, start) infinite; }
+@keyframes gap-blink { to { visibility: hidden; } }
+.ProseMirror-focused .ProseMirror-gapcursor { display: block; }
+
+/* The bar of section and table tools, and the ATS reading-order dialog. */
+.rb-context { position: relative; top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; }
+.rb-context .rb-tool-group { padding-top: 0; padding-bottom: 0; }
+.rb-tool-label { font: 700 12.5px/1 var(--mono); }
+/* A number box with its name before it and its unit after it, in the table bar. */
+.rb-num { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.rb-num .input { width: 64px; padding: 0 8px; }
+.rb-reading-notes { display: grid; gap: 6px; margin: 0; padding-left: 18px; font-size: 13.5px; }
+.rb-reading-text { max-height: 46vh; margin: 0; padding: 12px; overflow: auto; border: 1px solid #000000; border-radius: 10px; background: #f6f6f6; font: 500 12.5px/1.5 var(--mono); white-space: pre-wrap; }
+
+/* Sections the person has hidden in Page setup: still in the resume, just not drawn. */
+.rb-hide-summary [data-node="summarySection"], .rb-hide-education [data-node="educationSection"], .rb-hide-skills [data-node="skillsSection"] { display: none; }
+
+.rb-zoom-label { margin-left: auto; font: 500 12.5px/1 var(--mono); color: var(--muted); }
+.rb-zoom { width: auto; min-height: 30px; padding: 0 8px; font: 600 12.5px/1 var(--mono); }
+.rb-statusbar .rb-engine { margin-left: 0; }
+
+/* The resume version menu in the top bar of the pages that use the resume. */
+.vmenu { position: relative; }
+.vmenu-btn { gap: 8px; }
+.vmenu-btn .icon:last-child { width: 14px; height: 14px; }
+.vmenu-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 35; display: flex; flex-direction: column; width: min(300px, 86vw); max-height: 360px;
+  border: 1.5px solid #000000; border-radius: 12px; background: #ffffff; box-shadow: 4px 4px 0 #000000;
+}
+.vmenu-pop[hidden] { display: none; }
+.vmenu-title { padding: 10px 14px 6px; font: 700 12px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+.vmenu-list { flex: 1; min-height: 0; margin: 0; padding: 4px 6px; overflow-y: auto; list-style: none; }
+.vmenu-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border-radius: 8px; color: var(--text); font-size: 13.5px; }
+.vmenu-item:hover { background: var(--surface-2); color: var(--text); }
+.vmenu-item[aria-current="true"] { background: #000000; color: #ffffff; }
+.vmenu-item .when { font: 500 12px/1 var(--mono); opacity: 0.75; }
+.vmenu-empty { padding: 8px 10px; color: var(--muted); font-size: 13.5px; }
+.vmenu-foot { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #000000; font-weight: 600; font-size: 13.5px; }
+.vmenu-foot .icon { width: 16px; height: 16px; }
+
+/* A narrow window: no separators, they would start a wrapped line. */
+@media (max-width: 1100px) { .rb-tool-group { padding: 0 10px 0 0; border-left: 0; } }
+
+/* Lay AI as a floating chat on pages other than the Resume Builder: a panel docked to the right edge. */
+.lay-panel.lay-dock { position: fixed; top: 16px; right: 16px; bottom: 16px; z-index: 60; width: min(400px, calc(100vw - 32px)); height: auto; min-height: 0; }
+.lay-msg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+@media (min-width: 1100px) { body.lay-docked .main { padding-right: 432px; } }
+@media (max-width: 900px) {
+  .lay-panel.lay-dock { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: min(72dvh, 620px); border-radius: 18px 18px 0 0; }
+}
+
+/* The applications board: cards drag between columns. */
+.apps-hint { font-size: 13.5px; }
+.apps-card { cursor: grab; }
+.apps-card:active { cursor: grabbing; }
+.apps-card .select, .apps-card .btn, .apps-card summary, .apps-card pre { cursor: pointer; }
+.apps-card.is-dragging { opacity: 0.4; outline: 2px dashed #000000; outline-offset: 2px; }
+.apps-col { transition: background-color 120ms; }
+.apps-col.is-over { background: #ffffff; outline: 2px dashed #000000; outline-offset: -5px; }
+.apps-col.is-over .apps-empty { visibility: hidden; }
+.apps-board.is-dragging-card .apps-col:not(.is-over) { border-style: dashed; }
+.apps-card.is-moved { animation: apps-moved 1.6s ease-out; }
+@keyframes apps-moved {
+  0%, 55% { outline: 3px solid #000000; outline-offset: 3px; }
+  100% { outline: 3px solid transparent; outline-offset: 3px; }
+}
+@media (prefers-reduced-motion: reduce) { .apps-card.is-moved { animation: none; outline: 3px solid #000000; outline-offset: 3px; } }

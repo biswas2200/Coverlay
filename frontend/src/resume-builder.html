@@ -4,10 +4,10 @@
     <meta charset="utf-8" />
     <title>Resume Builder · Coverlay</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.png" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="css/app.css" />
   </head>
   <body class="app">
@@ -22,6 +22,7 @@
           <h1 class="page-title">Resume Builder</h1>
         </div>
         <div class="topbar-actions">
+          <span id="version-menu-slot" data-label="Uploaded"></span>
           <span class="badge badge-violet">Preview</span>
           <button class="btn btn-ghost" id="start-over" type="button" hidden><i data-icon="refresh"></i>Start over</button>
           <button class="btn btn-secondary" id="change-template" type="button" hidden>Change template</button>
@@ -29,7 +30,7 @@
         </div>
       </header>
 
-      <div class="content">
+      <div class="content content-wide">
         <p class="alert alert-info" role="note">
           Preview with sample data: nothing here is saved to your account, and Lay AI's replies are
           samples. No AI is called yet.
@@ -83,10 +84,15 @@
         <section class="rb-step" id="step-templates" aria-labelledby="templates-title" hidden>
           <div class="rb-step-head">
             <div>
-              <h2 id="templates-title">Templates for you</h2>
+              <h2 id="templates-title">Pick a template</h2>
               <p class="muted" id="templates-sub"></p>
             </div>
             <button class="btn btn-ghost" id="templates-back" type="button">Change answers</button>
+          </div>
+          <div class="rb-filter" id="template-filter" role="group" aria-label="Show templates with">
+            <button class="btn btn-secondary btn-sm" type="button" data-filter="all" aria-pressed="true">All layouts</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-filter="1" aria-pressed="false">One column</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-filter="2" aria-pressed="false">Two columns</button>
           </div>
           <ul class="rb-templates" id="template-list"></ul>
         </section>
@@ -101,40 +107,79 @@
                 <button class="btn btn-ghost btn-sm" id="viewing-back" type="button">Back to current</button>
               </span>
             </div>
-            <div class="rb-toolbar" id="rb-toolbar" role="toolbar" aria-label="Formatting" aria-controls="rb-paper">
-              <div class="rb-tool-group">
+            <div class="rb-toolbar" id="rb-toolbar" role="toolbar" aria-label="Formatting" aria-controls="rb-editor">
+              <div class="rb-toolbar-row" role="group" aria-label="Text">
+              <div class="rb-tool-group" role="group" aria-label="History">
+                <button class="rb-tool" type="button" data-cmd="undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><i data-icon="undo"></i></button>
+                <button class="rb-tool" type="button" data-cmd="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><i data-icon="redo"></i></button>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Font">
                 <label class="sr-only" for="fmt-font">Font</label>
                 <select class="select" id="fmt-font" data-format="font">
                   <option value="sans">Sans</option>
                   <option value="serif">Serif</option>
                   <option value="classic">LaTeX (CMU Serif)</option>
                 </select>
-                <label class="sr-only" for="fmt-size">Text size</label>
-                <select class="select" id="fmt-size" data-format="size">
-                  <option value="s">Small</option>
-                  <option value="m">Medium</option>
-                  <option value="l">Large</option>
-                </select>
+                <button class="rb-tool" type="button" id="size-down" aria-label="Make the text smaller" title="Smaller text"><span aria-hidden="true">&minus;</span></button>
+                <label class="sr-only" for="fmt-fontsize">Text size in points</label>
+                <input class="input rb-size-input" id="fmt-fontsize" type="number" inputmode="decimal" min="8" max="14" step="0.5" title="Text size (pt)" />
+                <button class="rb-tool" type="button" id="size-up" aria-label="Make the text bigger" title="Bigger text"><span aria-hidden="true">+</span></button>
               </div>
               <div class="rb-tool-group" role="group" aria-label="Text style">
                 <button class="rb-tool" type="button" data-cmd="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
                 <button class="rb-tool" type="button" data-cmd="italic" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
                 <button class="rb-tool" type="button" data-cmd="underline" aria-label="Underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <div class="rb-color">
+                  <button class="rb-tool rb-tool-color" type="button" id="color-btn" data-cmd="color" aria-label="Text colour" aria-haspopup="true" aria-expanded="false" aria-controls="rb-colors" title="Text colour"><span class="rb-color-a" aria-hidden="true">A</span><span class="rb-color-bar" aria-hidden="true"></span></button>
+                  <div class="rb-colors" id="rb-colors" role="group" aria-label="Text colour" hidden>
+                    <button class="btn btn-secondary btn-sm rb-colors-auto" type="button" id="color-auto" aria-pressed="true">Automatic (black)</button>
+                    <div class="rb-swatches" id="color-swatches"></div>
+                    <label class="rb-colors-custom" for="color-custom"><span>Custom colour</span><input type="color" id="color-custom" value="#1d4ed8" /></label>
+                    <p class="rb-colors-note" id="color-note" role="status"></p>
+                  </div>
+                </div>
                 <button class="rb-tool" type="button" data-cmd="link" aria-label="Add a link" title="Add a link"><i data-icon="link"></i></button>
               </div>
-              <div class="rb-tool-group">
+              <div class="rb-tool-group" role="group" aria-label="Paragraph">
                 <button class="rb-tool" type="button" id="fmt-bullets" aria-pressed="false" aria-label="Experience as bullet points" title="Experience as bullet points"><i data-icon="list"></i></button>
                 <label class="sr-only" for="fmt-align">Header alignment</label>
                 <select class="select" id="fmt-align" data-format="align">
                   <option value="left">Header left</option>
                   <option value="center">Header centred</option>
                 </select>
-                <label class="sr-only" for="fmt-spacing">Spacing</label>
-                <select class="select" id="fmt-spacing" data-format="spacing">
+                <label class="sr-only" for="fmt-spacing">Line spacing</label>
+                <select class="select" id="fmt-spacing" data-format="spacing" title="Line spacing">
                   <option value="tight">Tight</option>
                   <option value="normal">Normal</option>
                   <option value="airy">Airy</option>
                 </select>
+              </div>
+              </div>
+              <div class="rb-toolbar-row" role="group" aria-label="Page and content">
+              <div class="rb-tool-group" role="group" aria-label="Insert">
+                <label class="sr-only" for="add-section">Add a section</label>
+                <select class="select" id="add-section" title="Add a section">
+                  <option value="">+ Add section…</option>
+                  <option value="text">Text section</option>
+                  <option value="bullets">Bullet list section</option>
+                  <option value="table-2">Table: 2 columns</option>
+                  <option value="table-3">Table: 3 columns</option>
+                  <option value="table-4">Table: 4 columns</option>
+                </select>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Page setup">
+                <label class="sr-only" for="fmt-columns">Columns</label>
+                <select class="select" id="fmt-columns" data-format="columns" data-number title="One column is the safest for ATS">
+                  <option value="1">One column</option>
+                  <option value="2">Two columns</option>
+                </select>
+                <label class="sr-only" for="fmt-limit">Page limit</label>
+                <select class="select" id="fmt-limit" title="How many pages the resume may take">
+                  <option value="1">1 page</option>
+                  <option value="2">2 pages</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" type="button" id="open-page-setup" title="Paper size, margins on each side, units and more">Page setup…</button>
+                <button class="btn btn-secondary btn-sm" type="button" id="fit-page" title="Tighten spacing, margins and text size until it fits the page limit. Nothing is deleted.">Fit to page</button>
               </div>
               <div class="rb-tool-group rb-tool-style">
                 <label for="fmt-style">Writing style</label>
@@ -145,6 +190,46 @@
                   <option value="beginner">Beginner</option>
                 </select>
               </div>
+              </div>
+            </div>
+            <div class="rb-toolbar rb-context" id="rb-context" role="toolbar" aria-label="Section and table tools" hidden>
+              <div class="rb-tool-group" role="group" aria-label="Section">
+                <span class="rb-tool-label" id="ctx-name"></span>
+                <button class="btn btn-secondary btn-sm" type="button" data-ctx="up" id="ctx-up">Move up</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-ctx="down" id="ctx-down">Move down</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-ctx="delete">Delete section</button>
+                <span id="ctx-insert"><button class="btn btn-secondary btn-sm" type="button" data-ctx="insert-table" title="Put a table in this section">Insert table</button></span>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Table" id="ctx-table" hidden>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="addColumnAfter">Column +</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="deleteColumn">Column −</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="addRowAfter">Row +</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="deleteRow">Row −</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="mergeCells" title="Select cells by dragging across them, then merge">Merge</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="splitCell">Split</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="toggleHeaderRow">Header row</button>
+                <button class="btn btn-secondary btn-sm" type="button" data-table="deleteTable">Delete table</button>
+              </div>
+              <div class="rb-tool-group" role="group" aria-label="Table lines and spacing" id="ctx-look" hidden>
+                <label class="sr-only" for="ctx-borders">Which lines</label>
+                <select class="select" id="ctx-borders" title="Which lines are drawn">
+                  <option value="all">Lines: full grid</option>
+                  <option value="light">Lines: light grid</option>
+                  <option value="rows">Lines: row lines</option>
+                </select>
+                <label class="sr-only" for="ctx-style">Line style</label>
+                <select class="select" id="ctx-style" title="Line style">
+                  <option value="solid">Solid line</option>
+                  <option value="dashed">Dashed line</option>
+                  <option value="dotted">Dotted line</option>
+                </select>
+                <label class="rb-num" for="ctx-width"><span>Width</span>
+                  <input class="input" id="ctx-width" type="number" inputmode="decimal" min="0" max="6" step="0.25" title="Line width in points. 0 hides the lines; the table stays." /><span>pt</span></label>
+                <label class="rb-num" for="ctx-padding"><span>Padding</span>
+                  <input class="input" id="ctx-padding" type="number" inputmode="decimal" min="0" max="12" step="0.5" title="Space inside each cell, in points" /><span>pt</span></label>
+                <label class="rb-num" for="ctx-gap"><span>Gap</span>
+                  <input class="input" id="ctx-gap" type="number" inputmode="decimal" min="0" max="12" step="0.5" title="Space between cells, in points. 0 joins the lines." /><span>pt</span></label>
+              </div>
             </div>
             <form class="rb-linkbar" id="rb-linkbar" hidden>
               <label for="link-url">Link for the selected text</label>
@@ -154,7 +239,33 @@
               <p class="field-error" id="link-error"></p>
             </form>
             <p class="muted rb-hint" id="editor-hint">Click any part of your resume and type to change it. Select text to make it bold or a link. Every change is kept as a version.</p>
-            <article class="rb-paper" id="rb-paper" aria-label="Your resume"></article>
+            <p class="muted rb-hint" id="columns-note" hidden>Two columns look sharp, but some ATS parsers read them out of order. One column is the safest choice for online applications.</p>
+            <div class="rb-page-wrap" id="rb-page-wrap">
+              <article class="rb-paper rb-editor" id="rb-editor" aria-label="Your resume" hidden></article>
+              <article class="rb-paper" id="rb-paper" aria-label="Your resume" hidden></article>
+            </div>
+            <div class="rb-statusbar" id="rb-statusbar">
+              <span id="rb-pages" class="rb-pages"></span>
+              <span id="rb-count"></span>
+              <span id="rb-saved"></span>
+              <button class="btn btn-ghost btn-sm" type="button" id="open-reading-order" title="The resume as plain text, in the order an applicant tracking system reads it">How an ATS reads this</button>
+              <label class="rb-zoom-label" for="rb-zoom">Zoom</label>
+              <select class="select rb-zoom" id="rb-zoom" title="How big the page is drawn. Fit width fills the space.">
+                <option value="fit">Fit width</option>
+                <option value="0.75">75%</option>
+                <option value="1">100%</option>
+                <option value="1.25">125%</option>
+                <option value="1.5">150%</option>
+              </select>
+              <span class="rb-engine" title="The resume is edited in a Tiptap (ProseMirror) editor">Editor: Tiptap</span>
+            </div>
+            <p class="rb-fit-note" id="fit-note" role="status" hidden></p>
+            <div class="rb-bubble" id="rb-bubble" role="toolbar" aria-label="Format the selected text" hidden>
+              <button class="rb-tool" type="button" data-cmd="bold" aria-label="Bold" title="Bold (Ctrl+B)"><b>B</b></button>
+              <button class="rb-tool" type="button" data-cmd="italic" aria-label="Italic" title="Italic (Ctrl+I)"><i>I</i></button>
+              <button class="rb-tool" type="button" data-cmd="underline" aria-label="Underline" title="Underline (Ctrl+U)"><u>U</u></button>
+              <button class="rb-tool" type="button" data-cmd="link" aria-label="Add a link" title="Add a link"><i data-icon="link"></i></button>
+            </div>
             <div class="rb-pointer" id="rb-pointer" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M4.5 2.5 19.5 12l-6.8 1.7L9.3 20.5z" /></svg>
               <div class="rb-pointer-body">
@@ -165,8 +276,10 @@
           </div>
 
           <aside class="lay-panel" id="lay-panel" aria-label="Lay AI" hidden>
+            <div class="lay-resize lay-resize-x" id="lay-resize-x" role="separator" aria-orientation="vertical" aria-label="Resize the Lay AI panel width. Arrow keys change it, Home resets it." tabindex="0" title="Drag to resize. Double-click to reset."></div>
+            <div class="lay-resize lay-resize-y" id="lay-resize-y" role="separator" aria-orientation="horizontal" aria-label="Resize the Lay AI panel height. Arrow keys change it, Home resets it." tabindex="0" title="Drag to resize. Double-click to reset."></div>
             <div class="lay-panel-head">
-              <span class="lay-avatar" aria-hidden="true"><i data-icon="sparkle"></i></span>
+              <span class="lay-avatar" aria-hidden="true"><svg class="lay-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#000"/><path class="lay-tri" d="M16 8.5 25 23.5H7z" fill="#fff"/></svg></span>
               <div>
                 <p class="lay-title">Lay AI</p>
                 <p class="lay-sub" id="lay-sub">Preview: sample replies</p>
@@ -180,6 +293,7 @@
             <div class="lay-body" id="lay-chat" role="tabpanel" aria-labelledby="tab-chat">
               <ul class="lay-messages" id="lay-messages" role="log" aria-live="polite"></ul>
               <div class="lay-suggestions" id="lay-suggestions">
+                <button class="lay-suggestion" type="button" data-prompt="Fit my resume on one page">Fit on one page</button>
                 <button class="lay-suggestion" type="button" data-prompt="Make it fit a DevOps role">Fit a DevOps role</button>
                 <button class="lay-suggestion" type="button" data-prompt="Add Docker and Kubernetes to my skills">Add Docker and Kubernetes</button>
                 <button class="lay-suggestion" type="button" data-prompt="Shorten my summary">Shorten my summary</button>
@@ -199,7 +313,9 @@
 
         <!-- 7. Finished -->
         <section class="rb-finished" id="step-finished" aria-label="Finished resume" hidden>
-          <article class="rb-paper" id="final-paper" aria-label="Your finished resume"></article>
+          <div class="rb-page-wrap" id="final-wrap">
+            <article class="rb-paper" id="final-paper" aria-label="Your finished resume"></article>
+          </div>
           <div class="card rb-finished-actions">
             <h2>Your resume is ready</h2>
             <p class="muted" id="finished-sub"></p>
@@ -216,9 +332,67 @@
 
     <button class="lay-fab" id="lay-fab" type="button" aria-controls="lay-panel" aria-expanded="false" hidden>
       <span class="lay-hi" aria-hidden="true">Hi!</span>
-      <span class="lay-orb"><i data-icon="sparkle"></i></span>
+      <span class="lay-orb"><svg class="lay-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#000"/><path class="lay-tri" d="M16 8.5 25 23.5H7z" fill="#fff"/></svg></span>
       <span class="lay-name">Lay AI</span>
     </button>
+
+
+    <dialog class="rb-dialog" id="page-setup" aria-labelledby="page-setup-title">
+      <form method="dialog" class="rb-dialog-form">
+        <h2 id="page-setup-title">Page setup</h2>
+        <p class="muted">Changes apply as you make them. The rulers above and beside the page do the same job: drag a margin marker.</p>
+        <fieldset>
+          <legend>Paper</legend>
+          <label for="ps-page">Paper size</label>
+          <select class="select" id="ps-page"><option value="a4">A4 (21 × 29.7 cm)</option><option value="letter">Letter (8.5 × 11 in)</option></select>
+          <label for="ps-unit">Units</label>
+          <select class="select" id="ps-unit"><option value="cm">Centimetres</option><option value="in">Inches</option></select>
+        </fieldset>
+        <fieldset>
+          <legend>Margins</legend>
+          <label for="ps-preset">Preset</label>
+          <select class="select" id="ps-preset">
+            <option value="narrow">Narrow (0.5 in all round)</option>
+            <option value="moderate">Moderate (narrow top and bottom)</option>
+            <option value="normal">Normal (0.75 in all round)</option>
+            <option value="wide">Wide (1 in all round)</option>
+            <option value="custom" disabled>Custom</option>
+          </select>
+          <div class="rb-margin-grid">
+            <label for="ps-top">Top</label><input class="input" id="ps-top" type="number" data-margin="marginTop" />
+            <label for="ps-bottom">Bottom</label><input class="input" id="ps-bottom" type="number" data-margin="marginBottom" />
+            <label for="ps-left">Left</label><input class="input" id="ps-left" type="number" data-margin="marginLeft" />
+            <label for="ps-right">Right</label><input class="input" id="ps-right" type="number" data-margin="marginRight" />
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Layout</legend>
+          <label for="ps-columns">Columns</label>
+          <select class="select" id="ps-columns"><option value="1">One column (safest for ATS)</option><option value="2">Two columns</option></select>
+          <label for="ps-limit">Page limit</label>
+          <select class="select" id="ps-limit"><option value="1">1 page</option><option value="2">2 pages</option></select>
+          <label class="rb-check"><input type="checkbox" id="ps-rules" /> Draw a line under section headings</label>
+        </fieldset>
+        <fieldset>
+          <legend>Sections shown</legend>
+          <label class="rb-check"><input type="checkbox" data-show="summary" /> Summary</label>
+          <label class="rb-check"><input type="checkbox" data-show="education" /> Education</label>
+          <label class="rb-check"><input type="checkbox" data-show="skills" /> Skills (hide it when your skills are in a table)</label>
+          <p class="field-hint" style="grid-column: 1 / -1">Hidden sections keep their text. Show them again to edit them.</p>
+        </fieldset>
+        <div class="rb-dialog-actions"><button class="btn btn-primary" value="done">Done</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="rb-dialog" id="reading-order" aria-labelledby="reading-order-title">
+      <form method="dialog" class="rb-dialog-form">
+        <h2 id="reading-order-title">How an ATS reads this</h2>
+        <p class="muted">Your resume as plain text, in the order a parser meets it: the usual test of pasting it into a text editor.</p>
+        <ul class="rb-reading-notes" id="reading-notes"></ul>
+        <pre class="rb-reading-text" id="reading-text" tabindex="0"></pre>
+        <div class="rb-dialog-actions"><button class="btn btn-primary" value="done">Done</button></div>
+      </form>
+    </dialog>
 
     <script type="module" src="js/pages/resume-builder.js"></script>
   </body>

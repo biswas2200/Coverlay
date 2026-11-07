@@ -22,6 +22,11 @@ repository's LICENSE.
 - A pull request that adds a feature, or changes how one is built, adds or
   updates its entry in [docs/design-patterns.md](docs/design-patterns.md):
   which pattern it uses, where, how, why, and what to check when it breaks.
+- The clickable prototype in `frontend/` is the source of truth for what the product
+  does, and [docs/prototype-spec.md](docs/prototype-spec.md) is the mandatory contract
+  the frontend, backend and ML service implement. A pull request that changes
+  behaviour changes the prototype, its test and that document together, and one that
+  needs a behaviour the prototype does not show starts by adding it there.
 
 ## Collaborator access
 

@@ -1,0 +1,26 @@
+{
+  "name": "coverlay-editor-vendor",
+  "private": true,
+  "description": "One-off tooling that bundles the Tiptap editor into ../src/vendor/tiptap.js. The app itself has no build step: run `npm run build` here only when you change the Tiptap version, and commit the output.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.32.0",
+    "@tiptap/extension-bold": "3.32.0",
+    "@tiptap/extension-document": "3.32.0",
+    "@tiptap/extension-italic": "3.32.0",
+    "@tiptap/extension-link": "3.32.0",
+    "@tiptap/extension-list": "3.32.0",
+    "@tiptap/extension-paragraph": "3.32.0",
+    "@tiptap/extension-table": "3.32.0",
+    "@tiptap/extension-text": "3.32.0",
+    "@tiptap/extension-underline": "3.32.0",
+    "@tiptap/extensions": "3.32.0",
+    "@tiptap/pm": "3.32.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

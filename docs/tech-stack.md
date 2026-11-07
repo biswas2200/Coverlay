@@ -4,7 +4,7 @@ Each layer's stack and whether it is built or planned. Sources: the repo root `R
 
 | Layer | Stack | Status |
 |---|---|---|
-| Frontend | HTML5, one hand-written CSS file (light and dark themes, no CSS framework), vanilla JavaScript (ES modules, no build step); fonts from Google Fonts (Plus Jakarta Sans, JetBrains Mono); tests via `node --test`; static files served by nginx | Implemented (`frontend/`) |
+| Frontend | HTML5, one hand-written CSS file (one white, black and grey theme, no CSS framework), vanilla JavaScript (ES modules, no build step); fonts from Google Fonts (Fira Mono); the Resume Builder editor is Tiptap/ProseMirror (MIT), bundled once into `src/vendor/tiptap.js`; tests via `node --test`; static files served by nginx | Implemented (`frontend/`) |
 | Backend | Java 21, Spring Boot 3.3, Spring Security (JWT, method security), Spring Data JPA, Flyway, springdoc-openapi | Implemented (`backend/`) |
 | Database | PostgreSQL 15 (Docker Compose locally), schema managed by Flyway (`V1__init_schema.sql`), `ddl-auto: validate` | Implemented |
 | Object storage | MinIO (S3-compatible) for uploaded resume files (`resume.ResumeStorageService`); no separate NoSQL store (see [LLD §7.3](lld.md)) | Implemented |
