@@ -15,16 +15,19 @@ import {
   startDeletion,
   tombstone,
 } from './settings-rules.js';
+import { CONNECTORS, connectionsKey, connectorById, emptyConnections, isConnected, normalizeConnections, setConnected, statusLabel } from './connections-rules.js';
 
 // Settings & privacy preview: account, phone change with a sample OTP, consents (EU/UK opt-in,
-// opt-out elsewhere), export, and the delete-account job shown step by step.
+// opt-out elsewhere), the connected apps (shared with the Letters page), export, and the delete-account job shown step by step.
 
 const USER = getUser();
 const KEY = `coverlay.preview.settings.${USER?.id ?? 'guest'}`;
+const CONNECTIONS_KEY = connectionsKey(USER?.id);
 const TICK_MS = 900;
 const SAMPLE_OTP = '123456';
 
 let state = load();
+let connections = normalizeConnections(readJson(CONNECTIONS_KEY));
 let ticker = 0;
 let otpSent = false;
 
@@ -97,6 +100,17 @@ function wire() {
     byId('phone-form').reset();
     announce('Phone number changed.');
   });
+  byId('apps').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-app]');
+    if (!button) {
+      return;
+    }
+    const connect = button.dataset.do === 'connect';
+    connections = setConnected(connections, button.dataset.app, connect);
+    writeJson(CONNECTIONS_KEY, connections);
+    renderApps();
+    announce(`${connectorById(button.dataset.app).label} ${connect ? 'connected (a sample: nothing is linked in the preview)' : 'disconnected'}.`);
+  });
   byId('export').addEventListener('click', () => show(byId('export-note')));
   byId('delete-form').addEventListener('submit', (event) => {
     event.preventDefault();
@@ -142,15 +156,41 @@ function run() {
     renderJob();
     if (state.job.status === 'done') {
       clearInterval(ticker);
+      // The "Connected apps" step of the job: every app is disconnected.
+      connections = emptyConnections();
+      writeJson(CONNECTIONS_KEY, connections);
+      renderApps();
     }
   }, TICK_MS);
 }
 
 function render() {
   setText(byId('acct-email'), USER?.email ?? '');
+  renderApps();
   renderPrivacy();
   byId('export-list').replaceChildren(...EXPORT_CONTENTS.map((item) => el('li', {}, icon('check'), el('span', {}, item))));
   renderJob();
+}
+
+/** One row per service: its name, whether it is linked, what it is for, what it asks for, and the one thing to do. */
+function renderApps() {
+  byId('apps').replaceChildren(
+    ...CONNECTORS.map((connector) => {
+      const linked = isConnected(connections, connector.id);
+      const action = connector.status === 'connectable'
+        ? el('button', { class: `btn btn-sm ${linked ? 'btn-secondary' : 'btn-primary'}`, type: 'button', 'data-app': connector.id, 'data-do': linked ? 'disconnect' : 'connect' },
+          linked ? `Disconnect ${connector.label}` : `Connect ${connector.label}`)
+        : connector.href ? el('a', { class: 'btn btn-secondary btn-sm', href: connector.href }, connector.linkLabel) : null;
+      return el('li', { class: `settings-app is-${connector.status}` },
+        el('div', { class: 'settings-app-head' },
+          el('span', { class: 'settings-app-name' }, el('strong', {}, connector.label), connector.detail ? el('span', { class: 'field-hint' }, connector.detail) : null),
+          el('span', { class: `badge ${linked ? 'badge-green' : ''}` }, statusLabel(connector, connections))),
+        el('p', { class: 'settings-app-text' }, connector.does),
+        connector.asks ? el('p', { class: 'field-hint' }, `Asks for: ${connector.asks}`) : null,
+        connector.note ? el('p', { class: 'field-hint' }, connector.note) : null,
+        action);
+    }),
+  );
 }
 
 function renderPrivacy() {

@@ -13,6 +13,7 @@ import {
   applyRecharge,
   creditsFor,
   formatRupees,
+  groupHistory,
   isWallet,
   journeyCost,
   journeysCovered,
@@ -175,10 +176,11 @@ function renderHistory() {
     list.replaceChildren(el('li', { class: 'muted' }, 'Nothing yet.'));
     return;
   }
+  // One row per action and day: thirteen messages to Lay AI are one row, "Lay AI message × 13", not thirteen.
   list.replaceChildren(
-    ...wallet.history.slice(0, 30).map((entry) =>
-      el('li', {},
-        el('span', { class: 'tl-what' }, entry.label),
+    ...groupHistory(wallet.history).slice(0, 30).map((entry) =>
+      el('li', { title: entry.count > 1 ? `${entry.count} times in a day, ${Math.abs(entry.credits) / entry.count} credits each` : null },
+        el('span', { class: 'tl-what' }, entry.count > 1 ? `${entry.label} × ${entry.count}` : entry.label),
         el('span', { class: `mono wallet-delta ${entry.credits > 0 ? 'is-plus' : ''}` }, `${entry.credits > 0 ? '+' : ''}${entry.credits}`),
         el('span', { class: 'tl-when' }, relativeTime(entry.at, now))),
     ),

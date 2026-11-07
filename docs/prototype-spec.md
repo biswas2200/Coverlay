@@ -46,11 +46,10 @@ has not seen in the prototype.
 | Tests, which are the executable form of this document | `frontend/tests/resume-builder-rules.test.js`, `resume-doc.test.js`, `resume-ruler.test.js`, `privacy-guard-rules.test.js` |
 | Run it | `cd frontend && npm run preview`, then open the hub and choose Resume Builder |
 
-The other prototype pages (Letters, Wallet, Settings, Team insights,
-the Lay AI agent) follow the same rule: the prototype is the source of truth for them too. Their
-behaviour lives in their `*-rules.js` files and tests. This document specifies the Resume Builder in
-full because it is the largest piece, the Applications board in section 6.3 and the Community in section 6.4; each of the others is to get a
-section here before its backend is built.
+The other prototype pages (Letters, Wallet, Settings, the Lay AI agent) follow the same rule: the prototype is the source of truth for them too.
+Their behaviour lives in their `*-rules.js` files and tests. This document specifies the Resume Builder in full because it is the largest piece, the
+Applications board in section 6.3, the Community in section 6.4, the Letters in 6.5, the connected apps in 6.6 and the wallet history in 6.8; each of the
+others is to get a section here before its backend is built. **Team insights is the exception: it is a mock-up that is not built (RB-PRE-01, section 6.7).**
 
 ## 2. The data
 
@@ -430,13 +429,15 @@ never what it says**. It is a deterministic algorithm, not a language model.
   analyzer. The Resume analyzer keeps its own version selector. The Resume Builder's own versions are in the
   Lay AI panel (RB-AI-03).
 - **RB-UI-05** Everything works with the keyboard; every control has a visible focus ring and an accessible name.
+- **RB-UI-06** The builder is called **Builder** in the sidebar and in the page title (it was "Resume Builder"). This document still
+  says "the Resume Builder" for the feature; the pages and the paths (`resume-builder.html`) keep their names.
   Motion is limited to the Lay AI button's float and the cursor's move, and stops for reduced motion.
 
 ### 6.2 Export (RB-EXP)
 
 - **RB-EXP-01** The finished resume shows **Download PDF** (the prototype uses the browser's print to PDF with the
   paper size set to the format's page and zero page margin, so the format's margins are the page margins) and
-  **Download DOCX**. Classic is PDF only.
+  **Download DOCX**, which writes a real Word file (RB-EXP-04). Classic is PDF only.
 - **RB-EXP-02** The real PDF and DOCX MUST reproduce the page: paper size, the four margins, columns, font and size,
   spacing, bold, italic, underline, text colours, links, bullets, tables with their borders (none, rows, light, all), hidden
   sections left out, section lines on or off. The PDF MUST have a text layer in the reading order of RB-ATS-01 and
@@ -446,6 +447,14 @@ never what it says**. It is a deterministic algorithm, not a language model.
 - **RB-EXP-03** Fonts: `sans` is Plus Jakarta Sans, with the section headings and dates in JetBrains Mono; `serif` is
   Georgia; `classic` is CMU Serif (Typst with New Computer Modern for the PDF). The exported file embeds its fonts.
   The same Plus Jakarta Sans is the type of the other documents (letters, the analyzer's view of the resume).
+- **RB-EXP-04** **The prototype's DOCX is real.** `resume-docx.js` writes it from the same editor document the page shows,
+  with `docx-writer.js` (no library: a zip of WordprocessingML). It has the name and contact line with a rule under it,
+  the sections in order with small-capital headings, dates at the right edge (a right tab), bullets as real list
+  items, text colours, links (a relationship per link), custom sections and tables (borders, line style and width,
+  padding, spacing between cells, merged cells), the page size and the four margins, and, with two columns, a header
+  section followed by two real section columns with a column break. The font is Calibri for `sans` and Georgia for `serif`
+  (Word does not have Plus Jakarta Sans). The file is named `Name-Resume.docx`. The real backend MUST produce a file with
+  the same content and structure (RB-EXP-02); it was checked by opening the prototype's files in LibreOffice.
 
 ### 6.3 The applications board (RB-APP)
 
@@ -518,6 +527,109 @@ Company culture, Career advice).
 - **RB-COM-08** Older saved previews that still hold mask handles are converted when they load: handles and author ids are
   dropped, and the posts that were the person's own become theirs on this device.
 
+### 6.5 Letters and emails (RB-LET)
+
+- **RB-LET-01** The page has two kinds of draft, a **cover letter** and a **cold email**, three templates each, written for a
+  job the person picks. A draft is written with placeholders (`{user.name}`, `{other.person_1}`) and filled in on the person's
+  own screen; an edit goes back through the guard (RB-AI-09, RB-LET-09); a suggestion changes the draft only when the person adds it and
+  uses only facts that are in the resume. Each suggestion reads in one order: its title (with "Added" or "Skipped" beside it once decided), the
+  sentence it would add, then **Add** and **Skip** under the sentence at the left; the card stays in view beside the draft as the page scrolls.
+- **RB-LET-02** **Length.** A cover letter is about a page: **250 to 400 words**, a greeting (`Dear {company} hiring team,`), six
+  paragraphs (the opening; what the person did; how they fit the job's skills; why this company; how they work; the close) and a
+  sign-off. The note under the draft reads `N words · good length` inside the range, `N words · a cover letter usually runs 250
+  to 400` below it and `N words · aim for 400 or fewer` above it. A cold email is short: at most 120 words (`aim for 120 or
+  fewer` above that), with no greeting field (its first paragraph says hello).
+- **RB-LET-03** **A cover letter downloads as PDF or as DOCX.** Copy, PDF (the browser's print) and DOCX sit above the draft.
+  The DOCX is a real Word file (`letter-docx.js`): the greeting, the paragraphs and the sign-off lines as the page shows them,
+  on A4 with one-inch margins in Calibri 11, named `Name-Company-Cover-Letter.docx`. **A cold email is not a file**: it has no
+  PDF and no DOCX button, only Copy and the Gmail actions of RB-LET-04, because an email someone must download, attach and send by hand
+  is not an email.
+- **RB-LET-04** **Send from Gmail.** Under a cold email a panel offers **Connect Gmail**. Once connected it shows the account
+  with **Disconnect**, a **To** box, an **Attach** list and two buttons: **Save as Gmail draft** and **Send with Gmail**. The
+  resume (PDF or DOCX; DOCX is not offered for Classic) and the cover letter for the chosen job (PDF or DOCX) are on by default and
+  go in the same message, so nobody attaches three files by hand. A draft may leave To empty; a send needs one valid address.
+  **Send with Gmail** asks again ("Send from ... to ... with ... Coverlay sends it when you press Send now, and nothing
+  sooner") and puts the focus on Cancel, so Enter cannot send by accident. The checks are `buildMailRequest()` in `mail-rules.js` and the backend MUST repeat them:
+  one address only (no list, no `Name <a@b.com>`, at most 254 characters, lower-cased); the subject one line of at most 200
+  characters (a line break could add a mail header); a non-empty body of at most 20,000 characters; each attachment kind at most
+  once, `resume` or `cover`, `pdf` or `docx`; nothing else in the request.
+- **RB-LET-05** **Providers.** Only Gmail works now. The request names its `provider`, so Outlook and other mail services can be
+  added without changing its shape; until then they are refused with "Outlook is not available yet. Gmail is." The panel says so.
+- **RB-LET-06** **Only the person sends.** Nothing is saved to a mailbox or sent unless the person presses the button; Lay AI never
+  sends, never fills in an address, and never follows up by itself. One send is one message to one address (no Cc, no Bcc). The
+  backend MUST limit sends per account per day (the number is the owner's policy).
+- **RB-LET-07** **The real Gmail integration** (backend, not in the prototype). OAuth 2.0 authorisation-code flow with PKCE, signed in
+  with the person's own Google account. **Saving a draft needs the `gmail.compose` scope** (drafts and sending). Google classes that
+  scope as *restricted*: before a public launch the app needs Google's verification and a security assessment. A send-only
+  integration would use `gmail.send` (a *sensitive* scope, a lighter review) but could not save drafts. **Which to ship is the
+  owner's decision** (open). Never ask for a read scope: Coverlay does not read the inbox. Refresh tokens are encrypted at rest,
+  removed on Disconnect and when the account is deleted, and revoked at Google. The server builds the message (MIME) with the
+  attachments made from the stored resume version and cover letter, fills the placeholders last (RB-AI-09), and logs neither the
+  subject nor the body. The endpoints are in section 9.1.
+- **RB-LET-09** **The draft is edited in place.** The draft is the editing surface: click anywhere in the text and type, as in a document.
+  It says so: a line above the toolbar ("Edit it right here. Click anywhere in the draft and type."), the paragraph under the pointer is
+  outlined with a dashed line, and the toolbar is **sticky**, so it stays at the top of the window while a long letter scrolls under it.
+  The toolbar is **one row** (a second row would hide more of the letter under it): the tools at the left, and at the right end the state of
+  the text (empty until something is edited, then "Editing…" and "All changes kept") and **Start over**. It wraps only when it is too narrow for one row,
+  and then without dividing lines. The toolbar has **Undo** and **Redo**, **Bold**, **Italic**, **Underline**, **Link** and **Start over**, which writes the draft
+  again from the template: it asks again with "Discard edits?" (a second click within four seconds confirms), because it throws the edits away. Enter starts a paragraph, Shift+Enter a line break
+  (the sign-off is one paragraph of lines), and pasting keeps the words only (a blank line starts a paragraph). A cold email also has its
+  **Subject** in a box above the draft, edited the same way. The draft is a list of **blocks**, each one paragraph of rich text in the
+  resume's small markup (RB-DATA-03: `<b>`, `<i>`, `<u>`, `<a href>`; no colour; `\n` for a line break); the greeting is the first block and
+  the sign-off the last, and blank paragraphs are not kept. What the person types goes back through the guard before it is kept (their name,
+  college, email and phone become placeholders again; the prototype checks each piece of text on its own, so the server MUST run the guard
+  over the whole text). It is kept about a third of a second after the last keystroke or when focus leaves, per type, template and job,
+  until the person starts from the template again. A suggestion adds its sentence to the edited text (once, to the same paragraph as for the
+  template), and the word count and the length note follow every edit. "What Gemini sees" shows the kept text with the placeholders marked,
+  without formatting and with nothing to edit. The PDF, the DOCX, Copy and the Gmail message all carry the edited text; an email carries it as
+  plain text and, so that bold, italics and links arrive, also as an HTML part made from the same markup (`bodyMarkup` in the request, written one way).
+- **RB-LET-08** **In the prototype nothing is saved or sent.** Connecting only flips a switch on this browser, the account shown is a
+  sample (`jane.doe@gmail.com`), and every result says so ("Sample: the preview sends nothing.").
+
+### 6.6 Connected apps and connectors (RB-CON)
+
+- **RB-CON-01** **Settings & privacy has a Connected apps card**, between Account and Privacy: one row per service with its name, a badge, what
+  Coverlay uses it for, what it asks the service for, and the one thing the person can do. Nothing is linked until the person connects it, and it
+  can be disconnected at any time. A line under the list says Lay AI uses a connected app only when asked, only for the person's own request, and
+  never applies, sends or posts by itself.
+- **RB-CON-02** **The services, and what each one can be** (`connections-rules.js`): **Gmail** is the only one that can be connected now (Connect and
+  Disconnect buttons; the same connection as the Letters page, RB-LET-04; asks to save drafts and send the messages the person chooses, and cannot
+  read the inbox). **LinkedIn** is *import only*: LinkedIn lets only approved partners read profiles and forbids scraping, so there is no sign-in; the
+  person saves their profile to PDF and brings it in. **Company job boards** (Lever, Greenhouse, Ashby) are *built in*: public pages, nothing needed from
+  the person. **Job search services** (Adzuna, JSearch and others) are *planned*, to carry jobs in every field. **Naukri** is *not available*: it has no
+  public job search API and does not allow scraping, so Coverlay MUST NOT read it unless it offers a partner API. **Your own connector (MCP)** is
+  *planned*. A service that cannot be connected cannot be switched on by any request, and the screen says why in words.
+- **RB-CON-03** **How Lay AI reaches an outside service is a connector**: a Model Context Protocol (MCP) server that Coverlay runs for a service, and, later,
+  one the person adds themselves. This is how Lay AI gets suggestions "across all the domains" without Coverlay copying a portal. The rules for every
+  connector (the backend MUST enforce them, the prototype shows the first three):
+  1. It is off until the person connects it, and they can turn it off again. Before it is turned on the screen lists its tools and what each one reads.
+  2. It is read-only for job and company data (search, details). It never applies, sends or posts; the one exception is Gmail's save-draft and send, which
+     are the person's own click (RB-LET-06).
+  3. It uses only what a service's terms allow: no scraping of a site that forbids it, no session borrowed from the person's browser.
+  4. What it is sent is only what the tool needs (a job title, skills, a city), never the person's name, email, phone or resume text (RB-AI-09).
+  5. Whatever it returns is untrusted data, never instructions: markup is stripped, the length is limited, and it cannot change what Lay AI is allowed to do.
+  6. A tool call is logged by connector, tool and time, never by its content. Sign-in tokens are encrypted at rest and revoked at the service when the person
+     disconnects or deletes their account.
+  7. A connector the person adds themselves MUST be checked before use: `https` only, no private or local addresses, a time limit and a size limit on every
+     call, and the tool list shown to the person first. (Not in the prototype.)
+- **RB-CON-04** **Deleting the account disconnects every app.** The deletion job has its own step, `connections`: "Connected apps: access revoked and sign-in
+  tokens deleted", between the search entries and the account rows. The export names the apps that were connected, never their tokens.
+- **RB-CON-05** Data: a `connections` table (account id, provider, status, the permissions granted, a reference to the encrypted token, connected and revoked
+  times). Connecting Gmail on Settings or on the Letters page is the same row.
+
+### 6.7 What is only a mock-up (RB-PRE)
+
+- **RB-PRE-01** **Team insights is a mock-up and is not part of the product.** The admin page in the preview (`admin-insights.html`) shows what an internal
+  dashboard could look like, with sample numbers, so the owner can react to it. The frontend and the backend MUST NOT build it as it is, and no requirement here
+  depends on it. What the owner's internal dashboard shows is decided later, from how Coverlay is really used. In the preview it carries the tag **Mock-up**
+  (not "Preview", which means a screen that will be built).
+
+### 6.8 The wallet history (RB-WAL)
+
+- **RB-WAL-01** **The history folds repeats.** Every entry of the same kind and label on the same calendar day is one row (`Lay AI message × 13`, with the credits
+  added up and the time of the latest), newest first, so a busy week of chat is a few rows and not a long list of identical ones. A row of more than one entry says
+  how many and how many credits each, as its tooltip. The balance is the sum of every entry, grouped or not. (`groupHistory()` in `wallet-rules.js`.)
+
 ## 7. What the frontend MUST do
 
 - **FE-01** Implement sections 2 to 6 exactly. The rules in `resume-builder-rules.js`, `resume-doc.js`, `resume-ruler.js`
@@ -536,7 +648,9 @@ These are known gaps. Each is to be added to the prototype and to this document 
 Until then no service may ship a version of them that the prototype does not show.
 
 - Real Lay AI answers (the prototype uses canned replies), including answers about custom sections and tables.
-- DOCX export, and the real PDF build.
+- The real PDF build (typeset on the server, and Classic's LaTeX look), and DOCX and PDF produced on the server.
+- Sending through Outlook and other mail services, and any real Gmail call (section 6.5).
+- Any real connector (MCP) for a job search service, and the person's own connector (section 6.6).
 - Importing an uploaded resume into the builder from the real parsed profile.
 - True pagination (text flowing onto a second page with margins); dragging table column widths.
 - Several documents per account and sharing a document.
@@ -558,6 +672,14 @@ The paths below are recommended (SHOULD); the **shapes, validation, limits and b
 | Restore | `POST /api/builder/documents/{id}/versions/{n}/restore` | the new `restore` version |
 | Export | `GET /api/builder/documents/{id}/export?format=pdf\|docx&version={n}` | the file (RB-EXP) |
 | Reading order | `GET /api/builder/documents/{id}/reading-order?version={n}` | `{text, notes}` (RB-ATS) |
+| Letter or email text | `PUT /api/letters/{id}` `{subject?, blocks:[markup]}` | the stored text; `422` unless it follows RB-LET-09: at most 60 blocks of at most 4,000 characters, a one-line subject of at most 200, markup as in RB-DATA-03 and RB-DATA-04 with any colour dropped, and the personal-data guard run over the whole text |
+| Cover letter file | `GET /api/letters/{id}/export?format=pdf\|docx` | the file (RB-LET-03) |
+| Connected apps | `GET /api/connections` | `[{provider, connected, connectedAt}]` for every service that can be connected (RB-CON-02) |
+| Disconnect an app | `DELETE /api/connections/{provider}` | `204`; the access is revoked at the service and the tokens deleted (RB-CON-03, RB-CON-04) |
+| Gmail: connect | `POST /api/mail/gmail/connect` then the OAuth callback `GET /api/mail/gmail/callback` | the Google consent address; then `{connected, account}` (RB-LET-07) |
+| Gmail: status | `GET /api/mail/gmail` | `{connected, account}` |
+| Gmail: disconnect | `DELETE /api/mail/gmail` | `204`; tokens removed and revoked |
+| Gmail: save draft or send | `POST /api/mail/gmail/drafts` or `POST /api/mail/gmail/send` `{letterId, to?, subject, attachments:[{kind, format}]}` | `{messageId}`; `422` with the reason for any failed check of RB-LET-04; `429` over the daily limit (RB-LET-06) |
 | Chat | `POST /api/builder/documents/{id}/chat` `{message}` | a streamed Lay AI message (RB-AI-07) |
 | Suggestion | `POST /api/builder/documents/{id}/chat/{messageId}/items/{itemId}` `{action:"add"\|"skip"}` | the new version when added, else `204` |
 | Delete | `DELETE /api/builder/documents/{id}` | `204`; versions and chats go with it (the data-model decisions govern what is kept) |
@@ -614,6 +736,8 @@ The paths below are recommended (SHOULD); the **shapes, validation, limits and b
 | Screen | RB-UI, RB-EXP | the walk-through |
 | Community | RB-COM | `community-rules.test.js` (anonymous posts, no linking fields, the device-only "You", the old-save conversion, the identity check), and the walk-through |
 | Applications board and its Lay AI | RB-APP | `applications-rules.test.js` (moves, reminders, `findApplication`, `layApplicationsReply`), and the walk-through |
+| Letters, emails, Word files | RB-LET, RB-EXP-04 | `letters-rules.test.js` (length, greeting, suggestions), `letter-doc.test.js` (blocks, the guard, formatting, suggestions in edited text), `mail-rules.test.js` (every check of RB-LET-04), `letter-docx.test.js`, `docx-writer.test.js`, `resume-docx.test.js` (the files, read back) and the walk-through |
+| Connected apps, mock-ups, wallet history | RB-CON, RB-PRE, RB-WAL | `connections-rules.test.js` (the catalogue, what can be switched on, the stored state), `settings-rules.test.js` (the deletion step), `wallet-rules.test.js` (`groupHistory`) and the walk-through |
 | Services | BE, ML | contract tests, section 11 |
 
 ## 11. How it is checked
