@@ -566,7 +566,10 @@ function textPaths(resume) {
   return paths;
 }
 
-/** What changed between two resumes: text fields by path, and skills added or removed. */
+/**
+ * What changed between two resumes: text fields by path, and skills added or removed.
+ * @returns {{ fields: string[], addedSkills: string[], removedSkills: string[], extraChanged?: boolean }}
+ */
 export function diffResume(before, after) {
   const fields = textPaths(after).filter((path) => getAt(before, path) !== getAt(after, path));
   const had = new Set(before.skills.map((s) => s.toLowerCase()));
@@ -731,8 +734,12 @@ export function styledSummary(lead, skillList, style = 'formal') {
   switch (style) {
     case 'concise':
       return `${role}: ${skillList.join(', ')}. Reliable, well-tested software.`;
-    case 'friendly':
-      return `I'm a ${lead.charAt(0).toLowerCase()}${lead.slice(1)} who enjoys building reliable software with ${skills}.`;
+    case 'friendly': {
+      // Inside a sentence "Backend Engineer" reads as "a backend engineer"; "DevOps" and "SDE II" keep their capitals.
+      const name = lead.split(' ').map((word) => (/^[A-Z][a-z]+$/.test(word) ? word.toLowerCase() : word)).join(' ');
+      const an = /^[aeiou]/i.test(name) || /^[AEFHILMNORSX][A-Z]+\b/.test(name);
+      return `I'm ${an ? 'an' : 'a'} ${name} who enjoys building reliable software with ${skills}.`;
+    }
     case 'beginner':
       return `${role} who builds software with ${skills} and checks that it works well.`;
     default:
@@ -796,6 +803,17 @@ function achievement(summary) {
 }
 
 /**
+ * The Summary for a role, as markup: one sentence in the chosen style built from `skills` (the first three the
+ * resume lists when none are given), then the first sentence that carries a number, so a fact the person wrote
+ * stays. It only uses what the resume already says.
+ */
+export function summaryForRole(resume, roleLabel, style = 'formal', skills = resume.skills) {
+  const chosen = skills.length ? skills.slice(0, 3) : resume.skills.slice(0, 3);
+  const fact = achievement(resume.summary);
+  return [escapeMarkup(styledSummary(roleLabel, chosen, style)), fact].filter(Boolean).join(' ');
+}
+
+/**
  * Suggestions for a role, or null when the prompt doesn't ask to fit one:
  * `{ role, jobs, reply, items: [{ id, kind: 'skill'|'summary', ..., status }] }`. Skills the
  * resume has are `status: 'have'`; the rest and the summary start `open`.
@@ -819,9 +837,7 @@ export function suggestForRole(prompt, resume, style = 'formal') {
     }
     return { id: `skill:${skill}`, kind: 'skill', skill, share, evidence, status: already ? 'have' : 'open' };
   });
-  const lead = market.label.charAt(0).toLowerCase() + market.label.slice(1);
-  const fact = achievement(resume.summary);
-  const after = [escapeMarkup(styledSummary(lead, resume.skills.slice(0, 3), style)), fact].filter(Boolean).join(' ');
+  const after = summaryForRole(resume, market.label, style);
   if (after !== resume.summary) {
     items.push({ id: 'summary', kind: 'summary', before: resume.summary, after, status: 'open' });
   }

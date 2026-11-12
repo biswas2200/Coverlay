@@ -83,9 +83,19 @@ app:
   admin:
     # Bootstrap administrators: accounts with these emails (comma-separated)
     # become ADMIN when they register or log in, so the first admin never
-    # needs a manual database edit. Admins change other accounts' role with
-    # PATCH /admin/users/{id}/role.
+    # needs a manual database edit. Admins change other accounts' role
+    # through the admin API (never their own).
     emails: ${APP_ADMIN_EMAILS:}
+    # The admin API is not at /admin. Every admin endpoint lives under one
+    # secret path segment: /<APP_ADMIN_PATH>/users, /<APP_ADMIN_PATH>/jobs/...
+    # 24-64 characters of letters, digits, - and _ (make one with
+    # `openssl rand -hex 24`); the app refuses to start with a weak one.
+    # Empty = a new random path on every start, which works because an
+    # administrator's client is told the path at sign-in (GET /auth/me);
+    # set it in production so it survives restarts and is the same on every
+    # instance. Anyone who is not an ADMIN gets 404 there, as for any
+    # address that does not exist, and the endpoints are not in the API docs.
+    path: ${APP_ADMIN_PATH:}
   skill-vector:
     # FR-7.2's smoothing factor: new_weight = alpha*new_signal + (1-alpha)*old_weight.
     # Not specified by the SRS -- 0.3 is a standard, moderate EMA smoothing choice

@@ -12,6 +12,7 @@ import { createLetterEditor } from './letter-editor.js';
 import { blocksPlain, blocksText, blocksToDoc, docToBlocks } from './letter-doc.js';
 import { SAMPLE_GMAIL, attachmentName, buildMailRequest, mailSummary } from './mail-rules.js';
 import { connectionsKey, isConnected, normalizeConnections, setConnected } from './connections-rules.js';
+import { lettersHandoff } from './lay-agent.js';
 import {
   LETTER_TYPES,
   SAMPLE_JOBS,
@@ -59,7 +60,7 @@ function builderResume() {
 
 function fresh() {
   return {
-    type: 'cover', templateId: 'standard', coverTemplateId: 'standard', jobId: SAMPLE_JOBS[0].id, recipient: '', decided: {}, docs: {}, gemini: false,
+    type: 'cover', templateId: 'standard', coverTemplateId: 'standard', jobId: SAMPLE_JOBS[0].id, customJob: null, recipient: '', decided: {}, docs: {}, gemini: false,
     mail: { to: '', attachResume: true, resumeFormat: 'pdf', attachCover: true, coverFormat: 'pdf' },
   };
 }
@@ -74,8 +75,32 @@ function load() {
     setGmail(true);
   }
   delete loaded.mail.connected;
+  loaded.customJob = cleanCustomJob(loaded.customJob);
+  // Lay AI left a cold email for a job (the person agreed in its chat): open it, ready to read and send from here.
+  const handoff = lettersHandoff({ take: true });
+  if (handoff) {
+    loaded.customJob = handoff.job;
+    loaded.jobId = handoff.job.id;
+    loaded.type = 'email';
+    loaded.templateId = 'hiring-manager';
+  }
   return loaded;
 }
+
+/** The job Lay AI brought, as kept in this browser: only its own shape, or null. */
+function cleanCustomJob(job) {
+  const text = (value) => (typeof value === 'string' && value.trim() ? value.trim().slice(0, 80) : null);
+  if (!job || typeof job !== 'object' || !/^lay-[a-z0-9-]{1,44}$/.test(job.id ?? '') || !text(job.title) || !text(job.company)) {
+    return null;
+  }
+  return {
+    id: job.id, title: text(job.title), company: text(job.company),
+    skills: Array.isArray(job.skills) ? job.skills.map(text).filter(Boolean).slice(0, 12) : [],
+  };
+}
+
+/** The job with this id: the one Lay AI brought, or one of the sample jobs. */
+const jobOf = (id) => (state.customJob && state.customJob.id === id ? state.customJob : jobById(id));
 
 /** Whether Gmail is connected: the one state Settings and this page share, read each time so a change in the other shows here. */
 function gmailConnected() {
@@ -112,7 +137,7 @@ const hasGreeting = (type) => type === 'cover';
 
 /** The template's draft with the suggestions added so far: `{ subject, blocks }` in placeholder form. */
 function templateDoc(type) {
-  const job = jobById(state.jobId);
+  const job = jobOf(state.jobId);
   let letter = draftLetter({ type, templateId: templateOf(type), resume, job });
   for (const item of letterSuggestions({ type, resume, job })) {
     if (state.decided[`${type}.${item.id}`] === 'added') {
@@ -298,7 +323,7 @@ function wire() {
     window.print();
   });
   byId('docx-draft').addEventListener('click', () => {
-    const job = jobById(state.jobId);
+    const job = jobOf(state.jobId);
     downloadBytes(buildLetterDocx({ blocks: filled('cover').blocks }, { title: `Cover letter for ${job.company}` }), letterDocxName(resume.name, job.company), DOCX_MIME);
     announce('Your Word file is downloading.');
   });
@@ -362,7 +387,7 @@ function wire() {
     // Edited text is its own copy: the sentence goes into that copy. Untouched, the template picks it up itself.
     const kept = state.docs[docKey()];
     if (added && kept) {
-      const item = letterSuggestions({ type: state.type, resume, job: jobById(state.jobId) }).find((i) => i.id === button.dataset.decide);
+      const item = letterSuggestions({ type: state.type, resume, job: jobOf(state.jobId) }).find((i) => i.id === button.dataset.decide);
       state.docs[docKey()] = { ...kept, blocks: addSuggestionToBlocks(kept.blocks, item, hasGreeting(state.type)) };
     }
     save();
@@ -397,11 +422,12 @@ function renderControls() {
     ),
   );
   const select = byId('job-select');
-  if (!select.children.length) {
-    select.replaceChildren(...SAMPLE_JOBS.map((job) => el('option', { value: job.id }, `${job.title} · ${job.company}`)));
-  }
+  select.replaceChildren(...[...(state.customJob ? [state.customJob] : []), ...SAMPLE_JOBS].map((job) => el('option', { value: job.id }, `${job.title} · ${job.company}`)));
   select.value = state.jobId;
-  const fit = skillFit(resume, jobById(state.jobId));
+  const fromLay = state.type === 'email' && state.customJob?.id === state.jobId;
+  setText(byId('lay-note'), fromLay ? `Lay AI prepared this email for ${state.customJob.title} at ${state.customJob.company}, after you agreed in its chat. Read it, add the address below and press Send when it is right. Nothing has been sent.` : '');
+  show(byId('lay-note'), fromLay);
+  const fit = skillFit(resume, jobOf(state.jobId));
   setText(byId('job-fit'), `You have ${fit.matched.length} of the ${fit.matched.length + fit.missing.length} skills it asks for${fit.missing.length ? ` (not yet: ${fit.missing.join(', ')})` : ''}.`);
   byId('recipient').value = state.recipient;
   show(byId('recipient-field'), state.type === 'email');
@@ -450,7 +476,7 @@ function placeholderNodes(text) {
 }
 
 function renderSuggestions() {
-  const items = letterSuggestions({ type: state.type, resume, job: jobById(state.jobId) });
+  const items = letterSuggestions({ type: state.type, resume, job: jobOf(state.jobId) });
   const list = byId('letter-suggestions');
   if (!items.length) {
     list.replaceChildren(el('li', { class: 'muted' }, 'No suggestions for this draft.'));
@@ -578,7 +604,7 @@ function renderMail() {
   byId('attach-resume-format').querySelector('[value="docx"]').disabled = resumeIsPdfOnly;
   byId('attach-cover').checked = mail.attachCover;
   byId('attach-cover-format').value = mail.coverFormat;
-  const job = jobById(state.jobId);
+  const job = jobOf(state.jobId);
   setText(byId('attach-cover-label'), `Cover letter for ${job.company}`);
   const names = [
     mail.attachResume ? attachmentName('resume', resumeIsPdfOnly ? 'pdf' : mail.resumeFormat, resume.name) : null,

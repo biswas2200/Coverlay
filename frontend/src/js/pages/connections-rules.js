@@ -27,7 +27,7 @@ export const CONNECTORS = [
     status: 'import',
     does: 'Fills your first Builder version from your profile.',
     note: 'LinkedIn only lets approved partners read profiles, so there is no sign-in. Save your profile to PDF on LinkedIn and bring it in; nothing else is read.',
-    href: 'resume-builder.html#linkedin',
+    href: 'upload.html#linkedin',
     linkLabel: 'Import from LinkedIn',
   },
   {

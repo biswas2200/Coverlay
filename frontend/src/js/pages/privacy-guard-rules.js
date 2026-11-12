@@ -98,6 +98,9 @@ function isPhone(text) {
  * Known values are matched whole-word and case-insensitive, longest first (so "Jane Doe" wins
  * over "Jane"); other emails, phone numbers and links become {other.email_1}, {other.phone_1},
  * {other.link_1}.
+ * @param {string} text
+ * @param {Record<string, string>} [values]
+ * @returns {{ stored: string, found: string[], vault: Record<string, string> }}
  */
 export function guardText(text, values = {}) {
   let stored = String(text ?? '');
@@ -136,8 +139,11 @@ export function guardText(text, values = {}) {
  * Fills placeholders back in from a vault (guardText's, or knownValues of the account). With no
  * value for a key -- the account was deleted, so its vault is gone -- the placeholder becomes
  * `missing(key)`: "null" by default.
+ * @param {string} stored
+ * @param {Record<string, string> | null} [values]
+ * @param {(key: string) => string} [missing]
  */
-export function resolveText(stored, values = {}, missing = () => 'null') {
+export function resolveText(stored, values = {}, missing = (_key) => 'null') {
   return String(stored ?? '').replace(PLACEHOLDER, (_, key) => values?.[key] ?? missing(key));
 }
 

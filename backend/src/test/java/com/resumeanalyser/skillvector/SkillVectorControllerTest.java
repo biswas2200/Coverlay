@@ -49,6 +49,8 @@ class SkillVectorControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @org.springframework.beans.factory.annotation.Value("${app.admin.base-path}")
+    private String admin;
 
     @MockBean
     private SkillVectorService skillVectorService;
@@ -84,7 +86,7 @@ class SkillVectorControllerTest {
     @Test
     @WithMockUser(roles = "USER")
     void recompute_isForbidden_forANonAdminRole() throws Exception {
-        mockMvc.perform(post("/roles/{roleId}/skill-vectors/recompute", roleId).with(csrf()))
+        mockMvc.perform(post(admin + "/roles/{roleId}/skill-vectors/recompute", roleId).with(csrf()))
                 .andExpect(status().isForbidden());
     }
 
@@ -95,7 +97,7 @@ class SkillVectorControllerTest {
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
         when(feedbackService.recomputeSkillVectors(role)).thenReturn(List.of());
 
-        mockMvc.perform(post("/roles/{roleId}/skill-vectors/recompute", roleId).with(csrf()))
+        mockMvc.perform(post(admin + "/roles/{roleId}/skill-vectors/recompute", roleId).with(csrf()))
                 .andExpect(status().isOk());
     }
 

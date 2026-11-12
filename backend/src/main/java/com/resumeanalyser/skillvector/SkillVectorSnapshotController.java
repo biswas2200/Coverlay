@@ -1,6 +1,7 @@
 package com.resumeanalyser.skillvector;
 
 import com.resumeanalyser.skillvector.dto.WeightsSnapshotDto;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,7 +26,8 @@ public class SkillVectorSnapshotController {
      * @return every role's currently-active skill weights as a single,
      * hashed, versioned document (FR-7.5)
      */
-    @GetMapping("/roles/skill-vectors/snapshot")
+    @Hidden
+    @GetMapping("${app.admin.base-path}/skill-vectors/snapshot")
     @PreAuthorize("hasRole('ADMIN')")
     public WeightsSnapshotDto snapshot() {
         return snapshotService.exportSnapshot();

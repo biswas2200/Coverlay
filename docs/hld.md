@@ -77,7 +77,7 @@ Every edition runs a single versioned artifact (code + hashed models + taxonomy 
 Because the matcher only sees canonical skills, all skill and role vectors are computed at build time and shipped as constants. The embedding model leaves the hot path and cross-CPU drift leaves the matcher. Rounding to 2 dp before sorting, plus a deterministic tie-break, covers the remaining numeric paths (FR-3.5, FR-3.6).
 
 ### 3.10 Tier gating at the module boundary
-`SecurityConfig` decides only whether a request is authenticated; which role an endpoint needs is declared on that endpoint with `@PreAuthorize` (already the pattern for `POST /roles/{id}/skill-vectors/recompute`). A `FeatureFlags` service maps the caller's role to `explainer=template|llm`, history limit and export rights; the backend passes those flags to the ML service per request (FR-12.x).
+`SecurityConfig` decides only whether a request is authenticated; which role an endpoint needs is declared on that endpoint with `@PreAuthorize` (already the pattern for `POST /{admin-path}/roles/{id}/skill-vectors/recompute`). A `FeatureFlags` service maps the caller's role to `explainer=template|llm`, history limit and export rights; the backend passes those flags to the ML service per request (FR-12.x).
 
 ### 3.11 Model releases are gated and shared
 Training happens offline; a new model ships only if held-out quality is not below the previous release and the golden suite is regenerated and reviewed. All editions receive the same model at the same precision (FR-13.x).

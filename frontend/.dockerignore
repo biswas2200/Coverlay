@@ -1,5 +1,6 @@
 node_modules
+dist
 tests
-package.json
+vendor-build
 README.md
 .scannerwork

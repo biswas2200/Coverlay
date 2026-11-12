@@ -20,7 +20,7 @@ test('the catalogue: every service has a known status, a reason or a way in, and
   assert.match(connectorById('naukri').note, /no public job search API/);
   assert.equal(connectorById('naukri').status, 'unavailable');
   assert.equal(connectorById('linkedin').status, 'import');
-  assert.equal(connectorById('linkedin').href, 'resume-builder.html#linkedin');
+  assert.equal(connectorById('linkedin').href, 'upload.html#linkedin');
   assert.equal(connectorById('custom').status, 'planned');
   assert.equal(connectorById('nope'), null);
 });

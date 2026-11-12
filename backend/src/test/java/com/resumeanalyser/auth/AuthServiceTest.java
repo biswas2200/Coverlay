@@ -46,7 +46,7 @@ class AuthServiceTest {
 
     private AuthService serviceWithAdmins(String... emails) {
         return new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService,
-                userDetailsService, List.of(emails));
+                userDetailsService, List.of(emails), "/test-admin-path");
     }
 
     private void stubRegistration() {
@@ -93,5 +93,19 @@ class AuthServiceTest {
         var response = service.register(new RegisterRequest("owner@example.com", "password123"));
 
         assertThat(response.user().role()).isEqualTo(UserRole.USER);
+    }
+
+    @Test
+    void onlyAnAdministratorIsToldWhereTheAdminApiIs() {
+        AuthService service = serviceWithAdmins();
+        User admin = new User();
+        admin.setEmail("owner@example.com");
+        admin.setRole(UserRole.ADMIN);
+        User user = new User();
+        user.setEmail("someone@example.com");
+        user.setRole(UserRole.USER);
+
+        assertThat(service.toDto(admin).adminPath()).isEqualTo("/test-admin-path");
+        assertThat(service.toDto(user).adminPath()).isNull();
     }
 }

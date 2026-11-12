@@ -28,6 +28,7 @@ write_env() {
   secret() { head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 40; }
   sed -e "s|^SITE_ADDRESS=.*|SITE_ADDRESS=${ip//./-}.sslip.io|" \
       -e "s|^APP_ADMIN_EMAILS=.*|APP_ADMIN_EMAILS=$admin|" \
+      -e "s|^APP_ADMIN_PATH=.*|APP_ADMIN_PATH=$(secret)|" \
       -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(secret)|" \
       -e "s|^MINIO_ROOT_PASSWORD=.*|MINIO_ROOT_PASSWORD=$(secret)|" \
       -e "s|^JWT_SECRET=.*|JWT_SECRET=$(secret)$(secret)|" \

@@ -465,6 +465,7 @@ html { scroll-behavior: smooth; }
             <p class="label">In Coverlay</p>
             <p>A new <code>job_applications</code> table tracks each application from preparation to result. Lay AI may prepare one (a tailored resume version and the link to the portal) but never submits it: the user applies on the company's site, then marks it as applied.</p>
             <p><code>saved_jobs</code> stays as the bookmark list. Starting an application from a saved job creates a <code>job_applications</code> row.</p>
+            <p>The person's own notes (interview dates, questions asked, what a rejection taught them) go in the <code>notes</code> column, at most 2,000 characters, owner-only. They are never copied into the anonymous outcome record and are deleted with the application. A rejected application is not deleted: it stays here with <code>status = 'REJECTED'</code>, and the only other copy is the anonymous outcome record (role, resume version, outcome), with no company and no notes.</p>
           </div>
         </div>
 

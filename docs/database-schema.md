@@ -133,7 +133,7 @@ History stays queryable (`ORDER BY version_timestamp`) for FR-7.4, and the parti
 | Change | Step | Detail |
 |---|---|---|
 | `parsed_profiles.engine_fingerprint JSONB` | 1 | Records which engine release produced each stored score, so history views and support can explain differences between versions. Migration `V4`. |
-| Weights snapshot export | 3 | Not a table. `GET /roles/skill-vectors/snapshot` (`ADMIN`) serialises all `current` rows as `{snapshot_id, created_at, sha256, weights{role→skill→weight}}`; the file ships inside the next core-engine release and its id appears in the fingerprint. |
+| Weights snapshot export | 3 | Not a table. `GET /{admin-path}/skill-vectors/snapshot` (`ADMIN`) serialises all `current` rows as `{snapshot_id, created_at, sha256, weights{role→skill→weight}}`; the file ships inside the next core-engine release and its id appears in the fingerprint. |
 | Admin-editable taxonomy / roles | later | `skills` and `role_skills` tables replacing the JSON files (FR-2.3), hashed into the fingerprint on export. |
 | Consent flag for training data | 7 | `users.training_consent BOOLEAN NOT NULL DEFAULT false` (FR-13.4). Migration `V4`. |
 

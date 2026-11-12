@@ -13,6 +13,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +57,7 @@ public class GlobalExceptionHandler {
     /**
      * Handles a request body that couldn't be read at all -- malformed JSON,
      * or a value that isn't one of an enum's constants (e.g. an unknown role
-     * name sent to {@code PATCH /admin/users/{id}/role}). That is the caller's
+     * name sent to the admin API's role change). That is the caller's
      * mistake, so it's a 400 like a validation failure, not a 500.
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -72,6 +74,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         return ResponseEntity.badRequest()
                 .body(ApiError.of(HttpStatus.BAD_REQUEST.value(), "Invalid value for '" + e.getName() + "'"));
+    }
+
+    /**
+     * Handles an address nothing is mapped to: a plain 404 (without this it
+     * would fall through to {@link #handleUnexpected} and report a 500).
+     * {@code AdminGateFilter} gives the same answer for the admin API to
+     * anyone who is not an administrator.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiError> handleNoSuchAddress(Exception e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.notFound());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

@@ -8,6 +8,7 @@ import com.resumeanalyser.bugreport.dto.BugReportRequest;
 import com.resumeanalyser.bugreport.dto.LinkRequest;
 import com.resumeanalyser.bugreport.dto.RejectRequest;
 import com.resumeanalyser.common.ResourceNotFoundException;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ import java.util.UUID;
 
 /**
  * Bug reports: signed-in users send and follow their own; administrators
- * review the queue ({@code /admin/**}, ADMIN only) and decide which reach GitHub.
+ * review the queue (under the secret admin path, ADMIN only, hidden from the API docs) and decide which reach GitHub.
  */
 @RestController
 public class BugReportController {
@@ -54,14 +55,16 @@ public class BugReportController {
         return service.mine(currentUser(authentication));
     }
 
-    @GetMapping("/admin/bug-reports")
+    @Hidden
+    @GetMapping("${app.admin.base-path}/bug-reports")
     @PreAuthorize("hasRole('ADMIN')")
     public List<BugReportDto> queue(@RequestParam(defaultValue = "PENDING") BugReportStatus status) {
         return service.queue(status);
     }
 
     /** Opens a GitHub issue for the report. */
-    @PostMapping("/admin/bug-reports/{id}/approve")
+    @Hidden
+    @PostMapping("${app.admin.base-path}/bug-reports/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
     public BugReportDto approve(@PathVariable UUID id, @Valid @RequestBody ApproveRequest request,
                                 Authentication authentication) {
@@ -69,7 +72,8 @@ public class BugReportController {
     }
 
     /** Points the report at a GitHub issue that already covers it. */
-    @PostMapping("/admin/bug-reports/{id}/link")
+    @Hidden
+    @PostMapping("${app.admin.base-path}/bug-reports/{id}/link")
     @PreAuthorize("hasRole('ADMIN')")
     public BugReportDto link(@PathVariable UUID id, @Valid @RequestBody LinkRequest request,
                              Authentication authentication) {
@@ -77,7 +81,8 @@ public class BugReportController {
     }
 
     /** Keeps the report off GitHub. */
-    @PostMapping("/admin/bug-reports/{id}/reject")
+    @Hidden
+    @PostMapping("${app.admin.base-path}/bug-reports/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
     public BugReportDto reject(@PathVariable UUID id, @Valid @RequestBody(required = false) RejectRequest request,
                                Authentication authentication) {
