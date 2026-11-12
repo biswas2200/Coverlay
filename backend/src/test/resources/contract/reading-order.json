@@ -1,0 +1,1494 @@
+{
+  "generatedBy": "frontend/tests/contract/export-reading-order.mjs",
+  "cases": [
+    {
+      "name": "the sample resume, one column",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "the sample resume, two columns",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {
+        "columns": 2
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "Two columns: the main column (summary, experience) is read first, then the side column (education, skills). Some parsers read straight across both columns instead and mix them up."
+      ]
+    },
+    {
+      "name": "details as bullets, one per sentence",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built the payment APIs. Cut latency by 40%! Why? Because 2 teams. lowercase stays in the same bullet. Led 3 engineers."
+          },
+          {
+            "role": "Intern, Beta",
+            "dates": "2020",
+            "details": ""
+          },
+          {
+            "role": "",
+            "dates": "",
+            "details": "Only details."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {
+        "bullets": true
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\n- Built the payment APIs.\n- Cut latency by 40%!\n- Why?\n- Because 2 teams. lowercase stays in the same bullet.\n- Led 3 engineers.\nIntern, Beta | 2020\n- \n\n- Only details.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "a sentence break before a tag and none inside one",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Engineer",
+            "dates": "2021",
+            "details": "Shipped <b>Done.</b> Next step. <b>Then</b> more."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {
+        "bullets": true
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nEngineer | 2021\n- Shipped Done. Next step.\n- Then more.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "every hideable section hidden",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Projects",
+            "body": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Built a thing."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {
+        "hidden": [
+          "summary",
+          "education",
+          "skills"
+        ]
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nPROJECTS\nBuilt a thing.",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "two columns with skills hidden",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {
+        "columns": 2,
+        "hidden": [
+          "skills"
+        ]
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021",
+      "notes": [
+        "Two columns: the main column (summary, experience) is read first, then the side column (education, skills). Some parsers read straight across both columns instead and mix them up."
+      ]
+    },
+    {
+      "name": "formatting is not in the text",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "<a href=\"https://example.com/jane\">jane@email.com</a> | +91 98765 43210",
+        "summary": "Led <b>payments</b> &amp; <a href=\"https://example.com\">notes</a> and <u><i>more</i></u>, a &lt; b.",
+        "experience": [
+          {
+            "role": "<b>Software Engineer</b>, <font color=\"#1d4ed8\">Acme</font>",
+            "dates": "2021 - now",
+            "details": "Cut <i>latency</i> by 40%."
+          }
+        ],
+        "education": [
+          {
+            "degree": "<b>B.Tech</b> Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210\n\nSUMMARY\nLed payments & notes and more, a < b.\n\nEXPERIENCE\nSoftware Engineer, Acme | 2021 - now\nCut latency by 40%.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "custom text and bullet sections, one column",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Projects",
+            "body": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Built a thing."
+                  }
+                ]
+              },
+              {
+                "type": "bulletList",
+                "content": [
+                  {
+                    "type": "listItem",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "One"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "listItem",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Two"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Languages",
+            "body": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "English, "
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Hindi"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nPROJECTS\nBuilt a thing.\n- One\n- Two\n\nLANGUAGES\nEnglish, \nHindi",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "custom sections stay in the main column in two columns",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Projects",
+            "body": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Built a thing."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {
+        "columns": 2
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nPROJECTS\nBuilt a thing.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "Two columns: the main column (summary, experience) is read first, then the side column (education, skills). Some parsers read straight across both columns instead and mix them up."
+      ]
+    },
+    {
+      "name": "a custom section with no body and a title that changes case",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Awards",
+            "body": []
+          },
+          {
+            "title": "Straße & Co",
+            "body": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "x"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nAWARDS\n\nSTRASSE & CO\nx",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "a table section, one column",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "New section",
+            "body": [
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "bulletList",
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Java"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "SQL"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "bulletList",
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Teamwork"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nNEW SECTION\nJava; SQL | Teamwork",
+      "notes": [
+        "The table in \"New section\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them."
+      ]
+    },
+    {
+      "name": "a table section, two columns",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "New section",
+            "body": [
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "bulletList",
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Java"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "SQL"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "bulletList",
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "Teamwork"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {
+        "columns": 2
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nNEW SECTION\nJava; SQL | Teamwork\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "Two columns: the main column (summary, experience) is read first, then the side column (education, skills). Some parsers read straight across both columns instead and mix them up.",
+        "The table in \"New section\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them."
+      ]
+    },
+    {
+      "name": "two tables, one of them empty",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "New section",
+            "body": [
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "attrs": {
+                          "colspan": 1,
+                          "rowspan": 1,
+                          "colwidth": null
+                        },
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Skills by area",
+            "body": [
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Backend"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Java, SQL"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "Cloud"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nNEW SECTION\n\nSKILLS BY AREA\nBackend | Java, SQL\nCloud |",
+      "notes": [
+        "The table in \"New section\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them.",
+        "The table in \"Skills by area\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them."
+      ]
+    },
+    {
+      "name": "a table cell holds paragraphs and bullets",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Grid",
+            "body": [
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "A"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "paragraph"
+                          },
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "B"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "bulletList",
+                            "content": [
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "x"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "listItem",
+                                "content": [
+                                  {
+                                    "type": "paragraph",
+                                    "content": [
+                                      {
+                                        "type": "text",
+                                        "text": "y"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "C"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "last"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nGRID\nA; B; x; y | C\n | last",
+      "notes": [
+        "The table in \"Grid\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them."
+      ]
+    },
+    {
+      "name": "two tables in one section give one note",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Two grids",
+            "body": [
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "a"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "b"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "between"
+                  }
+                ]
+              },
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "c"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "d"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nTWO GRIDS\na | b\nbetween\nc | d",
+      "notes": [
+        "The table in \"Two grids\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them."
+      ]
+    },
+    {
+      "name": "a text section holding a table and a paragraph",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [
+          {
+            "role": "Software Engineer, Acme Corp",
+            "dates": "2021 - now",
+            "details": "Built and ran the payment APIs: Java, Spring Boot, PostgreSQL."
+          }
+        ],
+        "education": [
+          {
+            "degree": "B.Tech Computer Science, VIT",
+            "dates": "2021"
+          }
+        ],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ],
+        "extra": [
+          {
+            "title": "Mixed",
+            "body": [
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Before"
+                  }
+                ]
+              },
+              {
+                "type": "table",
+                "attrs": {
+                  "borders": "all",
+                  "borderWidth": 1,
+                  "borderStyle": "solid",
+                  "cellPadding": 4,
+                  "cellGap": 0
+                },
+                "content": [
+                  {
+                    "type": "tableRow",
+                    "content": [
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "a"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "tableCell",
+                        "content": [
+                          {
+                            "type": "paragraph",
+                            "content": [
+                              {
+                                "type": "text",
+                                "text": "b"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "After"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\nSoftware Engineer, Acme Corp | 2021 - now\nBuilt and ran the payment APIs: Java, Spring Boot, PostgreSQL.\n\nEDUCATION\nB.Tech Computer Science, VIT | 2021\n\nSKILLS\nJava, Spring Boot, SQL\n\nMIXED\nBefore\na | b\nAfter",
+      "notes": [
+        "The table in \"Mixed\" is read cell by cell, row by row. Some parsers scramble tables, so keep job titles, dates and employers out of them."
+      ]
+    },
+    {
+      "name": "no jobs and no schools",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [],
+        "education": [],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {},
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\n\nEDUCATION\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "no jobs and no schools, details as bullets",
+      "resume": {
+        "name": "Jane Doe",
+        "contact": "jane@email.com | +91 98765 43210 | Bengaluru",
+        "summary": "Backend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.",
+        "experience": [],
+        "education": [],
+        "skills": [
+          "Java",
+          "Spring Boot",
+          "SQL"
+        ]
+      },
+      "format": {
+        "bullets": true
+      },
+      "text": "Jane Doe\njane@email.com | +91 98765 43210 | Bengaluru\n\nSUMMARY\nBackend developer with 3 years of Java and Spring Boot experience. Built payment APIs used by 2 million people and cut their response time by 40%.\n\nEXPERIENCE\n\n- \n\nEDUCATION\n\nSKILLS\nJava, Spring Boot, SQL",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "nothing written yet",
+      "resume": {
+        "name": "",
+        "contact": "",
+        "summary": "",
+        "experience": [],
+        "education": [],
+        "skills": []
+      },
+      "format": {},
+      "text": "SUMMARY\n\nEXPERIENCE\n\nEDUCATION\n\nSKILLS",
+      "notes": [
+        "One column and no tables: the safest layout for applicant tracking systems."
+      ]
+    },
+    {
+      "name": "nothing written yet, two columns, bullets",
+      "resume": {
+        "name": "",
+        "contact": "",
+        "summary": "",
+        "experience": [],
+        "education": [],
+        "skills": []
+      },
+      "format": {
+        "columns": 2,
+        "bullets": true
+      },
+      "text": "SUMMARY\n\nEXPERIENCE\n\n- \n\nEDUCATION\n\nSKILLS",
+      "notes": [
+        "Two columns: the main column (summary, experience) is read first, then the side column (education, skills). Some parsers read straight across both columns instead and mix them up."
+      ]
+    }
+  ]
+}
