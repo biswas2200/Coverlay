@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -117,6 +118,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(e.getRetryAfter().toSeconds()))
                 .body(ApiError.of(HttpStatus.TOO_MANY_REQUESTS.value(), e.getMessage()));
+    }
+
+    /**
+     * Handles two writes that raced on the same row (JPA's optimistic lock, which only shows at commit, after the service
+     * method has returned): the loser gets 409, the same answer as a write based on an old version (RB-VER-07). The message
+     * says nothing about the entity.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of(HttpStatus.CONFLICT.value(), "This was changed somewhere else while you were saving. Reload it and try again."));
+    }
+
+    /** Handles something bigger than its limit (e.g. a resume over 200 KB): 413. It is refused, never truncated. */
+    @ExceptionHandler(PayloadTooLargeException.class)
+    public ResponseEntity<ApiError> handlePayloadTooLarge(PayloadTooLargeException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiError.of(HttpStatus.PAYLOAD_TOO_LARGE.value(), e.getMessage()));
     }
 
     /** Handles a request value that makes no sense (e.g. a website that isn't a web address): 400. */
