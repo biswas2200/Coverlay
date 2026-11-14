@@ -115,7 +115,7 @@ test('the summary counts every column and names what needs the person most', () 
 
 test('Lay AI answers a status question from the board and points at the card', () => {
   const answer = layApplicationsReply('What is the status of Swiggy?', board(), NOW);
-  assert.match(answer.reply, /Backend Engineer at Swiggy is in Applied: you applied 9 days ago on LinkedIn with resume v3/);
+  assert.match(answer.reply, /AI Engineer Intern at Swiggy is in Applied: you applied 9 days ago on LinkedIn with resume v3/);
   assert.match(answer.reply, /Next: follow up if you haven't heard back, due 2 days ago\./);
   assert.equal(answer.focus, 'app-2');
   assert.equal(answer.proposal, null);
@@ -130,7 +130,7 @@ test("Lay AI lists what is due, what to chase, and summarises the board", () => 
   assert.match(layApplicationsReply("What's due?", [], NOW).reply, /Nothing is due/);
 
   const chase = layApplicationsReply("Who hasn't replied?", board(), NOW);
-  assert.match(chase.reply, /Backend Engineer at Swiggy \(9 days ago\)/);
+  assert.match(chase.reply, /AI Engineer Intern at Swiggy \(9 days ago\)/);
   assert.doesNotMatch(chase.reply, /Flipkart/, 'a two-day-old application is not worth chasing yet');
   assert.equal(chase.focus, 'app-2');
 

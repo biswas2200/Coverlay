@@ -322,7 +322,7 @@ function renderCard(app, now) {
   setText(field(card, 'role'), app.role);
   setText(field(card, 'company'), app.company);
   const since = app.appliedAt ? `Applied ${dayLabel(app.appliedAt, now)}` : `Added ${dayLabel(app.createdAt, now)}`;
-  setText(field(card, 'meta'), [app.portal, since, app.resumeVersion ? `resume v${app.resumeVersion}` : null].filter(Boolean).join(' · '));
+  setText(field(card, 'meta'), [app.portal, since, app.resumeVersion ? `resume v${app.resumeVersion}` : null, app.externalId ? `id ${app.externalId}` : null].filter(Boolean).join(' · '));
   const reminder = field(card, 'reminder');
   setText(reminder, app.reminder ? `Reminder ${dayLabel(app.reminder.dueAt, now)}: ${app.reminder.text}` : '');
   show(reminder, Boolean(app.reminder));

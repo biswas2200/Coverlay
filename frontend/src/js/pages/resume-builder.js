@@ -59,6 +59,7 @@ import {
   watchHint,
   TEXT_COLORS,
 } from './resume-builder-rules.js';
+import { SAMPLE_LINKEDIN_PROFILE, fileProblem, foundItems, roleFrom, toResume } from './linkedin-import-rules.js';
 
 // The Resume Builder preview: a clickable prototype with sample data. Steps: start questions ->
 // templates -> editor -> finished. In the editor the resume sits on the left and is edited by
@@ -105,13 +106,21 @@ let pointerDown = false; // a mouse button is held, so the page must not change 
 let dropPending = false; // emptied skills waiting for the mouse button to come up
 const storedOpen = new Set(); // messages whose "What we store" box is open
 let messageCounter = 0; // declared up here: the start-up block below can already need a message id
+let linkedin = null; // the LinkedIn profile being reviewed in the start step, or null
 
 if (requireAuth()) {
   hydrateIcons();
   renderShell('builder');
   wire();
+  // resume-builder.html#linkedin (from the sign-up preview) opens the LinkedIn import.
+  if (location.hash === '#linkedin') {
+    state.step = 'start';
+  }
   render();
   applyHandoff();
+  if (location.hash === '#linkedin') {
+    openLinkedIn();
+  }
 }
 
 // ---------- state ----------
@@ -157,6 +166,19 @@ function wire() {
     readAnswers(false);
   });
   byId('from-upload').addEventListener('click', () => readAnswers(true));
+  byId('from-linkedin').addEventListener('click', () => (byId('linkedin-panel').hidden ? openLinkedIn() : closeLinkedIn()));
+  byId('linkedin-close').addEventListener('click', closeLinkedIn);
+  byId('linkedin-sample').addEventListener('click', () => reviewLinkedIn('Sample profile (Riya Kapoor, fictional)'));
+  byId('linkedin-file').addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    const problem = fileProblem(file);
+    setText(byId('linkedin-error'), problem);
+    if (!problem) {
+      reviewLinkedIn(`${file.name}. Preview: showing a sample profile, not this file`);
+    }
+    event.target.value = '';
+  });
+  byId('linkedin-import').addEventListener('click', importLinkedIn);
   byId('templates-back').addEventListener('click', () => goTo('start'));
   byId('template-filter').addEventListener('click', (event) => {
     const button = event.target.closest('[data-filter]');
@@ -274,16 +296,74 @@ function wire() {
   });
 }
 
-function readAnswers(fromUpload) {
+function formAnswers() {
   const form = new FormData(byId('start-form'));
-  state.answers = {
+  return {
     role: normalizeText(form.get('role')).slice(0, 80),
     level: form.get('level') ?? DEFAULT_ANSWERS.level,
     style: form.get('style') ?? DEFAULT_ANSWERS.style,
     pages: Number(form.get('pages') ?? DEFAULT_ANSWERS.pages),
   };
+}
+
+function readAnswers(fromUpload) {
+  state.answers = formAnswers();
   state.fromUpload = fromUpload;
   goTo('templates');
+}
+
+// ---------- LinkedIn import ----------
+
+function openLinkedIn() {
+  show(byId('linkedin-panel'));
+  byId('from-linkedin').setAttribute('aria-expanded', 'true');
+  byId('linkedin-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  byId('linkedin-title').setAttribute('tabindex', '-1');
+  byId('linkedin-title').focus({ preventScroll: true });
+}
+
+function closeLinkedIn() {
+  show(byId('linkedin-panel'), false);
+  byId('from-linkedin').setAttribute('aria-expanded', 'false');
+  byId('from-linkedin').focus();
+}
+
+/** Shows "What we found" for the sample profile; `source` says which file it stands for. */
+function reviewLinkedIn(source) {
+  linkedin = SAMPLE_LINKEDIN_PROFILE;
+  setText(byId('linkedin-error'), '');
+  setText(byId('linkedin-file-note'), `Reading: ${source}.`);
+  byId('linkedin-found').replaceChildren(
+    ...foundItems(linkedin).map((item) =>
+      el('li', {},
+        el('label', { class: 'rb-found-item' },
+          el('input', { type: 'checkbox', value: item.id, checked: true }),
+          el('span', { class: 'rb-found-group' }, item.group),
+          el('span', { class: 'rb-found-label' }, item.label),
+          item.meta ? el('span', { class: 'rb-found-meta' }, item.meta) : null))),
+  );
+  show(byId('linkedin-review'));
+  announce('Profile read. Review what we found, then import.');
+}
+
+/** Version 1 (or the next version) is the imported resume; then the template step. */
+function importLinkedIn() {
+  const chosen = [...byId('linkedin-found').querySelectorAll('input:checked')].map((input) => input.value);
+  const meta = { source: 'import', summary: 'Imported from LinkedIn', at: Date.now() };
+  const resume = toResume(linkedin, chosen);
+  state.history = state.history ? addVersion(state.history, resume, meta) : createHistory(resume, meta);
+  const answers = formAnswers();
+  state.answers = { ...answers, role: answers.role || roleFrom(linkedin) };
+  state.fromUpload = false;
+  linkedin = null;
+  show(byId('linkedin-review'), false);
+  show(byId('linkedin-panel'), false);
+  byId('from-linkedin').setAttribute('aria-expanded', 'false');
+  if (location.hash === '#linkedin') {
+    window.history.replaceState(null, '', location.pathname + location.search);
+  }
+  goTo('templates');
+  announce('Imported from LinkedIn as a new version. Choose a template.');
 }
 
 function chooseTemplate(id) {
@@ -292,7 +372,7 @@ function chooseTemplate(id) {
   if (!state.history) {
     const summary = state.fromUpload ? `Imported from upload, template ${template.name}` : `Started from template ${template.name}`;
     state.history = createHistory(sampleResume(), { source: state.fromUpload ? 'import' : 'template', summary, at });
-  } else if (state.templateId !== template.id) {
+  } else if (state.templateId && state.templateId !== template.id) {
     state.history = addVersion(state.history, currentResume(state.history), { source: 'template', summary: `Switched to template ${template.name}`, at });
   }
   // A template brings its typeface (Classic is the LaTeX look) and its columns; leaving Classic goes back to sans.

@@ -102,8 +102,11 @@ export function validateApplication({ company, role, portal }) {
   return null;
 }
 
-/** @param {number | null} [resumeVersion] the resume version the application is made with */
-export function addApplication(apps, { company, role, portal }, now, resumeVersion = null) {
+/**
+ * @param {{ company: string, role: string, portal: string, externalId?: string | null }} fields
+ * @param {number | null} [resumeVersion] the resume version the application is made with
+ */
+export function addApplication(apps, { company, role, portal, externalId = null }, now, resumeVersion = null) {
   if (validateApplication({ company, role, portal })) {
     return apps;
   }
@@ -118,6 +121,7 @@ export function addApplication(apps, { company, role, portal }, now, resumeVersi
     appliedAt: null,
     checkInAt: null,
     resumeVersion,
+    externalId: externalId ? String(externalId).trim().slice(0, 40) : null,
     reminder: reminderFor('PREPARING', now),
   };
   return [app, ...apps];
@@ -222,7 +226,7 @@ export function sampleApplications(now) {
   };
   return [
     make('app-1', 'Razorpay', 'Platform Engineer', 'Company site', 'PREPARING', 1, 4),
-    make('app-2', 'Swiggy', 'Backend Engineer', 'LinkedIn', 'APPLIED', 9, 3),
+    make('app-2', 'Swiggy', 'AI Engineer Intern', 'LinkedIn', 'APPLIED', 9, 3),
     make('app-3', 'Flipkart', 'SDE II', 'Referral', 'APPLIED', 2, 3),
     make('app-4', 'Zerodha', 'DevOps Engineer', 'Naukri', 'INTERVIEW', 4, 2),
     make('app-5', 'Freshworks', 'Java Developer', 'Company site', 'REJECTED', 15, 1),

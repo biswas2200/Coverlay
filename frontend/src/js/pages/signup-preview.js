@@ -1,4 +1,4 @@
-import { byId, setText, show } from '../core/dom.js';
+import { byId, el, setText, show } from '../core/dom.js';
 import { regionFromTimeZone } from './settings-rules.js';
 import { analyticsDefault, emailState, finalStepError, normalizePhone, otpValid, validPassword } from './signup-rules.js';
 
@@ -99,7 +99,8 @@ function wire() {
     }
     show(byId('step-3'), false);
     show(byId('su-done'));
-    setText(byId('su-done'), `Account created (preview). Analytics ${byId('su-analytics').checked ? 'on' : 'off'}; you can change it in Settings & privacy.`);
+    setText(byId('su-done'), `Account created (preview). Analytics ${byId('su-analytics').checked ? 'on' : 'off'}; you can change it in Settings & privacy. `);
+    byId('su-done').append(el('a', { href: 'resume-builder.html#linkedin' }, 'Start your resume from your LinkedIn profile'), '.');
     step = 4;
     renderSteps();
   });

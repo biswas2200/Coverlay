@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "start": "vite preview",
     "test": "node --test \"tests/*.test.js\"",
-    "preview": "node preview/server.mjs"
+    "preview": "node preview/server.mjs",
+    "preview:hosted": "node preview/build-hosted.mjs"
   },
   "dependencies": {
     "@tiptap/core": "^3.32.0",
