@@ -46,17 +46,20 @@ class AdminControllerTest {
 
     private final UUID userId = UUID.randomUUID();
 
+    @org.springframework.beans.factory.annotation.Value("${app.admin.base-path}")
+    private String admin;
+
     @Test
     @WithMockUser(roles = "USER")
     void findUser_isForbidden_forANonAdminRole() throws Exception {
-        mockMvc.perform(get("/admin/users").param("email", "a@b.c"))
+        mockMvc.perform(get(admin + "/users").param("email", "a@b.c"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "USER")
     void updateRole_isForbidden_forAnOrdinaryUser() throws Exception {
-        mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
+        mockMvc.perform(patch(admin + "/users/{id}/role", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isForbidden());
@@ -65,10 +68,10 @@ class AdminControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void updateRole_isAllowed_forTheAdminRole() throws Exception {
-        when(adminService.updateRole(userId, UserRole.ADMIN))
+        when(adminService.updateRole("user", userId, UserRole.ADMIN))
                 .thenReturn(new UserDto(userId, "a@b.c", UserRole.ADMIN, Instant.now()));
 
-        mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
+        mockMvc.perform(patch(admin + "/users/{id}/role", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"ADMIN\"}"))
                 .andExpect(status().isOk())
@@ -78,7 +81,7 @@ class AdminControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void updateRole_rejectsTheRemovedPremiumRole() throws Exception {
-        mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
+        mockMvc.perform(patch(admin + "/users/{id}/role", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"PREMIUM_USER\"}"))
                 .andExpect(status().isBadRequest());
@@ -87,7 +90,7 @@ class AdminControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void updateRole_rejectsAnUnknownRole() throws Exception {
-        mockMvc.perform(patch("/admin/users/{id}/role", userId).with(csrf())
+        mockMvc.perform(patch(admin + "/users/{id}/role", userId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"role\":\"GOLD\"}"))
                 .andExpect(status().isBadRequest());

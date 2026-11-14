@@ -1,11 +1,41 @@
 {
   "name": "frontend",
   "private": true,
-  "description": "Static HTML + CSS + vanilla JS client. No dependencies; this file only marks the .js files as ES modules for Node's built-in test runner.",
+  "description": "Coverlay web client: React + TypeScript on Vite. The DOM-free rules modules (src/js/pages/*-rules.js) are plain JavaScript, tested with Node's built-in runner.",
   "type": "module",
   "scripts": {
-    "start": "python3 -m http.server 4200 --directory src",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "start": "vite preview",
     "test": "node --test \"tests/*.test.js\"",
-    "preview": "node preview/server.mjs"
+    "preview": "node preview/server.mjs",
+    "preview:hosted": "node preview/build-hosted.mjs"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.32.0",
+    "@tiptap/extension-bold": "^3.32.0",
+    "@tiptap/extension-document": "^3.32.0",
+    "@tiptap/extension-italic": "^3.32.0",
+    "@tiptap/extension-link": "^3.32.0",
+    "@tiptap/extension-list": "^3.32.0",
+    "@tiptap/extension-paragraph": "^3.32.0",
+    "@tiptap/extension-table": "^3.32.0",
+    "@tiptap/extension-text": "^3.32.0",
+    "@tiptap/extension-underline": "^3.32.0",
+    "@tiptap/extensions": "^3.32.0",
+    "@tiptap/pm": "^3.32.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^7.18.5",
+    "swr": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.7"
   }
 }

@@ -44,7 +44,13 @@ has not seen in the prototype.
 | The sidebar and the version menu | `frontend/src/js/components/shell.js`, `version-menu.js` |
 | Styles | `frontend/src/css/app.css` |
 | Tests, which are the executable form of this document | `frontend/tests/resume-builder-rules.test.js`, `resume-doc.test.js`, `resume-ruler.test.js`, `privacy-guard-rules.test.js` |
-| Run it | `cd frontend && npm run preview`, then open the hub and choose Resume Builder |
+| Run it | `cd frontend && npm run dev`, then open `/preview` (the React app with sample data) |
+| The React app (from 8 Nov 2026) | `frontend/app/`: `pages/` one file per screen, `components/` the shell, Lay AI's chat and the shared pieces, `builder/` the Builder's parts, `lay/` Lay AI's glue, `api/` and `lib/` the backend calls, the session and storage |
+
+**The frontend is a React + TypeScript single-page app built with Vite (FE-04).** The pages of the older static app (`frontend/src/*.html` and
+`frontend/src/js/pages/<page>.js`) are kept only until the owner has reviewed the React app; the file names in the table above that end in `-rules.js`,
+`resume-doc.js`, `resume-editor.js`, `resume-ruler.js` and `letter-*.js` are shared by both and are the ones that count. A screen is `frontend/app/pages/<Screen>.tsx`
+(`Builder.tsx`, `Letters.tsx`, `Applications.tsx`, ...); the older `<name>.html` addresses redirect to its route.
 
 The other prototype pages (Letters, Wallet, Settings, the Lay AI agent) follow the same rule: the prototype is the source of truth for them too.
 Their behaviour lives in their `*-rules.js` files and tests. This document specifies the Resume Builder in full because it is the largest piece, the
@@ -402,13 +408,17 @@ never what it says**. It is a deterministic algorithm, not a language model.
 
 ### 6.1 The look (RB-UI)
 
-- **RB-UI-01** One theme: a white page, black text and borders, greys for fills, **Fira Mono** for every character
-  of the interface. No dark mode, and no colour for meaning (no green or red): status is carried by words,
-  borders and solid versus outlined badges. The exceptions are **Sign out**, which turns red (`#b3261e` on a
-  pale red fill) when pointed at or focused because it ends the session, and the swatches of the text colour
+- **RB-UI-01** One theme: a white page, black text and borders, greys for fills, **Inter** for the interface and **Source Serif 4** for headings (changed 11 Nov 2026 from Fira Mono: simpler to read). No dark mode. White and black stay the theme (white page, white cards, 1.5px outlines, hard offset shadows). Colour is an accent only (changed 11 Nov 2026):
+  blue (`#2a52e0`, the opposite of the logo's orange) on the primary button, the current-page marker (pale blue `#d6e2ff`), the active tab and the
+  headline highlight. No tinted pages, bands or cards, no pink, and no orange outside the logo. **Sign out** is red (`#c4161c`) at all times and solid
+  red with white text when pointed at or focused. Colour as a signal appears on
+  the product's own results, namely the ATS score, its bar and ring and its checks (green good, amber partial, red to fix),
+  the role match percentage, the skills you have (green) and the skills to add (amber), the status badges, and the
+  icon tile of each landing feature. Status is still written in words, so nothing depends on hue alone, and every
+  colour pair has a contrast ratio of at least 4.5. The development build shows a demo account on the sign-in page.
+  The other exception is the swatches of the text colour
   palette (RB-FMT-06), which are the choices themselves. The documents the person makes are not interface: the
-  resume paper, the letters and the analyzer's view of the resume use the document fonts of RB-EXP-03, not Fira
-  Mono (a monospace body does not read as a resume). The resume is white paper; a template may colour its own headings.
+  resume paper, the letters and the analyzer's view of the resume use the document fonts of RB-EXP-03, not the interface fonts (a monospace body does not read as a resume). The resume is white paper; a template may colour its own headings.
 - **RB-UI-02** The toolbar has two rows with every control the same height and centred on the row: row one for
   text (undo and redo; font and size; bold, italic, underline, text colour, link; bullets, header alignment, spacing), row two
   for the page and content (add section; columns, page limit, Page setup, Fit to page; then writing style). The
@@ -420,7 +430,7 @@ never what it says**. It is a deterministic algorithm, not a language model.
   dividing lines. A group never changes height or its place in the row's order. "Add section" has a fixed width,
   so the options in its list never widen the row.
 - **RB-UI-03** The sidebar has three parts: the account and brand fixed at the top, the navigation in the middle
-  (the only part that scrolls, with the admin links at its end for administrators), and **Report a bug** and
+  (the only part that scrolls; it has no admin links, the admin console is a separate window, RB-ADM-01), and **Report a bug** and
   **Sign out pinned at the bottom** so they are always visible and never scroll away.
 - **RB-UI-04** **Resume versions are not listed in the sidebar.** A page that uses the resume shows a version menu
   in its top bar: one button (`Analysis of v3`, `Ranked with v3`, `Written from v3`, `Uploaded v3`) that opens a
@@ -480,8 +490,8 @@ The Applications page (`frontend/src/applications.html`, rules in `applications-
   resume version and outcome: never a company contact, a name or an email, and the card shows exactly that record.
 - **RB-APP-06** **Lay AI is on this page** as the black-square button at the bottom right, opening a panel docked to the right
   edge (a bottom sheet on a phone) beside the board, with greeting, quick prompts ("What's due?", "Who hasn't replied?",
-  "Summarise my board", "Status of Swiggy", "Move Razorpay to Applied") and a box. The same component is to be used on any
-  page that gets Lay AI.
+  "Where are my rejections?", "Status of Swiggy", "Move Razorpay to Applied") and a box. It is the one Lay AI of RB-LAY-01
+  (the same chat as every other page), with the board's own answers added; Lay AI's own work (RB-LAY-03) is answered first.
 - **RB-APP-07** Lay AI answers from the person's own board: what is due in the next two days; which applications sent a week
   or more ago have had no news; a summary (count per column and the one that needs the person most); the status of one
   application found by company first and then role words; what to do to prepare for an interview.
@@ -490,9 +500,27 @@ The Applications page (`frontend/src/applications.html`, rules in `applications-
   it. A card already in that column is reported, not moved; a message that names no application asks which one.
 - **RB-APP-09** When an answer is about a card, that card is scrolled into view and outlined, as in RB-AI-11.
 - **RB-APP-10** Replies are at most 80 words, plain, and have no exclamation marks; when Lay AI cannot find what was asked it
-  says so and says how to ask, and it never invents an application. In the prototype the chat is not stored and nothing is
-  sent anywhere; in the real build it follows RB-AI-09 and ML-01 to ML-07: the board is data, placeholders replace personal
-  values, and moving a card is always the person's action.
+  says so and says how to ask, and it never invents an application. In the prototype nothing is sent anywhere (the chat is
+  kept on the device, RB-LAY-02); in the real build it follows RB-AI-09 and ML-01 to ML-07: the board is data, placeholders
+  replace personal values, and moving a card is always the person's action.
+- **RB-APP-11** **A card has the person's own notes.** Every card has one small **+ Notes** button (a pill, not a window). Pressing it opens a text box
+  under the card: interview dates, who they met, the questions asked, what went well, what a rejection taught them. While a card has no note the
+  button says **+ Notes**; once it has one it says **Notes** with the word count. The box's hint follows the column (Preparing: who to ask for, what to
+  read first; Applied: who you wrote to, when to follow up; Interview: date, interviewers, questions asked; Offer: pay, joining date, what to ask;
+  Rejected: what you were told, what you would do differently). A note is kept as the person types (after half a second, and at once when they leave the
+  box), is at most 2,000 characters, and keeps its line breaks and at most one blank line in a row. The box stays open across a move, the board is not
+  redrawn while typing (the caret stays), and a card cannot be dragged while its note has the focus (so text can be selected). Writing a note is not a
+  move: it does not change the status, the dates or the reminder. An emptied note removes the field. (`setNotes`, `cleanNotes`, `notesPlaceholder` in
+  `applications-rules.js`.)
+- **RB-APP-12** **Notes are private to the person.** A note is never part of the outcome record the insights keep (RB-APP-05 picks its fields one by one, and
+  `applications-rules.test.js` pins that a note cannot appear in it); it is not shown to anyone else; and Lay AI reads it only when the person asks to
+  prepare for that application ("Prepare for Zerodha"), never for a status or a summary. In the real build the note is the `notes` column of
+  `job_applications` (owner-only, text, at most 2,000 characters), it is in the person's export, and it is deleted with the application and with the account.
+- **RB-APP-13** **Where a rejection is kept.** A rejected application is not deleted and not hidden: it stays on the board in the **Rejected** column with its
+  dates, its resume version and its notes. The only other copy is the anonymous outcome record (role, experience band, skills, resume version,
+  `outcome: rejected`; RB-APP-05), which carries no company, name or note. Asking Lay AI "Where are my rejections?" says exactly this, from the board:
+  how many, which (up to three by name), whether they have notes, and where they are kept (`rejectionsSummary`). There is no separate rejection
+  history or reason list in this version; the note is where the person writes why.
 
 ### 6.4 The community (RB-COM)
 
@@ -504,7 +532,7 @@ Company culture, Career advice).
   initials or any other mark that differs between writers, so nobody can tell that two posts came from the same
   person. All posts sit under the same umbrella. The author line, the composer and the button all say "Anonymous".
 - **RB-COM-02** A post stores only its topic, its optional company (up to 60 characters), its text (20 to 1,000
-  characters), the **hour** it was made (never the exact time) and its usefulness count. It MUST NOT store, log, index or
+  characters), the **hour** it was made (never the exact time) and its upvote and downvote counts. It MUST NOT store, log, index or
   send to analytics the account id, any device id, IP address, user agent, session, exact time, or anything else that
   could link a post to an account or two posts to each other. The community routes MUST NOT carry the login token.
 - **RB-COM-03** Each post is authorised by its **own one-time pass**, made on the device and signed by the backend
@@ -526,6 +554,57 @@ Company culture, Career advice).
   to an account or two posts to each other. Consequences the owner accepts: there are no per-person bans and no reputation.
 - **RB-COM-08** Older saved previews that still hold mask handles are converted when they load: handles and author ids are
   dropped, and the posts that were the person's own become theirs on this device.
+- **RB-COM-09** **Upvotes (agree) and downvotes (disagree) are two separate counts.** Every post and every comment shows an up arrow with its
+  upvote count and a down arrow with its downvote count. There is no combined score: how the two counts are shown, weighed or used for ranking
+  is the backend's decision, and people who agree and people who disagree are kept apart. **A device has one vote per post or comment, and it is
+  never locked:** pressing the same arrow again takes the vote back, and pressing the other arrow switches it. The chosen arrow is filled (blue for
+  up, red for down; `aria-pressed`). **No stored counter ever goes down:** each post and comment has four increment-only counters, `upvotes` and
+  `downvotes` (votes given) and `upvotesWithdrawn` and `downvotesWithdrawn` (votes taken back, including switching away). A new vote adds one to
+  its given counter; a take-back adds one to its withdrawn counter; a switch does both. The count shown is given minus withdrawn, never below zero
+  (`voteCounts`). So the server never subtracts or handles a negative value, and can apply votes in any order without locks or transactions;
+  exact ordering is not required. Which way this device voted is kept on the device alone (`votes`: id to 1 or -1), never on the server; in the
+  real build each vote, take-back or switch is authorised like a post (RB-COM-03), so the server cannot tell who voted, or that two votes came from
+  one person. An older tally's "Useful" marks become upvotes. (`vote`, `voteOf`, `voteCounts`.)
+- **RB-COM-10** **Anonymous comments in branches, as on Reddit.** A post has a **Comment** button (or "N comments") that opens a box under the post;
+  every comment has a **Reply** button that opens a box under that comment. A reply sits under its parent, indented, with a thread line down its
+  left side; branches go at most 6 levels deep, and at the deepest level the comment says "This branch is as deep as it goes; reply higher up".
+  In the prototype siblings are sorted by the most upvotes, then the fewest downvotes, then the older one (the real ranking is the backend's). Pressing **[–]** or the thread line collapses the whole branch to its
+  head line, which then says how many replies are hidden ("3 more replies"); **[+]** opens it again (for this visit only). Each comment's head line is
+  "Anonymous" and the hour (a collapsed one adds its up and down counts). A comment is 5 to 500 characters, goes through the same identity check as a post (RB-COM-06),
+  stores only `{id, parentId, text, createdHour, upvotes, downvotes}`, and earns no points. A comment whose parent is gone is shown at the top level.
+  The device keeps its own comments as `{id, postId}` so it can show **"You"** on them and list them on My activity; the server never knows whose
+  comment it is. (`validateReply`, `addReply`, `replyDepth`, `replyTree`, `branchSize`, `isMyReply`.)
+- **RB-COM-11** **Posts viewed.** A post counts as viewed once 60% of it has been on screen; each post once, never the person's own, at most 500
+  remembered (`markViewed`). The list is on the device only and is not sent anywhere (a view log on the server would link reading to an account).
+  The side card shows posts, points, comments and votes, and links to My activity.
+
+### 6.4a My activity (RB-ACT)
+
+The My activity page (`/activity`, Account group of the sidebar; rules in `activity-rules.js`, tests in `activity-rules.test.js`) is the signed-in
+person's own analytics. Nobody else sees it, and it is never part of the admin console (RB-ADM-04).
+
+- **RB-ACT-01** **Applications and jobs.** Four tiles: **Applications sent** (cards that have reached Applied, even if later moved to Interview, Offer
+  or Rejected; with the number on the board and the number sent in the last 30 days), **Job postings opened** (with the last 7 days), **Saved jobs**
+  (from the saved-jobs list, with how many are marked Applied or further; Not selected counts as applied), and **Interviews and offers** on the board.
+  Below them, the board's count per column as bars, and the last five postings opened. (`activitySummary`.)
+- **RB-ACT-02** **Community, this device only.** Four tiles: **Posts viewed** (RB-COM-11), **Upvotes given** (with the downvotes; RB-COM-09),
+  **Anonymous comments** (RB-COM-10) and **Your posts** (with points waiting). Below them, the person's comments (text, its up and down counts, the comment it
+  replies to or the post it is on, topic, hour) and what they upvoted (posts and comments, with both counts). The section is labelled **This device only**, and the page says that Coverlay never links a post, a vote or a comment to the account,
+  so another browser or phone starts at zero. This is the price of RB-COM-02 and RB-COM-04 and MUST NOT be "fixed" by storing it on the server.
+- **RB-ACT-03** **Job postings opened.** Pressing **Apply** or **View posting** on Jobs for you, or **Posting** on Saved jobs, records
+  `{jobId, title, company, at}`: each posting once (opening it again moves it to the top), newest first, at most 200 (`recordJobOpen`). In the
+  prototype it is kept in this browser; in the real build it SHOULD be an owner-only server table (job views are not anonymous), in the person's
+  export and deleted with the account.
+- **RB-ACT-05** **Skills and education** come first on the page. Four tiles: **Total skills** (with where they came from), **Education** (the number of
+  entries, with the first degree and year), **Skills to add** and **Role matches** (with the domain). Below them, **Your skills** as green chips, then
+  **Skills your role matches ask for** as amber chips (each role's missing skills counted across the matched roles, most asked first, without the
+  ones the person has, ignoring case; at most 8; "×3" when three roles ask), and **Education** as a list (degree, institution, year). The source is
+  the latest uploaded resume as the system read it (`GET /resumes/{id}/profile`: `skills`, `education`); when there is no upload yet, or it has
+  neither skills nor education, the Builder resume (its Skills and Education sections) is used instead, and the page says which ("From your resume,
+  version 3" or "From your Builder resume"). Skills are de-duplicated ignoring case, keeping the first spelling. The role matches are the dashboard's
+  (`GET /recommendations/dashboard`). (`profileSummary`, `skillGaps`.)
+- **RB-ACT-04** A count of zero says so plainly, with what to do to fill it ("Use the up arrow on a post or a comment in the community."). A comment or upvoted post or comment whose
+  post is no longer in the feed is still counted but not listed.
 
 ### 6.5 Letters and emails (RB-LET)
 
@@ -599,6 +678,21 @@ Company culture, Career advice).
   the person. **Job search services** (Adzuna, JSearch and others) are *planned*, to carry jobs in every field. **Naukri** is *not available*: it has no
   public job search API and does not allow scraping, so Coverlay MUST NOT read it unless it offers a partner API. **Your own connector (MCP)** is
   *planned*. A service that cannot be connected cannot be switched on by any request, and the screen says why in words.
+- **RB-PIC-01** **Profile picture.** Settings & privacy opens with a **Profile picture** card: the current picture in a 96 px circle, **Upload a photo** (or
+  **Change photo**), **Remove**, and eight ready-made avatars to choose from (`AVATARS` in `avatar-rules.js`: Sky, Mint, Sun, Coral, Violet, Slate, Ink,
+  Sand, each a head and shoulders in two colours, 4.5:1 or better). The choice shows in the sidebar at once. With no choice, the initials show.
+- **RB-PIC-02** **A photo is JPEG, PNG or WebP, at most 5 MB** (GIF, SVG and other files are refused with a sentence). It is cut to the largest centred
+  square and shrunk to 256 x 256 (`cropSquare`, `PHOTO_SIZE`) before it is kept, so it fills every round frame without being stretched; the frame uses
+  `object-fit: cover`. A transparent PNG gets a white background. The preview keeps the choice per person in this browser
+  (`coverlay.preview.avatar.<userId>`); a saved value that is not a JPEG/PNG/WebP data URL or a known avatar id (a web address, an SVG, edited by hand) is
+  ignored and the initials show. The real build MUST store the photo with the account, re-check type and size on the server, re-encode it, and never serve
+  a person's photo to anyone else.
+- **RB-PIC-03** **Import from LinkedIn** is a card on the Resume analyzer (`/upload#linkedin`, the Connected apps LinkedIn row links to it): three steps (save
+  your profile to PDF on LinkedIn, choose it here, check the new version), a **Choose LinkedIn PDF** button that takes a PDF only, and a line saying there is no
+  sign-in and the PDF does not carry the photo. The PDF goes through the same upload and analysis as any resume (RB-CON-02 still holds: no sign-in, no scraping).
+- **RB-PIC-04** **Stage two (planned): Sign in with LinkedIn** to bring the name, email and photo in automatically. It needs a LinkedIn developer app and
+  reverses the no-sign-in line of RB-CON-02 for those three fields only (it never reads work history), so it ships only when the owner decides. Until then the
+  photo comes from the person saving it on LinkedIn and uploading it (RB-PIC-01), and they can always change it to an avatar or another picture.
 - **RB-CON-03** **How Lay AI reaches an outside service is a connector**: a Model Context Protocol (MCP) server that Coverlay runs for a service, and, later,
   one the person adds themselves. This is how Lay AI gets suggestions "across all the domains" without Coverlay copying a portal. The rules for every
   connector (the backend MUST enforce them, the prototype shows the first three):
@@ -619,7 +713,30 @@ Company culture, Career advice).
 
 ### 6.7 What is only a mock-up (RB-PRE)
 
-- **RB-PRE-01** **Team insights is a mock-up and is not part of the product.** The admin page in the preview (`admin-insights.html`) shows what an internal
+- **RB-ADM-01** **The admin console is a separate window, not part of the user app.** Administrators get their own shell at a secret address (RB-ADM-02): a black sidebar tagged
+  **Admin console** with its own links (**Admin analytics**, **Bug reports**), their own pages, and no Lay AI and no bug-report dialog. The user app's sidebar, pages and
+  landing page carry no admin link, section or tag. An administrator who signs in lands in the console (unless they were sent to sign in from another page) and
+  reaches the user view with **Open the user view**; a person who is not an administrator has no admin address to type: for them `/admin` or any guess is an unknown address like any other (the backend still
+  checks ADMIN on every call, RB-ADM-03). The console's analytics are its own: platform-wide numbers about the whole product, never the person's own analysis (that is
+  "Your analysis" in the user app).
+- **RB-ADM-02** **The admin console and the admin API are not at `/admin`, and their address cannot be guessed or read out of the app.** The backend holds one secret
+  path segment (`APP_ADMIN_PATH`: 24 to 64 letters, digits, `-` or `_`; the backend refuses to start with a shorter one, one that contains "admin", or one that
+  is not random; when it is not set a new random one is made at every start). Every admin endpoint lives under it (`/{admin-path}/users`, `/{admin-path}/jobs/...`,
+  `/{admin-path}/bug-reports...`, `/{admin-path}/skill-vectors/snapshot`, `/{admin-path}/roles/{id}/skill-vectors/recompute`); nothing is mapped at `/admin`. The
+  path is told only to an administrator, about their own account, in the answer to sign-in and to `GET /auth/me` (`adminPath`); for everyone else the field is
+  absent. The frontend takes the console's address from that field (`/{admin-path}` and `/{admin-path}/bugs`): the address is not in the bundle, the routes do
+  not exist until an administrator is signed in, and a stored value that is not the promised shape is ignored (`admin-rules.js`). The admin endpoints are left out
+  of the public API docs.
+- **RB-ADM-03** **Knowing the address gives nothing.** The path is one layer, never the access check. (1) Every admin endpoint requires the ADMIN role, checked twice
+  (the URL rule and on the endpoint), with the role read from the database on every request, so removing the role works at once. (2) A signed-in person who is
+  not an administrator gets, at any address under the admin path, exactly the 404 that an address that does not exist gets (same status, same body); a person
+  with no session gets the same 401 every address gives. A correct guess cannot be told from a wrong one. (3) Every admin call, and every refused one, is
+  written to the `admin.audit` log: the account, the action, the result and the caller's address, without the secret path and without the query string.
+  (4) An administrator cannot change their own access level; another administrator must. **Still to decide (not built):** a second sign-in step for
+  administrators, a shorter session for them, and a limit on which networks may reach the admin path.
+- **RB-ADM-04** **A person's own analytics stay theirs, in the user app.** My activity (RB-ACT), "Your analysis" and the Applications insights are each person's own numbers, on their own
+  pages; they are never part of the admin console, and the console's platform-wide analytics (RB-PRE-01) never show one person's.
+- **RB-PRE-01** **Admin analytics (formerly Team insights) is a mock-up and is not part of the product.** The admin page in the preview (the console's first page) shows what an internal
   dashboard could look like, with sample numbers, so the owner can react to it. The frontend and the backend MUST NOT build it as it is, and no requirement here
   depends on it. What the owner's internal dashboard shows is decided later, from how Coverlay is really used. In the preview it carries the tag **Mock-up**
   (not "Preview", which means a screen that will be built).
@@ -630,6 +747,55 @@ Company culture, Career advice).
   added up and the time of the latest), newest first, so a busy week of chat is a few rows and not a long list of identical ones. A row of more than one entry says
   how many and how many credits each, as its tooltip. The balance is the sum of every entry, grouped or not. (`groupHistory()` in `wallet-rules.js`.)
 
+### 6.9 Lay AI on every page (RB-LAY)
+
+Lay AI is one assistant that follows the person through the app. The chat is `components/lay-chat.js`, mounted once by `components/shell.js` (`lay-global.js`);
+what it can do is in `pages/lay-agent-rules.js` (DOM-free; `tests/lay-agent-rules.test.js`); what it reads from the device and leaves for the next page is
+`pages/lay-agent.js`.
+
+- **RB-LAY-01** **Lay AI is on every signed-in page.** The black-square button at the bottom right opens the panel (RB-APP-06) on Overview, Resume analyzer,
+  Letters & emails, Role matches, JD match, Jobs, Saved jobs, Applications, Watchlist, Community, Wallet, Settings and the admin pages. The Builder keeps its own
+  Lay AI panel (RB-AI-01) and does not get a second one. A page that knows more adds its own answers (`setLayPage`); Lay AI's own work comes first when a message
+  asks for it. A phone shows the panel as a bottom sheet and the quick questions as one scrolling row.
+- **RB-LAY-02** **The box takes a pasted job description.** It is a text area of up to 6,000 characters: Enter sends, Shift+Enter adds a line, and it grows to
+  about six lines and then scrolls. **The conversation follows the person from page to page** on the device: the last 30 messages, as the guard made them
+  (placeholders for name, college and contacts; filled in again on the person's own screen), under **New chat**, which clears them. **A long message is kept only
+  as its first 300 characters and a word count, and the raw job description is never stored anywhere**: only what was read from it (role, company, skills)
+  is kept, for a day, so "match it" can follow "here is the job". Buttons are not restored with an old message: a decision belongs to the moment it was asked.
+- **RB-LAY-03** **Lay AI proposes, the person agrees, one action at a time.** Given a request ("I learned Docker and Kubernetes, add them to my resume. Here is the
+  JD: ..."), it answers with what it would do in plain lines and buttons: **Yes, open the Builder** / **Not now**. Nothing is changed, saved or sent before the
+  press, and a press settles that message (its buttons are disabled afterwards). The requests it understands: add skills the person says they have; tailor the
+  resume to a job description; match the resume to a job; draft a cold email; say where the rejections are (RB-APP-13); open a page of this app by name. A pasted job
+  description on its own is read back (role, company, skills it asks for) with **Tailor my resume**, **Match my resume** and **Draft a cold email**. A message it
+  cannot place gets help that gives examples, or the page's own answer.
+- **RB-LAY-04** **It only says what is true.** (1) It adds only skills the person's own message names as theirs: never one that is only in the job description;
+  the skills the job asks for and the resume lacks are listed ("I won't add them unless you tell me you have them"). (2) It never writes or changes Experience,
+  Education, name or contact details. (3) A tailored Summary is built from skills the resume listed *before* this update, never from one the person has just
+  added, so it does not claim experience they only now say they have; a fact the person wrote (the first sentence with a number) stays. (4) The match counts
+  skills by name, from Skills and from what the Summary and Experience say, and says what it counted and that the real one reads meaning too. (5) A remembered job
+  description is used for an update only when the message points at it ("for this job", "tailor it"), so "add Docker to my skills" never turns into a tailoring.
+- **RB-LAY-05** **Redirect to the Builder, then do it.** On any page other than the Builder the first yes saves the request (the skills and the job's role, company
+  and skills; nothing else) as a *handoff* on the device, says "Opening the Builder", and opens it. The Builder takes the handoff once (it is valid for two hours,
+  is removed when taken, and is ignored if it is not one of ours), reopens a finished resume if needed, and carries it out as **one new version** named
+  "Lay AI: added Docker, Kubernetes; tailored for Platform Engineer (you agreed)": the skills the job asks for first, the Summary for its role, what changed in
+  green with the Lay AI cursor on it, Versions able to take it back, and the Lay AI panel open on the answer. With no resume yet the request waits (the start
+  page says so) and is carried out when the first resume exists. On the Builder itself the same request asks for one yes in the panel and does it there.
+- **RB-LAY-06** **The next steps are offered, not taken.** After the update: **Match it to the job** (with the percentage, what is covered, what is not, what is only
+  in the experience text, the nice-to-haves) and then **Draft a cold email**. The email is the Letters draft for that job (RB-LET-01: the "Hiring manager"
+  template, placeholders for anything personal, filled in on the person's own screen) shown in the chat as a quoted block with its subject.
+- **RB-LAY-07** **A cold email is prepared in the chat and sent only by the person, on the Letters page.** The buttons are **Open in Letters to send** (the job and
+  nothing else go to Letters as a handoff; Letters opens on Cold email with the draft, a note that Lay AI prepared it and that nothing has been sent, and the person
+  adds the address and presses Send, then confirms, RB-LET-06), **Save as a Gmail draft** when Gmail is connected (a draft, with the resume and the cover letter
+  attached, and no recipient; nothing is sent) or **Connect Gmail first** (Settings) when it is not. **No Lay AI button sends mail.** This is deliberate: a send is
+  the one action that cannot be undone, so it stays behind the person's own address, their own Send and the second confirmation, even for a person who trusts
+  Lay AI. If the draft still has a blank ("[Company]" when the job description did not name the company; "{user.link}" when the resume has no link) Lay AI says
+  which; **a draft may keep a blank, a send may not** (`buildMailRequest` refuses to send one, in the prototype and in the backend).
+- **RB-LAY-08** **The same rules everywhere.** The rules are one module used by the global chat and the Builder's panel; messages in the Builder's panel keep their
+  buttons (`kind: agent`) and keep only placeholders; a card is filled in for display only. Every opening answer is plain, has no exclamation marks and no button
+  that sends. In the real build the model proposes with the same constraints (RB-AI, ML-01 to ML-07) and the backend repeats them: a step that changes a resume is
+  one version written by `POST /api/builder/documents/{id}/versions` with `source: ai`; a connector tool call follows RB-CON-03; and Lay AI's own requests are
+  logged by kind and time, never by content.
+
 ## 7. What the frontend MUST do
 
 - **FE-01** Implement sections 2 to 6 exactly. The rules in `resume-builder-rules.js`, `resume-doc.js`, `resume-ruler.js`
@@ -639,8 +805,23 @@ Company culture, Career advice).
   `textContent` or the editor's schema, never as HTML (RB-DATA-03, RB-DATA-04).
 - **FE-03** Keep the editor behind the converter: the rest of the app sees plain resume objects, never editor internals,
   so versions, diffs, Lay AI and the backend never depend on the editor.
-- **FE-04** The prototype has no build step for the app. If the real frontend adds one it MUST still pass every test
+- **FE-04** **The frontend is React and TypeScript on Vite** (decided 8 Nov 2026, when the application grew past what hand-written pages could carry): React 19, React
+  Router, SWR for what the backend answers, Tiptap for the two document editors. The look is unchanged: the same stylesheet and class names (`frontend/src/css/app.css`).
+  The rules modules stay plain JavaScript with no React and no DOM, so Node tests them (`npm test`) and the backend and ML contract tests copy their fixtures;
+  the screens only draw what the rules decide. A change MUST pass `npm test`, `npm run typecheck` and `npm run build` (the CI job runs all three).
+  The earlier text of this requirement follows and still holds: any build step MUST still pass every test
   in `frontend/tests`.
+- **FE-05** **The routes.** `/` (landing), `/login`, `/register`, then, for a signed-in person only: `/dashboard` (tabs by hash: `#overview`, `#matches`, `#jd`), `/upload`,
+  `/builder`, `/letters`, `/jobs`, `/saved`, `/applications`, `/watchlist`, `/community`, `/activity` (My activity, RB-ACT), `/wallet`, `/settings`, and, for administrators only and in their own shell (RB-ADM-01), `/{admin-path}` (admin analytics, preview only) and `/{admin-path}/bugs`, where the path is the secret one the backend gives an administrator (RB-ADM-02); there is no `/admin` route. A person with no session is sent to `/login`
+  and back to where they were going after signing in; a 401 from the backend ends the session and does the same. An address from the older app (`/dashboard.html`,
+  `/resume-builder.html`) goes to its route. `/preview` (the hub that signs in a sample person and links every screen), `/signup-preview` and the admin analytics page (RB-PRE-01) exist **only in a preview build** (`npm run dev`, or `VITE_PREVIEW=true npm run build`): a production build does not contain them.
+- **FE-06** **Where the app finds its backend.** `index.html` loads `/config.js` before the app, which sets `window.__COVERLAY__.apiBaseUrl`; nginx writes it at start-up
+  (`API_BASE_URL`, `/api` behind the proxy) and `npm run dev` serves one that points at the sample API. `BACKEND_URL=http://localhost:8080 npm run dev` sends `/api` to the real
+  backend instead. Every call goes through `app/lib/http.ts` (the session's JWT, `ApiError`, the 401 rule).
+- **FE-07** **Speed.** Written to the Vercel React best-practices rules (installed at `.agents/skills/vercel-react-best-practices`): every screen is its own chunk, loaded when it is first
+  visited, and Lay AI's chat is its own chunk fetched after the shell is drawn (the Builder and Letters, with their editors, are the only pages that download Tiptap); no barrel files; what
+  the backend answers is read with SWR, so a request shared by the sidebar, the version menu and a page is made once; list items that do not change are `memo`; stored state is read once, lazily,
+  and written when it changes; effects depend on the values they use and nothing more; and browser listeners are added once and removed with the component.
 
 ## 8. Not in the prototype yet (so not yet required)
 
@@ -676,6 +857,10 @@ The paths below are recommended (SHOULD); the **shapes, validation, limits and b
 | Cover letter file | `GET /api/letters/{id}/export?format=pdf\|docx` | the file (RB-LET-03) |
 | Connected apps | `GET /api/connections` | `[{provider, connected, connectedAt}]` for every service that can be connected (RB-CON-02) |
 | Disconnect an app | `DELETE /api/connections/{provider}` | `204`; the access is revoked at the service and the tokens deleted (RB-CON-03, RB-CON-04) |
+| Application note | `PUT /api/applications/{id}/notes` `{notes}` | the note, cleaned as RB-APP-11 (line breaks, one blank line, at most 2,000 characters); an empty note removes it; `404` for another person's application; never part of an outcome record (RB-APP-12) |
+| Lay AI: propose | `POST /api/lay/requests` `{text}` (guarded text only) | `{reply, actions:[{id,label,primary}], payload, card?}` as RB-LAY-03 to RB-LAY-06; changes nothing |
+| Lay AI: a step | `POST /api/lay/requests/{id}/steps/{actionId}` | `{reply, actions?, card?}` and, for `update`, the new version of the resume (RB-LAY-05); `email-draft` saves a Gmail draft and `email-letters` returns the job for Letters; there is no send step (RB-LAY-07) |
+| Lay AI: history | `GET /api/lay/messages` and `DELETE /api/lay/messages` | the last 30 messages as the guard stored them (RB-LAY-02); the delete is "New chat" |
 | Gmail: connect | `POST /api/mail/gmail/connect` then the OAuth callback `GET /api/mail/gmail/callback` | the Google consent address; then `{connected, account}` (RB-LET-07) |
 | Gmail: status | `GET /api/mail/gmail` | `{connected, account}` |
 | Gmail: disconnect | `DELETE /api/mail/gmail` | `204`; tokens removed and revoked |
@@ -701,6 +886,33 @@ The paths below are recommended (SHOULD); the **shapes, validation, limits and b
 - **BE-07** Export renders from a stored version and the document's format with the same rules as the page (RB-EXP-02),
   and produces the reading order of RB-ATS-01 from the same function as the reading-order endpoint.
 - **BE-08** Log a request id on every call (as the rest of the backend does) and never log resume text or chat text.
+
+**Built so far** (`backend/src/main/java/com/resumeanalyser/builder`, migration `V12__resume_builder.sql`, which leaves V11 free for
+the accounts migration of the data model): the rows Start, Read, List, Format, Template, Write a version, Restore, Reading order
+and Delete, with BE-01 to BE-04. **Not yet:** Export, Chat and Suggestion (they need the renderers and the ML service), and
+`fromUploadId`, which is answered `400` until an upload's profile can be turned into a resume. Where this section was silent, the
+backend does this, and the prototype or this section changes with it if that is wrong:
+
+- A new document starts from the prototype's sample resume (Jane Doe), as the prototype does. It also carries a `title`: the target
+  role, or `My resume`. A list row is `{id, title, templateId, current, updatedAt}`; `at` and `updatedAt` are milliseconds since 1970.
+- A resume with a field missing or of the wrong type (including a job without `details`) is `400` and the message names the field;
+  keys that are not in the model are dropped. In a custom section, a node type outside section 2.2 and a table inside a cell are
+  `400`; a mark or attribute that is not on the list is stripped; a link outside RB-DATA-04 or a colour that cannot be read on
+  white loses the mark and keeps its text. A title that is empty or over 80 characters is `400`.
+- `baseVersion` is required (`400` without it); one that is not the current version is `409`, and so are two writes that raced on
+  the same document. A version `summary` is 1 to 200 characters (`400`, never cut). The client sends no time and no number.
+- Choosing the template a document already has changes nothing and adds no version. Restoring the current version adds none either
+  (as in the prototype); restoring a version that is gone, whether it never existed or the 50-version cap dropped it, is `404`.
+- A resume over 200 KB (`MAX_BYTES`, measured in bytes of JSON) is `413`.
+- Reading order: `?version=` is optional and defaults to the current version; a version that is gone is `404`. The resume is the
+  version's, but the layout choices that change what a parser meets (columns, bullets, hidden sections) are the document's format
+  **now**, because the format is not versioned. The response is `{text, notes}`, and `text` comes from `ReadingOrder`, the one
+  function export will use for the PDF's text layer (BE-07, RB-EXP-02). It is a contract test: `ReadingOrderTest` loads
+  `backend/src/test/resources/contract/reading-order.json`, which the prototype writes by running its own `docToPlainText` and
+  `readingNotes` (`node frontend/tests/contract/export-reading-order.mjs`); change the prototype, regenerate, and the test shows
+  what the backend must now do. A table section with an empty first row adds no line, and a section with two tables gets one note.
+- The start answers (RB-TPL-01) are made valid like the format: a choice outside its list is the default, a role over 80
+  characters is `400`.
 
 ### 9.2 ML service
 
@@ -731,14 +943,16 @@ The paths below are recommended (SHOULD); the **shapes, validation, limits and b
 | Templates | RB-TPL | `resume-builder-rules.test.js` (`suggestTemplates`, catalogue) |
 | Editor, sections, tables | RB-EDIT, RB-SEC, RB-BLOCK | `resume-doc.test.js` (converter, tables, defaults, paths) and the walk-through |
 | Page, rulers, fit | RB-PAGE, RB-FIT | `resume-builder-rules.test.js` (`fitToPages`, `pageUsage`, margins), `resume-ruler.test.js` |
-| Reading order | RB-ATS | `resume-doc.test.js` (`docToPlainText`, `readingNotes`) |
+| Reading order | RB-ATS | `resume-doc.test.js` (`docToPlainText`, `readingNotes`); backend: `ReadingOrderTest` on `contract/reading-order.json`, generated by the prototype |
 | Lay AI | RB-AI | `resume-builder-rules.test.js` (sample replies, suggestions, `watchHint`), `privacy-guard-rules.test.js`; cursor and scroll by the walk-through |
 | Screen | RB-UI, RB-EXP | the walk-through |
-| Community | RB-COM | `community-rules.test.js` (anonymous posts, no linking fields, the device-only "You", the old-save conversion, the identity check), and the walk-through |
-| Applications board and its Lay AI | RB-APP | `applications-rules.test.js` (moves, reminders, `findApplication`, `layApplicationsReply`), and the walk-through |
+| Community | RB-COM | `community-rules.test.js` (anonymous posts, no linking fields, the device-only "You", the old-save conversion, the identity check, votes, comment branches, views), and the walk-through |
+| My activity | RB-ACT | `activity-rules.test.js` (skills and education and their source, skills to add, applications sent, postings opened, saved jobs, the device-only community counts and lists), and the walk-through |
+| Applications board and its Lay AI | RB-APP | `applications-rules.test.js` (moves, reminders, `findApplication`, `layApplicationsReply`, notes, `rejectionsSummary`, the outcome record), and the walk-through |
+| Lay AI on every page | RB-LAY | `lay-agent-rules.test.js` (the job description, the request, the plan and what it will not add, the match, the email, the handoffs, the history), `mail-rules.test.js` (blanks), and the walk-through |
 | Letters, emails, Word files | RB-LET, RB-EXP-04 | `letters-rules.test.js` (length, greeting, suggestions), `letter-doc.test.js` (blocks, the guard, formatting, suggestions in edited text), `mail-rules.test.js` (every check of RB-LET-04), `letter-docx.test.js`, `docx-writer.test.js`, `resume-docx.test.js` (the files, read back) and the walk-through |
 | Connected apps, mock-ups, wallet history | RB-CON, RB-PRE, RB-WAL | `connections-rules.test.js` (the catalogue, what can be switched on, the stored state), `settings-rules.test.js` (the deletion step), `wallet-rules.test.js` (`groupHistory`) and the walk-through |
-| Services | BE, ML | contract tests, section 11 |
+| Services | BE, ML | contract tests, section 11. Backend: `backend/src/test/java/com/resumeanalyser/builder/*Test.java`; `BuilderPostgresTest` checks the migration, constraints, cascade and lock on a real PostgreSQL and runs when `BUILDER_TEST_DB_URL` is set |
 
 ## 11. How it is checked
 
@@ -758,6 +972,8 @@ prototype's test, never rewritten.
 6. Ask Lay AI to add a skill that is below the fold and watch the page scroll to it.
 7. Resize the Lay AI panel; zoom to 150%; switch to a phone width.
 8. View an old version, restore it, and download the PDF.
+9. On Jobs (not the Builder), open Lay AI, type "I learned Docker and Kubernetes, add them to my resume. Here is the JD:" and paste a job description under it: Lay AI lists what it will change and what it won't add, and changes nothing yet. Press **Yes, open the Builder**: the Builder opens, the change is one new version in green, and the panel is open on the answer. Press **Match it to the job**, then **Draft a cold email**, then **Open in Letters to send**: Letters opens on Cold email with the draft and a note, and Send refuses while a blank is left.
+10. On Applications, press **+ Notes** on a card, type, press **Move to…** on another card (the note stays open and kept), and ask Lay AI "Where are my rejections?".
 9. On the Applications board, drag a card onto another column, check its date and reminder changed, drop it on its own column and see nothing change, then ask Lay AI "What's due?", "Status of Swiggy" and "Move Razorpay to Applied" and see the card come into view and only move when you press Move it.
 10. On the Community page, post, and see that every post says "Anonymous", that only your own posts carry "You" on your screen, and that the side card is yours alone.
 11. Open the version menu on the dashboard with many uploaded versions and see that it scrolls and the sidebar stays short, with Report a bug and Sign out always at the bottom.

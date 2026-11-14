@@ -311,6 +311,10 @@ function addSkillButton() {
  * `onTyping()` after an edit, `onSelection()` when the caret moves, `onFocus()`, and
  * `onBlur(relatedTarget)` when focus leaves the editor (the target says where it went).
  */
+/**
+ * @param {HTMLElement} host
+ * @param {{ onTyping?: () => void, onSelection?: () => void, onFocus?: () => void, onBlur?: (to: Element | null) => void }} [handlers]
+ */
 export function createResumeEditor(host, { onTyping, onSelection, onFocus, onBlur } = {}) {
   let dirty = false;
   let fieldCache = { doc: null, fields: [] };

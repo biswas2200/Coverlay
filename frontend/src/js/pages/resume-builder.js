@@ -8,6 +8,9 @@ import { createResumeEditor } from './resume-editor.js';
 import { docToPlainText, readingNotes, resumeToDoc, tableClass, tableStyle } from './resume-doc.js';
 import { RULER_THICKNESS, createRuler } from './resume-ruler.js';
 import { downloadBytes } from '../core/download.js';
+import { shortened } from '../components/lay-chat.js';
+import { agentStep, agentTurn } from './lay-agent-rules.js';
+import { builderHandoff, fillFor, gmailConnected, leaveHandoff, rememberJd, rememberedJd } from './lay-agent.js';
 import { DOCX_MIME } from './docx-writer.js';
 import { buildResumeDocx, resumeDocxName } from './resume-docx.js';
 import {
@@ -56,6 +59,7 @@ import {
   watchHint,
   TEXT_COLORS,
 } from './resume-builder-rules.js';
+import { SAMPLE_LINKEDIN_PROFILE, fileProblem, foundItems, roleFrom, toResume } from './linkedin-import-rules.js';
 
 // The Resume Builder preview: a clickable prototype with sample data. Steps: start questions ->
 // templates -> editor -> finished. In the editor the resume sits on the left and is edited by
@@ -101,12 +105,22 @@ let rulers = null; // { x, y }: the rulers along the top and left of the editabl
 let pointerDown = false; // a mouse button is held, so the page must not change shape yet
 let dropPending = false; // emptied skills waiting for the mouse button to come up
 const storedOpen = new Set(); // messages whose "What we store" box is open
+let messageCounter = 0; // declared up here: the start-up block below can already need a message id
+let linkedin = null; // the LinkedIn profile being reviewed in the start step, or null
 
 if (requireAuth()) {
   hydrateIcons();
   renderShell('builder');
   wire();
+  // resume-builder.html#linkedin (from the sign-up preview) opens the LinkedIn import.
+  if (location.hash === '#linkedin') {
+    state.step = 'start';
+  }
   render();
+  applyHandoff();
+  if (location.hash === '#linkedin') {
+    openLinkedIn();
+  }
 }
 
 // ---------- state ----------
@@ -139,6 +153,9 @@ function goTo(step) {
   save();
   render();
   window.scrollTo({ top: 0 });
+  if (step === 'editor') {
+    applyHandoff();
+  }
 }
 
 // ---------- events ----------
@@ -149,6 +166,19 @@ function wire() {
     readAnswers(false);
   });
   byId('from-upload').addEventListener('click', () => readAnswers(true));
+  byId('from-linkedin').addEventListener('click', () => (byId('linkedin-panel').hidden ? openLinkedIn() : closeLinkedIn()));
+  byId('linkedin-close').addEventListener('click', closeLinkedIn);
+  byId('linkedin-sample').addEventListener('click', () => reviewLinkedIn('Sample profile (Riya Kapoor, fictional)'));
+  byId('linkedin-file').addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    const problem = fileProblem(file);
+    setText(byId('linkedin-error'), problem);
+    if (!problem) {
+      reviewLinkedIn(`${file.name}. Preview: showing a sample profile, not this file`);
+    }
+    event.target.value = '';
+  });
+  byId('linkedin-import').addEventListener('click', importLinkedIn);
   byId('templates-back').addEventListener('click', () => goTo('start'));
   byId('template-filter').addEventListener('click', (event) => {
     const button = event.target.closest('[data-filter]');
@@ -217,6 +247,14 @@ function wire() {
     event.preventDefault();
     send(byId('lay-input').value);
   });
+  // A few lines for a pasted job description: Enter sends, Shift+Enter adds a line.
+  byId('lay-input').addEventListener('input', growInput);
+  byId('lay-input').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      byId('lay-form').requestSubmit();
+    }
+  });
   byId('lay-suggestions').addEventListener('click', (event) => {
     const button = event.target.closest('[data-prompt]');
     if (button) {
@@ -258,16 +296,74 @@ function wire() {
   });
 }
 
-function readAnswers(fromUpload) {
+function formAnswers() {
   const form = new FormData(byId('start-form'));
-  state.answers = {
+  return {
     role: normalizeText(form.get('role')).slice(0, 80),
     level: form.get('level') ?? DEFAULT_ANSWERS.level,
     style: form.get('style') ?? DEFAULT_ANSWERS.style,
     pages: Number(form.get('pages') ?? DEFAULT_ANSWERS.pages),
   };
+}
+
+function readAnswers(fromUpload) {
+  state.answers = formAnswers();
   state.fromUpload = fromUpload;
   goTo('templates');
+}
+
+// ---------- LinkedIn import ----------
+
+function openLinkedIn() {
+  show(byId('linkedin-panel'));
+  byId('from-linkedin').setAttribute('aria-expanded', 'true');
+  byId('linkedin-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  byId('linkedin-title').setAttribute('tabindex', '-1');
+  byId('linkedin-title').focus({ preventScroll: true });
+}
+
+function closeLinkedIn() {
+  show(byId('linkedin-panel'), false);
+  byId('from-linkedin').setAttribute('aria-expanded', 'false');
+  byId('from-linkedin').focus();
+}
+
+/** Shows "What we found" for the sample profile; `source` says which file it stands for. */
+function reviewLinkedIn(source) {
+  linkedin = SAMPLE_LINKEDIN_PROFILE;
+  setText(byId('linkedin-error'), '');
+  setText(byId('linkedin-file-note'), `Reading: ${source}.`);
+  byId('linkedin-found').replaceChildren(
+    ...foundItems(linkedin).map((item) =>
+      el('li', {},
+        el('label', { class: 'rb-found-item' },
+          el('input', { type: 'checkbox', value: item.id, checked: true }),
+          el('span', { class: 'rb-found-group' }, item.group),
+          el('span', { class: 'rb-found-label' }, item.label),
+          item.meta ? el('span', { class: 'rb-found-meta' }, item.meta) : null))),
+  );
+  show(byId('linkedin-review'));
+  announce('Profile read. Review what we found, then import.');
+}
+
+/** Version 1 (or the next version) is the imported resume; then the template step. */
+function importLinkedIn() {
+  const chosen = [...byId('linkedin-found').querySelectorAll('input:checked')].map((input) => input.value);
+  const meta = { source: 'import', summary: 'Imported from LinkedIn', at: Date.now() };
+  const resume = toResume(linkedin, chosen);
+  state.history = state.history ? addVersion(state.history, resume, meta) : createHistory(resume, meta);
+  const answers = formAnswers();
+  state.answers = { ...answers, role: answers.role || roleFrom(linkedin) };
+  state.fromUpload = false;
+  linkedin = null;
+  show(byId('linkedin-review'), false);
+  show(byId('linkedin-panel'), false);
+  byId('from-linkedin').setAttribute('aria-expanded', 'false');
+  if (location.hash === '#linkedin') {
+    window.history.replaceState(null, '', location.pathname + location.search);
+  }
+  goTo('templates');
+  announce('Imported from LinkedIn as a new version. Choose a template.');
 }
 
 function chooseTemplate(id) {
@@ -276,7 +372,7 @@ function chooseTemplate(id) {
   if (!state.history) {
     const summary = state.fromUpload ? `Imported from upload, template ${template.name}` : `Started from template ${template.name}`;
     state.history = createHistory(sampleResume(), { source: state.fromUpload ? 'import' : 'template', summary, at });
-  } else if (state.templateId !== template.id) {
+  } else if (state.templateId && state.templateId !== template.id) {
     state.history = addVersion(state.history, currentResume(state.history), { source: 'template', summary: `Switched to template ${template.name}`, at });
   }
   // A template brings its typeface (Classic is the LaTeX look) and its columns; leaving Classic goes back to sans.
@@ -727,7 +823,10 @@ function setTab(next) {
 }
 
 function send(text) {
-  const typed = normalizeText(text);
+  // Line breaks stay for Lay AI (a pasted job description is read line by line); the canned replies below
+  // work on the one-line form.
+  const raw = String(text ?? '').replace(/\r/g, '').trim();
+  const typed = normalizeText(raw);
   if (!typed || replying || !state.history) {
     return;
   }
@@ -736,18 +835,38 @@ function send(text) {
   replying = true;
   // The guard: what is stored (and what Lay AI would send to Gemini) has placeholders; the
   // vault with the real values is the account's own and only fills this screen.
-  const guard = guardText(typed, knownValues(currentResume(state.history)));
-  state.messages.push({ id: messageId(), from: 'you', text: guard.stored, vault: guard.vault, found: guard.found });
+  const guard = guardText(raw, knownValues(currentResume(state.history)));
+  const oneLine = normalizeText(guard.stored);
+  // A long paste is kept only as its first lines: the job description itself is never stored.
+  state.messages.push({ id: messageId(), from: 'you', text: shortened(guard.stored), vault: guard.vault, found: guard.found });
   byId('lay-input').value = '';
+  growInput();
   renderEditor();
 
   setTimeout(() => {
     const before = currentResume(state.history);
+    // Lay AI's own work (a job description, new skills, a match, an email) proposes first and waits for a yes.
+    const turn = fitRequest(oneLine) ? null : agentTurn(guard.stored, {
+      resume: before, style: state.format.style, jd: rememberedJd(), gmail: gmailConnected(), claim: 'builder', onBuilder: true, fill: fillFor(before),
+    });
+    if (turn) {
+      if (turn.payload?.jd) {
+        rememberJd(turn.payload.jd);
+      }
+      state.messages.push(agentMessage(turn));
+      replying = false;
+      save();
+      renderEditor();
+      if (tab === 'chat') {
+        byId('lay-input').focus({ preventScroll: true });
+      }
+      return;
+    }
     // "Fit it on one page" changes how the resume is set (spacing, margins, text size), never the words.
-    const fit = fitRequest(guard.stored);
+    const fit = fitRequest(oneLine);
     const result = fit
       ? { reply: fitSentence(fitResume(fit.pages)), resume: before, summary: null }
-      : sampleLayReply(guard.stored, before, state.format.style);
+      : sampleLayReply(oneLine, before, state.format.style);
     let change = null;
     if (result.resume !== before) {
       state.history = addVersion(state.history, result.resume, { source: 'ai', summary: result.summary, at: Date.now() });
@@ -774,13 +893,23 @@ function send(text) {
   }, TYPING_DELAY_MS);
 }
 
-let messageCounter = 0;
+function growInput() {
+  const input = byId('lay-input');
+  input.style.height = 'auto';
+  input.style.height = `${Math.min(input.scrollHeight, 150)}px`;
+}
+
 function messageId() {
   messageCounter += 1;
   return `${Date.now().toString(36)}-${messageCounter}`;
 }
 
 function onMessageClick(event) {
+  const agent = event.target.closest('[data-agent]');
+  if (agent) {
+    runAgent(agent.dataset.message, agent.dataset.agent);
+    return;
+  }
   const decision = event.target.closest('[data-suggest]');
   if (decision) {
     decide(decision.dataset.message, decision.dataset.suggest, decision.dataset.action);
@@ -826,6 +955,93 @@ function decide(messageKey, itemId, action) {
     save();
     renderEditor();
   }
+}
+
+// ---------- Lay AI's own work: proposals the person agrees to one by one ----------
+
+/** A Lay AI message with buttons: what the rules answered, kept in the chat (placeholders only, no real values). */
+function agentMessage(result) {
+  return {
+    id: messageId(),
+    from: 'lay',
+    kind: 'agent',
+    text: result.reply,
+    card: result.card ?? null,
+    actions: (result.actions ?? []).map((item) => ({ id: item.id, label: item.label, primary: Boolean(item.primary) })),
+    payload: result.payload ?? {},
+    chosen: null,
+  };
+}
+
+/**
+ * What a step makes real on this page: a new resume becomes one version (green, with the Lay AI cursor on it),
+ * a line goes into the chat, and a step that opens another page leaves its request there first.
+ */
+function finishStep(step, { intro = '' } = {}) {
+  const before = currentResume(state.history);
+  let change = null;
+  if (step.payload?.jd) {
+    rememberJd(step.payload.jd);
+  }
+  if (step.resume && step.resume !== before) {
+    state.history = addVersion(state.history, step.resume, { source: 'ai', summary: step.summary, at: Date.now() });
+    change = diffResume(before, step.resume);
+    highlight = change;
+  }
+  state.messages.push(agentMessage({ reply: `${intro}${step.reply}`, actions: step.actions, card: step.card, payload: step.payload }));
+  save();
+  renderEditor();
+  if (change) {
+    pointToChange(change);
+  }
+  if (step.effect?.type === 'navigate') {
+    leaveHandoff(step.effect.handoff);
+    // A moment to read the line first.
+    setTimeout(() => {
+      location.href = step.effect.href;
+    }, 900);
+  }
+}
+
+function agentContext() {
+  const resume = currentResume(state.history);
+  return { resume, style: state.format.style, jd: rememberedJd(), gmail: gmailConnected(), onBuilder: true, fill: fillFor(resume) };
+}
+
+/** One press on a button of a Lay AI message: it can be pressed once, and then the whole message is settled. */
+function runAgent(messageKey, actionId) {
+  const message = state.messages.find((m) => m.id === messageKey);
+  if (!message || message.kind !== 'agent' || message.chosen || !message.actions?.some((a) => a.id === actionId)) {
+    return;
+  }
+  commitEditor();
+  viewing = null;
+  message.chosen = actionId;
+  finishStep(agentStep(actionId, message.payload, agentContext(), Date.now()));
+}
+
+/**
+ * A request Lay AI left on another page ("yes, open the Builder"): the person agreed there, so it is carried out
+ * now as one new version, and the chat opens on the answer. Waits for a resume if there is none yet.
+ */
+function applyHandoff() {
+  if (!state.history || (state.step !== 'editor' && state.step !== 'finished')) {
+    return;
+  }
+  const handoff = builderHandoff({ take: true });
+  if (!handoff) {
+    return;
+  }
+  if (state.step !== 'editor') {
+    // The resume was finished: reopen it, so the change is where the person can see it.
+    state.step = 'editor';
+    render();
+  }
+  const step = agentStep('update', { skills: handoff.skills, jd: handoff.jd }, agentContext(), Date.now());
+  tab = 'chat';
+  panelOpen = true;
+  finishStep(step, { intro: 'Picking up what you agreed to. ' });
+  announce('Lay AI made the change you agreed to.');
 }
 
 function restoreTo(number) {
@@ -1277,6 +1493,7 @@ function render() {
 }
 
 function renderStart() {
+  show(byId('handoff-note'), builderHandoff() !== null);
   const form = byId('start-form');
   form.elements.role.value = state.answers.role;
   for (const name of ['level', 'style', 'pages']) {
@@ -1429,7 +1646,29 @@ function renderMessage(message) {
   if (message.kind === 'suggest') {
     return [renderSuggestion(message)];
   }
+  if (message.kind === 'agent') {
+    return [renderAgent(message)];
+  }
   return [el('li', { class: 'lay-msg from-lay' }, message.text)];
+}
+
+function renderAgent(message) {
+  const fill = fillFor(currentResume(state.history));
+  const card = message.card
+    ? el(
+      'div',
+      { class: 'lay-card' },
+      el('p', { class: 'lay-card-subject' }, el('span', { class: 'lay-card-label' }, 'Subject'), fill(message.card.subject)),
+      el('p', { class: 'lay-card-body' }, fill(message.card.body)),
+    )
+    : null;
+  const buttons = (message.actions ?? []).map((item) =>
+    el(
+      'button',
+      { class: `btn btn-sm ${item.primary ? 'btn-primary' : 'btn-secondary'}`, type: 'button', 'data-message': message.id, 'data-agent': item.id, disabled: Boolean(message.chosen) },
+      item.label,
+    ));
+  return el('li', { class: 'lay-msg from-lay' }, message.text, card, buttons.length ? el('div', { class: 'lay-msg-actions' }, ...buttons) : null);
 }
 
 function storedBox(message) {

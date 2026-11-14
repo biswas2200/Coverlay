@@ -1,5 +1,6 @@
 package com.resumeanalyser.account.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.resumeanalyser.account.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +17,9 @@ import java.util.UUID;
  * @param email     the account's login email
  * @param role      the account's access level (USER / ADMIN)
  * @param createdAt when the account was created
+ * @param adminPath where the admin API lives, told only to an administrator about
+ *                  their own account (sign-in and {@code GET /auth/me}); absent from
+ *                  the JSON for everyone else
  */
 public record UserDto(
         UUID id,
@@ -27,5 +31,14 @@ public record UserDto(
 
         UserRole role,
 
-        Instant createdAt
-) {}
+        Instant createdAt,
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        String adminPath
+) {
+
+    /** An account as anyone but its own administrator session sees it: no admin path. */
+    public UserDto(UUID id, String email, UserRole role, Instant createdAt) {
+        this(id, email, role, createdAt, null);
+    }
+}

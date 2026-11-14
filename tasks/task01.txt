@@ -1,0 +1,13 @@
+So, I want to archive the local first approach for now, the docker
+part where user can run fully locally in docker image
+but not the ML pipeline part only the local part where user can run locally
+because the other delivery edition will be remain same.
+so 
+"100% deterministic (reproducible).• Local parsing, ATS scoring, and skill matching.• 
+Template-based feedback explanations.• 
+Zero API cost, zero cloud dependencies,complete privacy"
+
+Now this particualar thing will run on the google cloud so I can get the ai free cost
+for the domains I mentioned in the 2nd Delivery Editiion
+
+So before starting lets plan carefully and review everything 

@@ -1,0 +1,12 @@
+.hub { max-width: 980px; margin: 0 auto; padding: 40px 16px 64px; display: grid; gap: 22px; }
+.hub-head { display: grid; gap: 10px; }
+.hub-head h1 { font-size: clamp(28px, 4vw, 38px); }
+.hub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.hub-card { display: grid; gap: 6px; align-content: start; color: var(--text); }
+.hub-card:hover { border-color: var(--accent); color: var(--text); }
+.hub-card h3 { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.hub-card p { font-size: 13.5px; color: var(--muted); }
+.hub-group { display: grid; gap: 12px; }
+.hub-group h2 { font-size: 18px; }
+.hub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 800px) { .hub-grid { grid-template-columns: minmax(0, 1fr); } }

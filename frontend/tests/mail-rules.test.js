@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ATTACHMENT_FORMATS, LIMITS, MAIL_PROVIDERS, SAMPLE_GMAIL, attachmentName, buildMailRequest, cleanRecipient, cleanSubject, mailSummary } from '../src/js/pages/mail-rules.js';
+import { ATTACHMENT_FORMATS, LIMITS, MAIL_PROVIDERS, SAMPLE_GMAIL, attachmentName, blanksIn, buildMailRequest, cleanRecipient, cleanSubject, describeBlank, mailSummary } from '../src/js/pages/mail-rules.js';
 
 const good = { action: 'draft', to: 'Priya.Sharma@Swiggy.in', subject: 'Backend Engineer at Swiggy', body: 'Hi Priya,\n\nI am applying.', attachments: [{ kind: 'resume', format: 'pdf' }, { kind: 'cover', format: 'docx' }] };
 
@@ -91,4 +91,23 @@ test('the formatted email travels with the plain one, written one way, and only 
   assert.equal(made.request.bodyMarkup, 'Hi <b><i>Priya</i></b>, see my notes&lt;script&gt;x&lt;/script&gt;.', 'canonical order, the unsafe link dropped, the tag turned into text');
   assert.equal('bodyMarkup' in buildMailRequest(good).request, false, 'no markup, no field');
   assert.match(buildMailRequest({ ...good, bodyMarkup: 'x'.repeat(LIMITS.markup + 1) }).error, /too long/);
+});
+
+test('a draft can keep a blank, a send cannot', () => {
+  const blank = { ...good, subject: 'Platform Engineer at [Company]', body: 'Hi there, my profile is at {user.link}.' };
+  assert.deepEqual(blanksIn(`${blank.subject}\n${blank.body}`), ['[Company]', '{user.link}']);
+  assert.equal(buildMailRequest({ ...blank, action: 'draft' }, 'Jane Doe').ok, true, 'saved in Drafts, where the person can finish it');
+  const refused = buildMailRequest({ ...blank, action: 'send' }, 'Jane Doe');
+  assert.equal(refused.ok, false);
+  assert.match(refused.error, /still has a blank to fill in: \[Company\] \(the company name\), \{user\.link\} \(your link\)/);
+  assert.equal(buildMailRequest({ ...good, action: 'send' }, 'Jane Doe').ok, true, 'a finished email sends');
+});
+
+test('blanks are found once each, and described in words', () => {
+  assert.deepEqual(blanksIn('a [Company] b [Company] {other.person_1} {user.phone}'), ['[Company]', '{other.person_1}', '{user.phone}']);
+  assert.deepEqual(blanksIn('Dear team, {not a placeholder} and [Other]'), []);
+  assert.deepEqual(blanksIn(null), []);
+  assert.equal(describeBlank('[Company]'), 'the company name');
+  assert.equal(describeBlank('{user.link}'), 'your link');
+  assert.equal(describeBlank('{other.person_1}'), 'a detail');
 });

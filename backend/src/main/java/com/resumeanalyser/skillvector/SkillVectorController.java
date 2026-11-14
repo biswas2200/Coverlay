@@ -6,11 +6,11 @@ import com.resumeanalyser.recommendation.Role;
 import com.resumeanalyser.recommendation.RoleRepository;
 import com.resumeanalyser.skillvector.dto.SkillVectorDto;
 import com.resumeanalyser.skillvector.mapper.SkillVectorMapper;
+import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
@@ -25,7 +25,6 @@ import java.util.UUID;
  * any candidate should be able to do to a shared, global resource.
  */
 @RestController
-@RequestMapping("/roles/{roleId}/skill-vectors")
 public class SkillVectorController {
 
     private final SkillVectorService skillVectorService;
@@ -52,7 +51,7 @@ public class SkillVectorController {
      * @return one entry per skill the role currently has a vector for
      * @throws ResourceNotFoundException if no role has this id
      */
-    @GetMapping
+    @GetMapping("/roles/{roleId}/skill-vectors")
     public List<SkillVectorDto> list(@PathVariable UUID roleId) {
         Role role = findRole(roleId);
         return skillVectorService.getAllCurrent(role).stream().map(skillVectorMapper::toDto).toList();
@@ -61,12 +60,14 @@ public class SkillVectorController {
     /**
      * Forces an immediate EMA recompute of every skill this role has accumulated
      * feedback for, instead of waiting for the automatic feedback-count threshold.
+     * Like every admin action it lives under the secret admin path.
      *
      * @param roleId the role to recompute
      * @return the freshly written, now-current skill vectors
      * @throws ResourceNotFoundException if no role has this id
      */
-    @PostMapping("/recompute")
+    @Hidden
+    @PostMapping("${app.admin.base-path}/roles/{roleId}/skill-vectors/recompute")
     @PreAuthorize("hasRole('ADMIN')")
     public List<SkillVectorDto> recompute(@PathVariable UUID roleId) {
         Role role = findRole(roleId);

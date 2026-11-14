@@ -3,6 +3,7 @@ package com.resumeanalyser.job;
 import com.resumeanalyser.job.dto.AddCompanyRequest;
 import com.resumeanalyser.job.dto.CompanyDto;
 import com.resumeanalyser.job.dto.JobsStatusDto;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,12 @@ import java.util.List;
 /**
  * Admin controls for job collection. The long tasks run in the background
  * ({@link JobsRunner}): they answer 202 at once, or 409 if one is already
- * running; {@code GET /admin/jobs/status} shows progress.
+ * running; {@code GET .../jobs/status} shows progress. Under the secret admin
+ * path (never {@code /admin}) and out of the public API docs.
  */
+@Hidden
 @RestController
-@RequestMapping("/admin/jobs")
+@RequestMapping("${app.admin.base-path}/jobs")
 @PreAuthorize("hasRole('ADMIN')")
 public class JobAdminController {
 

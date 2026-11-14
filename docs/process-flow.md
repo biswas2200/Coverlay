@@ -71,7 +71,7 @@ flowchart TD
     C -- Yes --> D["signal = helpful ratio per skill\n(FeedbackService)"]
     D --> E["new_weight = α·signal + (1−α)·old_weight\nα = 0.3 — FR-7.2"]
     E --> F[Insert new SkillVector row, mark current;\nprior versions retained — FR-7.4]
-    F --> G["Admin exports weights snapshot*\nGET /roles/skill-vectors/snapshot — FR-7.5"]
+    F --> G["Admin exports weights snapshot*\nGET /{admin-path}/skill-vectors/snapshot — FR-7.5"]
     G --> H["Snapshot exported for versioned\nrelease deployments"]
     H --> I([Done])
 ```

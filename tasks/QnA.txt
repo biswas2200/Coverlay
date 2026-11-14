@@ -1,0 +1,32 @@
+Lets try to question one by one I make an this file  
+of QnA which we are having right now so we can, 
+use it for plan the complete document.
+
+1.
+Now for the Track u have asked for, 
+the model training part will be done in the cloud, itself and every fine-tuning
+no local because of local machine limitation so the traning part will also
+be done there.
+
+Same model I will be use in the cloud by uploading in there.
+So the process will be same but the network call will be happening over there
+like the result will be comming from there. 
+
+2.
+yes its ready in the data folder, its not much here but, 
+I will use as human in loop to keep quality of the result.
+
+3.
+Hybrid, like I don't have much knowledge so make sure u check to open for
+modification, now for the quick output lets go with the Option A
+
+4.
+Yes, create an archive/community-edition so that i can merge it later,
+but make sure it should not create an future conflict 
+
+If u have any more doubt make sure, u ask me. Don't blindly go for it. 
+
+Also make sure u create an archive file (just for reference)in docs first and 
+then update all the docs, like remove all the text of the offline
+version from the docs.
+

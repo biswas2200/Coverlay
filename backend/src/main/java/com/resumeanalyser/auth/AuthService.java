@@ -33,6 +33,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final List<String> adminEmails;
+    private final String adminBasePath;
 
     public AuthService(
             UserRepository userRepository,
@@ -40,8 +41,10 @@ public class AuthService {
             AuthenticationManager authenticationManager,
             JwtService jwtService,
             UserDetailsService userDetailsService,
-            @Value("${app.admin.emails:}") List<String> adminEmails
+            @Value("${app.admin.emails:}") List<String> adminEmails,
+            @Value("${app.admin.base-path}") String adminBasePath
     ) {
+        this.adminBasePath = adminBasePath;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -90,7 +93,7 @@ public class AuthService {
      * Bootstrap for the first administrator: an account whose email is listed
      * in {@code app.admin.emails} ({@code APP_ADMIN_EMAILS}) becomes ADMIN on
      * register and on login, so no manual database edit is ever needed to
-     * get an admin who can then promote others via {@code /admin/users}.
+     * get an admin who can then promote others through the admin API.
      */
     User promoteIfBootstrapAdmin(User user) {
         if (user.getRole() != UserRole.ADMIN
@@ -142,8 +145,12 @@ public class AuthService {
         return AuthResponse.bearer(token, jwtService.extractExpiration(token), toDto(user));
     }
 
-    /** The client's view of an account. */
+    /**
+     * The client's view of its own account. Only an administrator is told
+     * where the admin API is; for everyone else the field is absent.
+     */
     UserDto toDto(User user) {
-        return new UserDto(user.getId(), user.getEmail(), user.getRole(), user.getCreatedAt());
+        String adminPath = user.getRole() == UserRole.ADMIN ? adminBasePath : null;
+        return new UserDto(user.getId(), user.getEmail(), user.getRole(), user.getCreatedAt(), adminPath);
     }
 }

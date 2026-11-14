@@ -13,6 +13,18 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      # FR-1.1 / FR-1.3: a resume is "PDF or DOCX, up to 5 MB". Not an environment setting on purpose: the same 5 MB
+      # is fixed in ResumeService (MAX_FILE_SIZE_BYTES), frontend/src/js/core/validation.js, frontend/nginx.conf and
+      # the SRS, so raising it means changing all of them. Without these two lines Spring's default applies: 1 MB,
+      # which refused every resume with a logo or photo.
+      # A file over max-file-size is answered 413 "A resume can be at most 5 MB." (GlobalExceptionHandler reads this
+      # value for the message, so it cannot drift from the limit).
+      max-file-size: 5MB
+      # Room for the form around the file (boundaries, field headers). Properties cannot add, so keep it a little
+      # above max-file-size, as frontend/nginx.conf does (client_max_body_size 6m).
+      max-request-size: 6MB
 
 server:
   port: ${PORT:8080}
@@ -83,9 +95,19 @@ app:
   admin:
     # Bootstrap administrators: accounts with these emails (comma-separated)
     # become ADMIN when they register or log in, so the first admin never
-    # needs a manual database edit. Admins change other accounts' role with
-    # PATCH /admin/users/{id}/role.
+    # needs a manual database edit. Admins change other accounts' role
+    # through the admin API (never their own).
     emails: ${APP_ADMIN_EMAILS:}
+    # The admin API is not at /admin. Every admin endpoint lives under one
+    # secret path segment: /<APP_ADMIN_PATH>/users, /<APP_ADMIN_PATH>/jobs/...
+    # 24-64 characters of letters, digits, - and _ (make one with
+    # `openssl rand -hex 24`); the app refuses to start with a weak one.
+    # Empty = a new random path on every start, which works because an
+    # administrator's client is told the path at sign-in (GET /auth/me);
+    # set it in production so it survives restarts and is the same on every
+    # instance. Anyone who is not an ADMIN gets 404 there, as for any
+    # address that does not exist, and the endpoints are not in the API docs.
+    path: ${APP_ADMIN_PATH:}
   skill-vector:
     # FR-7.2's smoothing factor: new_weight = alpha*new_signal + (1-alpha)*old_weight.
     # Not specified by the SRS -- 0.3 is a standard, moderate EMA smoothing choice

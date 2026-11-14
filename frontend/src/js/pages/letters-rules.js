@@ -7,6 +7,7 @@
 import { escapeMarkup, joinList, plainText } from './resume-builder-rules.js';
 
 // `words` is the most a good draft has; `minWords` the least (a cover letter is a page, a cold email a few lines).
+/** @type {{ id: 'cover' | 'email', label: string, minWords?: number, words: number, credits: number }[]} */
 export const LETTER_TYPES = [
   { id: 'cover', label: 'Cover letter', minWords: 250, words: 400, credits: 18 },
   { id: 'email', label: 'Cold email', words: 120, credits: 11 },

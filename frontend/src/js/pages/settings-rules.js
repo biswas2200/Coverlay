@@ -72,6 +72,8 @@ export function beginPurge(job, now) {
  * One tick of the worker: the next unfinished step runs. `failing` names steps that fail on
  * their first try (the preview makes "search" fail once to show the retry). A failed step is
  * retried on the next tick; the job is done only when every step is.
+ * @param {ReturnType<typeof startDeletion>} job
+ * @param {{ failing?: string[] }} [options]
  */
 export function advanceDeletion(job, { failing = [] } = {}) {
   if (job.status !== 'running') {

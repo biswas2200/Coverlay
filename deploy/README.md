@@ -69,10 +69,12 @@ Update: `git pull && bash deploy/setup.sh up`. Logs:
 
 ## Job data
 
-A new database has no companies or jobs. Sign in with the admin email, then
-call `POST /api/admin/jobs/import-startup-map` (about 20 minutes, one page a
+A new database has no companies or jobs. Sign in with the admin email (the
+answer's `adminPath` is the secret admin path, `APP_ADMIN_PATH` in
+`deploy/.env`; written `{admin-path}` below), then
+call `POST /api/{admin-path}/jobs/import-startup-map` (about 20 minutes, one page a
 second) or load a dump of `companies` and `job_postings`, then
-`POST /api/admin/jobs/refresh` and `POST /api/admin/jobs/market-demand`. The
+`POST /api/{admin-path}/jobs/refresh` and `POST /api/{admin-path}/jobs/market-demand`. The
 daily refresh at 06:30 India time keeps it current.
 
 ## Stop paying

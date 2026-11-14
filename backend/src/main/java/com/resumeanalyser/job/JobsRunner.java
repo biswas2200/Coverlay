@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 /**
  * Runs the long job-collection tasks one at a time in the background (a
  * full detection run asks the feeds a few thousand times), and remembers
- * how the last one went for {@code GET /admin/jobs/status}. Also owns the
+ * how the last one went for the admin API's {@code GET .../jobs/status}. Also owns the
  * daily refresh schedule ({@code app.jobs.refresh-cron}, India time; "-" turns it off).
  */
 @Component

@@ -67,8 +67,9 @@ terminal):
    docker compose up -d       # starts Postgres + MinIO
    APP_ADMIN_EMAILS=you@example.com mvn spring-boot:run   # your account becomes ADMIN; ML_SERVICE_BASE_URL defaults to http://localhost:8000
    ```
-   An ADMIN can make another account ADMIN with `PATCH /admin/users/{id}/role` (find the
-   id with `GET /admin/users?email=`). There are no tiers or payments.
+   An ADMIN can make another account ADMIN with `PATCH /{admin-path}/users/{id}/role` (find the
+   id with `GET /{admin-path}/users?email=`). The admin API is not at `/admin`: `{admin-path}` is a secret
+   path an administrator reads from `adminPath` in their sign-in answer (see `backend/README.md`, Admin API). There are no tiers or payments.
 3. **Frontend** (`frontend/`, port 4200) — plain HTML/CSS/JS, nothing to install or build.
    It expects the backend at `http://localhost:8080` (`frontend/src/js/config.js`). Serve the
    `src/` folder over HTTP (ES modules don't load from `file://`):

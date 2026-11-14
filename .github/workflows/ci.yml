@@ -105,6 +105,15 @@ jobs:
         with:
           node-version: '22'
 
-      # No dependencies to install: the tests use Node's built-in runner.
+      - name: Install dependencies
+        run: npm ci
+
+      # The rules modules (plain JavaScript, no React) are pinned by Node's built-in test runner.
       - name: Run tests
         run: npm test
+
+      - name: Typecheck the React app
+        run: npm run typecheck
+
+      - name: Build the React app
+        run: npm run build

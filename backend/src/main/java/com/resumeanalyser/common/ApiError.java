@@ -38,6 +38,15 @@ public record ApiError(
      * @param message the error message
      * @return a new ApiError, timestamped now
      */
+    /**
+     * The one answer for "there is nothing at this address". The admin API
+     * gives exactly this to anyone who is not an administrator, so it cannot
+     * be told apart from an address that does not exist.
+     */
+    public static ApiError notFound() {
+        return of(404, "Not found");
+    }
+
     public static ApiError of(int status, String message) {
         return new ApiError(Instant.now(), status, message, null, null);
     }

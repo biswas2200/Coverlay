@@ -37,6 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BugReportControllerTest {
 
     @Autowired private MockMvc mockMvc;
+    @org.springframework.beans.factory.annotation.Value("${app.admin.base-path}")
+    private String admin;
     @MockBean private BugReportService service;
     @MockBean private UserRepository users;
 
@@ -73,8 +75,8 @@ class BugReportControllerTest {
     @Test
     @WithMockUser(username = "u@example.com", roles = "USER")
     void theReviewQueue_isAdminOnly() throws Exception {
-        mockMvc.perform(get("/admin/bug-reports")).andExpect(status().isForbidden());
-        mockMvc.perform(post("/admin/bug-reports/{id}/approve", UUID.randomUUID()).with(csrf())
+        mockMvc.perform(get(admin + "/bug-reports")).andExpect(status().isForbidden());
+        mockMvc.perform(post(admin + "/bug-reports/{id}/approve", UUID.randomUUID()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"x\"}"))
                 .andExpect(status().isForbidden());
         verify(service, never()).approve(any(), any(), any());

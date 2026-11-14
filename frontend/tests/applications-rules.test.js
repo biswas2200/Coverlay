@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   DAY_MS,
+  NOTES_MAX,
   addApplication,
   boardColumns,
   boardSummary,
@@ -15,8 +16,14 @@ import {
   moveTo,
   needsCheckIn,
   nextStatus,
+  noteWords,
+  notesOf,
+  notesPlaceholder,
   outcomeRecord,
+  rejectionsSummary,
   sampleApplications,
+  setNotes,
+  cleanNotes,
   snoozeCheckIn,
   validateApplication,
 } from '../src/js/pages/applications-rules.js';
@@ -108,7 +115,7 @@ test('the summary counts every column and names what needs the person most', () 
 
 test('Lay AI answers a status question from the board and points at the card', () => {
   const answer = layApplicationsReply('What is the status of Swiggy?', board(), NOW);
-  assert.match(answer.reply, /Backend Engineer at Swiggy is in Applied: you applied 9 days ago on LinkedIn with resume v3/);
+  assert.match(answer.reply, /AI Engineer Intern at Swiggy is in Applied: you applied 9 days ago on LinkedIn with resume v3/);
   assert.match(answer.reply, /Next: follow up if you haven't heard back, due 2 days ago\./);
   assert.equal(answer.focus, 'app-2');
   assert.equal(answer.proposal, null);
@@ -123,7 +130,7 @@ test("Lay AI lists what is due, what to chase, and summarises the board", () => 
   assert.match(layApplicationsReply("What's due?", [], NOW).reply, /Nothing is due/);
 
   const chase = layApplicationsReply("Who hasn't replied?", board(), NOW);
-  assert.match(chase.reply, /Backend Engineer at Swiggy \(9 days ago\)/);
+  assert.match(chase.reply, /AI Engineer Intern at Swiggy \(9 days ago\)/);
   assert.doesNotMatch(chase.reply, /Flipkart/, 'a two-day-old application is not worth chasing yet');
   assert.equal(chase.focus, 'app-2');
 
@@ -161,4 +168,87 @@ test('every Lay AI reply is short and plain', () => {
     assert.ok(reply.split(/\s+/).length <= 80, `${question}: ${reply.split(/\s+/).length} words`);
     assert.ok(!reply.includes('!'), 'no exclamation marks');
   }
+});
+
+// ---------- notes on a card ----------
+
+test('a note is kept on one card, cleaned, and writing it is not a move', () => {
+  const apps = sampleApplications(NOW);
+  const zerodha = apps.find((a) => a.company === 'Zerodha');
+  const next = setNotes(apps, zerodha.id, '  Round 2 on Friday.\r\n\r\n\r\n\r\nAsk about on-call.   ', NOW + 1);
+  const kept = next.find((a) => a.id === zerodha.id);
+  assert.equal(kept.notes, 'Round 2 on Friday.\n\nAsk about on-call.', 'line breaks as \\n, one blank line at most, nothing trailing');
+  assert.equal(kept.status, zerodha.status);
+  assert.equal(kept.updatedAt, zerodha.updatedAt, 'a note does not count as news from the company');
+  assert.deepEqual(kept.reminder, zerodha.reminder);
+  assert.equal(next.filter((a) => a.notes).length, 1, 'no other card gets it');
+  assert.notEqual(next, apps, 'a new list');
+  assert.equal(apps.find((a) => a.id === zerodha.id).notes, undefined, 'the old list is untouched');
+});
+
+test('an unchanged or unknown note changes nothing, and an emptied note removes the field', () => {
+  const apps = setNotes(sampleApplications(NOW), 'app-2', 'Spoke to Asha.', NOW);
+  assert.equal(setNotes(apps, 'app-2', 'Spoke to Asha.', NOW + 5)[1], apps[1], 'same note: same card object');
+  assert.deepEqual(setNotes(apps, 'nope', 'x', NOW), apps, 'unknown id');
+  const emptied = setNotes(apps, 'app-2', '  \n ', NOW);
+  assert.equal('notes' in emptied[1], false);
+  assert.equal('notesAt' in emptied[1], false);
+  assert.equal(notesOf(emptied[1]), '');
+});
+
+test('a note is capped, a card from before notes existed has none', () => {
+  assert.equal(cleanNotes('x'.repeat(NOTES_MAX + 500)).length, NOTES_MAX);
+  assert.equal(notesOf({ id: 'a', status: 'APPLIED' }), '');
+  assert.equal(notesOf({ id: 'a', status: 'APPLIED', notes: 42 }), '', 'a stored value that is not text is ignored');
+  assert.equal(cleanNotes(null), '');
+  assert.equal(noteWords('Round 2 on Friday'), 4);
+  assert.equal(noteWords('   '), 0);
+});
+
+test('a card with a note is still a valid board, and its note never reaches the outcome record', () => {
+  const apps = setNotes(sampleApplications(NOW), 'app-5', 'They said the role needed more Kubernetes.', NOW);
+  assert.ok(isApplicationList(apps));
+  const record = outcomeRecord(apps.find((a) => a.id === 'app-5'), { subjectId: 's', experienceBand: '1-3 yrs', skills: ['Java'] });
+  assert.equal(record.outcome, 'rejected');
+  assert.ok(!JSON.stringify(record).includes('Kubernetes'), 'the note is the person\'s, not the insights\'');
+  assert.deepEqual(Object.keys(record).sort(), ['experience_band', 'outcome', 'resume_version', 'role', 'skills', 'subject_id']);
+});
+
+test('the note hint follows the column, and a rejected card asks what it taught', () => {
+  assert.match(notesPlaceholder('INTERVIEW'), /questions/i);
+  assert.match(notesPlaceholder('REJECTED'), /differently/i);
+  assert.ok(notesPlaceholder('SOMETHING').length > 0);
+});
+
+test('Lay AI shows a card\'s own notes when asked to prepare, and only then', () => {
+  const apps = setNotes(sampleApplications(NOW), 'app-4', 'Ask about the on-call rota.', NOW);
+  assert.match(layApplicationsReply('Prepare for Zerodha', apps, NOW).reply, /Your notes say: "Ask about the on-call rota\."/);
+  assert.doesNotMatch(layApplicationsReply('Status of Zerodha', apps, NOW).reply, /on-call/, 'a status question does not read the notes');
+  assert.doesNotMatch(layApplicationsReply('Summarise my board', apps, NOW).reply, /on-call/);
+});
+
+// ---------- where rejections are kept ----------
+
+test('Lay AI says where the rejections are kept, from the board', () => {
+  const apps = sampleApplications(NOW);
+  const reply = layApplicationsReply('Where are my rejections?', apps, NOW);
+  assert.match(reply.reply, /Java Developer at Freshworks/);
+  assert.match(reply.reply, /Rejected column/);
+  assert.match(reply.reply, /deletes nothing/);
+  assert.match(reply.reply, /never the company or your notes/);
+  assert.equal(reply.focus, 'app-5', 'the card is brought into view');
+  assert.equal(reply.proposal, null, 'asking never moves a card');
+});
+
+test('the rejections reply handles none, one, and many, with and without notes', () => {
+  assert.match(rejectionsSummary([]), /no rejections/);
+  const one = sampleApplications(NOW).filter((a) => a.id === 'app-5');
+  assert.match(rejectionsSummary(one), /Add a note on a rejected card/);
+  const noted = setNotes(one, 'app-5', 'Wanted Kubernetes.', NOW);
+  assert.match(rejectionsSummary(noted), /One has a note from you/);
+  const many = ['a', 'b', 'c', 'd'].map((id) => ({ ...one[0], id, company: id.toUpperCase() }));
+  const text = rejectionsSummary(many);
+  assert.match(text, /4 applications were rejected/);
+  assert.match(text, /and 1 more/);
+  assert.match(rejectionsSummary(setNotes(many, 'a', 'x', NOW).map((a, i) => (i === 1 ? { ...a, notes: 'y' } : a))), /2 have notes from you/);
 });

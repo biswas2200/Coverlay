@@ -45,12 +45,12 @@ flowchart LR
         UC18["Verify engine fingerprint\n[Planned — step 1]"]
         UC19["Upgrade to Premium\n[Implemented — admin sets role; payments Planned]"]
         UC20["Export report\n[Planned — step 5, Premium]"]
-        UC21["Recompute skill vectors (EMA)\n[Implemented — POST /skill-vectors/recompute, ADMIN]"]
+        UC21["Recompute skill vectors (EMA)\n[Implemented — POST /{admin-path}/roles/{id}/skill-vectors/recompute, ADMIN]"]
         UC22["Export weights snapshot\n[Planned — step 3, ADMIN]"]
         UC23["Train and release a model\n[Planned — step 7, ADMIN]"]
         UC24["Detect job domain\n[Implemented — domain_classifier.py]"]
         UC25["Re-analyse a resume at the\ncurrent tier\n[Implemented — POST /resumes/{id}/reanalyze]"]
-        UC26["Promote an account\n[Implemented — PATCH /admin/users/{id}/role, ADMIN]"]
+        UC26["Promote an account\n[Implemented — PATCH /{admin-path}/users/{id}/role, ADMIN]"]
     end
 
     Free --> UC1
