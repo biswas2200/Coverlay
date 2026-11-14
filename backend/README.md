@@ -10,7 +10,7 @@ recommendations and feedback.
 |---|---|---|
 | `auth` | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` | Stateless JWT, bcrypt passwords, RBAC roles; `/me` reads the role fresh from the database so an upgrade is visible immediately. Emails in `APP_ADMIN_EMAILS` become ADMIN on register/login |
 | `admin` | `GET /admin/users?email=`, `PATCH /admin/users/{id}/role` (ADMIN only) | Account administration: an admin sets `USER` / `ADMIN`. There are no tiers (the `PREMIUM_USER` role was removed by `V10__remove_tiers.sql`, which turned those accounts into `USER`) |
-| `resume` | `POST /resumes`, `GET /resumes`, `GET /resumes/{id}/profile`, `POST /resumes/{id}/reanalyze` | Validates + stores the file (PDF or DOCX), calls the ML service's `POST /analyze-file?top_n=5` once per upload, the same for every account; `reanalyze` re-reads the stored file and re-runs it (how a result locked because the AI engine could not run gets its matches later). `POST /resumes/{id}/jd-match` is open to every account |
+| `resume` | `POST /resumes`, `GET /resumes`, `GET /resumes/{id}/profile`, `POST /resumes/{id}/reanalyze` | Validates + stores the file (PDF or DOCX), calls the ML service's `POST /analyze-file?top_n=5` once per upload, the same for every account; `reanalyze` re-reads the stored file and re-runs it (how a result locked because the AI engine could not run gets its matches later). `POST /resumes/{id}/jd-match` is open to every account. A file over 5 MB is refused with `413` ([Upload size](#resume-upload-size)) |
 | `recommendation` | `GET /recommendations/dashboard` | Composite read view assembled from the latest resume's persisted analysis: detected domain, ATS score, roles (or a lock with `lockReason`), explanation |
 | `feedback` | `POST /feedback`, `GET /feedback/{recommendationId}` | Helpful/not-helpful verdicts (FR-10.1); triggers the skill-vector recompute once enough feedback accumulates |
 | `skillvector` | `GET /roles/{roleId}/skill-vectors`, `POST /roles/{roleId}/skill-vectors/recompute` (ADMIN only) | Versioned, EMA-weighted skill store (FR-7.1-7.4) |
@@ -33,6 +33,23 @@ and `OBJECT_STORAGE_*` at an existing S3-compatible endpoint instead.
 
 Flyway (`src/main/resources/db/migration/`) creates the schema on startup; Hibernate only
 validates it matches the entities (`ddl-auto: validate`), it never generates DDL itself.
+
+## Resume upload size
+
+A resume is a PDF or DOCX of **up to 5 MB** (SRS FR-1.1, FR-1.3), the same limit the web client and nginx apply.
+It is set in `application.yml` as `spring.servlet.multipart.max-file-size: 5MB`, with `max-request-size: 6MB` a little
+above it for the form around the file. Spring's own default is 1 MB, so both lines are needed; without them every
+resume with a logo or photo is refused.
+
+- A file of exactly 5 MB is accepted; one byte more is refused by the servlet container before any controller runs,
+  and `GlobalExceptionHandler` answers `413 Payload Too Large` with `{"status": 413, "message": "A resume can be at most 5 MB."}`.
+  The message is built from `max-file-size`, so it cannot drift from the limit.
+- The limit is not an environment variable: `ResumeService` (`MAX_FILE_SIZE_BYTES`, answers `400`),
+  `frontend/src/js/core/validation.js` and `frontend/nginx.conf` (`client_max_body_size 6m`) hold the same 5 MB.
+  Raising it means changing all of them and the SRS together.
+- `ResumeUploadLimitTest` checks the limit against a real servlet container (4 MB and exactly 5 MB accepted,
+  5 MB + 1 byte and 6 MB refused with 413); `ResumeControllerUploadTest` and `GlobalExceptionHandlerTest` cover the
+  answer itself.
 
 ## API docs
 

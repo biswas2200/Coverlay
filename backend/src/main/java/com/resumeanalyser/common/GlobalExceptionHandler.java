@@ -4,6 +4,8 @@ import com.resumeanalyser.common.logging.RequestIdFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +14,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,11 +27,22 @@ import java.util.UUID;
  * raw stack trace. Applies app-wide (no {@code basePackages} restriction).
  * Module-specific exceptions (e.g. auth's {@code EmailAlreadyInUseException})
  * are handled by that module's own scoped handler instead, never here.
+ *
+ * <p>{@code @EnableConfigurationProperties} makes sure {@link MultipartProperties} (the upload limits, also read by
+ * Spring Boot's own multipart setup) is a bean here too: {@code @WebMvcTest} slices load this class but not that setup.
  */
 @RestControllerAdvice
+@EnableConfigurationProperties(MultipartProperties.class)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final MultipartProperties multipart;
+
+    /** @param multipart the upload limits the servlet container enforces, so the message names the real limit */
+    public GlobalExceptionHandler(MultipartProperties multipart) {
+        this.multipart = multipart;
+    }
 
     /**
      * Handles a request body that failed its {@code @Valid} constraints
@@ -133,6 +148,35 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiError.of(HttpStatus.FORBIDDEN.value(), "You do not have permission to perform this action"));
+    }
+
+    /**
+     * Handles an upload the servlet container refused for being over {@code spring.servlet.multipart.max-file-size}
+     * (or {@code max-request-size}): 413, never a 500. The container refuses it while the request is still being
+     * unpacked, before any controller is chosen, so this has to live here: a module's package-scoped advice does not
+     * apply at that point. The limit is read from the configuration rather than from the exception, which carries no
+     * size ({@code -1}); the exception's own text (field name, byte count) is deliberately not shown.
+     *
+     * @param e what the container threw; not used beyond picking this handler
+     * @return a 413 Payload Too Large response saying how big a resume can be
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiError.of(HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                        "A resume can be at most " + describe(multipart.getMaxFileSize()) + "."));
+    }
+
+    /** A size as people write it: "5 MB", or "512 KB" when it is not a whole number of megabytes. */
+    private static String describe(DataSize size) {
+        long bytes = size.toBytes();
+        if (bytes % DataSize.ofMegabytes(1).toBytes() == 0) {
+            return size.toMegabytes() + " MB";
+        }
+        if (bytes % DataSize.ofKilobytes(1).toBytes() == 0) {
+            return size.toKilobytes() + " KB";
+        }
+        return bytes + " bytes";
     }
 
     /**

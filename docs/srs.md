@@ -132,7 +132,7 @@ Priority: High
 
 - FR-1.1 The system shall allow users to upload resume files in PDF format up to 5 MB. [Implemented] DOCX support [Planned].
 - FR-1.2 The system shall extract candidate name, contact information, education, work experience, and skills from the uploaded resume using a local NER model by default; an LLM-based extraction path shall remain available as an explicit opt-in (`PARSER_BACKEND=llm`). *(v1.0 said "LLM-based extraction"; changed.)* [Implemented]
-- FR-1.3 The system shall reject and report a clear error for unsupported file formats or files exceeding the size limit. [Implemented]
+- FR-1.3 The system shall reject and report a clear error for unsupported file formats or files exceeding the size limit. [Implemented] (A file over 5 MB is answered `413` with "A resume can be at most 5 MB."; the limit is `spring.servlet.multipart.max-file-size`, checked against a real servlet container in `ResumeUploadLimitTest`. Until 14 Nov 2026 no limit was configured, so Spring's 1 MB default refused larger files with a 500.)
 - FR-1.4 The system shall store the parsed structured profile associated with the user's account (web editions). [Implemented]
 - FR-1.5 The system shall retain each new upload as a distinct, timestamped version rather than overwriting the previous one. [Implemented]
 - FR-1.6 The system shall segment resume text into sections (Skills, Experience, Education, other) by heading detection before running the NER model, and shall run the NER model only on the Experience and Education sections. [Implemented] (`sectioner.py`; falls back to running NER over the whole text when no heading is recognized)
