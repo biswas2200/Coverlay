@@ -20,6 +20,28 @@ export const ATTACHMENT_KINDS = { resume: 'Resume', cover: 'Cover letter' };
 export const ATTACHMENT_FORMATS = ['pdf', 'docx'];
 export const LIMITS = { subject: 200, body: 20000, markup: 40000, address: 254 };
 
+// A blank the draft still has: "[Company]" (the job description did not name it) or a placeholder the person's
+// resume could not fill ("{user.link}": no link on it). A draft may keep one; a send may not.
+const BLANK = /\[Company\]|\{(?:user|other)\.[a-z_]+(?:_\d+)?\}/g;
+const BLANK_WORDS = {
+  '[Company]': 'the company name',
+  '{user.link}': 'your link',
+  '{user.phone}': 'your phone number',
+  '{user.email}': 'your email address',
+  '{user.name}': 'your name',
+  '{user.first_name}': 'your first name',
+  '{user.company}': 'your company',
+  '{user.college}': 'your college',
+};
+
+/** The blanks in a text, each once, as written: `['[Company]', '{user.link}']`. */
+export function blanksIn(text) {
+  return [...new Set(String(text ?? '').match(BLANK) ?? [])];
+}
+
+/** A blank in words for the person: "the company name", "your link". */
+export const describeBlank = (/** @type {string} */ blank) => BLANK_WORDS[blank] ?? 'a detail';
+
 /** A single address, lower-cased, or null (a list, a name with brackets, or anything that is not an address). */
 export function cleanRecipient(raw) {
   const text = String(raw ?? '').trim().toLowerCase();
@@ -43,6 +65,12 @@ export function attachmentName(kind, format, personName) {
  * Checks a request to put an email in the person's mailbox and returns `{ ok: true, request }` with
  * everything cleaned, or `{ ok: false, error }` in words for the person. `action` is `draft`
  * (saved in the Drafts folder, nothing sent) or `send`. `attachments` is `[{ kind, format }]`.
+ * @typedef {{ kind: string, format: string }} AttachmentWish
+ * @typedef {{ kind: string, format: string, fileName: string }} Attachment
+ * @typedef {{ provider: string, action: string, to: string | null, subject: string, body: string, bodyMarkup?: string, attachments: Attachment[] }} MailRequest
+ * @param {{ provider?: string, action: string, to?: string, subject?: string, body?: string, bodyMarkup?: string, attachments?: AttachmentWish[] }} input
+ * @param {string} [personName]
+ * @returns {{ ok: true, request: MailRequest } | { ok: false, error: string }}
  */
 export function buildMailRequest({ provider = 'gmail', action, to, subject, body, bodyMarkup, attachments = [] }, personName = '') {
   const found = MAIL_PROVIDERS.find((p) => p.id === provider);
@@ -62,6 +90,10 @@ export function buildMailRequest({ provider = 'gmail', action, to, subject, body
   const cleanedSubject = cleanSubject(subject);
   if (!cleanedSubject) {
     return { ok: false, error: 'The email needs a subject.' };
+  }
+  const blanks = blanksIn(`${cleanedSubject}\n${body ?? ''}`);
+  if (action === 'send' && blanks.length) {
+    return { ok: false, error: `The email still has a blank to fill in: ${blanks.map((b) => `${b} (${describeBlank(b)})`).join(', ')}. Fill it in or edit that line, then send. A draft can keep it.` };
   }
   const text = String(body ?? '').trim();
   if (!text) {
@@ -101,7 +133,7 @@ export function buildMailRequest({ provider = 'gmail', action, to, subject, body
  * What a request does, in one sentence: before it runs ("Send from ... to ...") for the confirmation, or
  * after it ran (`done: true`: "Sent from ... to ...") for the result.
  */
-export function mailSummary(request, account, { done = false } = {}) {
+export function mailSummary(/** @type {MailRequest} */ request, /** @type {string} */ account, { done = false } = {}) {
   const files = request.attachments.map((a) => `${ATTACHMENT_KINDS[a.kind]} ${a.format.toUpperCase()}`);
   const withFiles = files.length ? ` with ${files.length === 1 ? 'one attachment' : `${files.length} attachments`} (${files.join(', ')})` : ' with no attachments';
   if (request.action === 'send') {

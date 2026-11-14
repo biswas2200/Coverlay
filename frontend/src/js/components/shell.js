@@ -5,6 +5,7 @@ import { clearSession, getUser } from '../core/session.js';
 import { initials, shortDate } from '../pages/insights.js';
 import { roleLabel } from '../pages/dashboard-rules.js';
 import { openBugReport } from './bug-report.js';
+import { mountGlobalLay } from './lay-global.js';
 import { hydrateIcons, icon } from './icons.js';
 import { mountVersionMenu } from './version-menu.js';
 
@@ -136,6 +137,11 @@ export function renderShell(active) {
   });
   nav.addEventListener('click', () => setDrawer(false));
   hydrateIcons();
+
+  // Lay AI is on every signed-in page. The Builder has its own panel, so it does not get a second one.
+  if (active !== 'builder') {
+    mountGlobalLay();
+  }
 
   // The stored role goes stale after an admin changes it; refresh it quietly.
   refreshCurrentUser().then(

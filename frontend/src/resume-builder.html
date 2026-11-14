@@ -42,6 +42,7 @@
           <div>
             <h2 id="start-title">Let's start with a few questions</h2>
             <p class="muted">Lay AI suggests templates from your answers.</p>
+            <p class="rb-handoff" id="handoff-note" hidden>Lay AI is holding a request you agreed to for your resume. It will carry it out as soon as your first resume is ready.</p>
           </div>
           <form class="rb-start-form" id="start-form">
             <div class="field">
@@ -301,7 +302,7 @@
               </div>
               <form class="lay-form" id="lay-form">
                 <label class="sr-only" for="lay-input">Ask Lay AI</label>
-                <input class="input" id="lay-input" maxlength="300" placeholder="Ask Lay AI to change your resume…" autocomplete="off" />
+                <textarea class="input lay-input" id="lay-input" rows="1" maxlength="6000" placeholder="Ask Lay AI to change your resume, or paste a job description…" autocomplete="off"></textarea>
                 <button class="btn btn-primary" id="lay-send" type="submit">Send</button>
               </form>
             </div>

@@ -33,7 +33,7 @@ ml-service/app/
     ├── skill_vectors.npy   # (planned, step 2) taxonomy × 384 -- not yet generated, needs a real model run
     ├── role_vectors.npy    # (planned, step 2)
     ├── vectors.sha256      # (planned, step 2)
-    └── weights_snapshot.json # optional; exported by GET /roles/skill-vectors/snapshot, absent by default
+    └── weights_snapshot.json # optional; exported by GET /{admin-path}/skill-vectors/snapshot, absent by default
 ml-service/scripts/          # (planned) precompute_vectors.py, bench.py, download_models.py
 ml-service/training/         # (planned, step 7) cloud training on GCP (train_ner.py, train_embed.py, config.py)
 ml-service/tests/golden/     # (planned, step 6) fixtures + expected outputs per engine version
@@ -81,7 +81,7 @@ Text (or multipart `file`, PDF only; `415` otherwise) → `ParseResponse { profi
   }
 }
 ```
-`ner_model_sha`/`embed_model_sha` hash the configured model identifier (name + pinned revision), not the downloaded weights themselves; see `fingerprint.py`'s docstring for why, and [Editions & Parity §7](editions-and-parity.md#7-implementation-order) step 1 for the real ONNX content-hash pinning this stands in for. `weights_snapshot_id` is `"uniform"` until an admin exports a snapshot via `GET /roles/skill-vectors/snapshot`.
+`ner_model_sha`/`embed_model_sha` hash the configured model identifier (name + pinned revision), not the downloaded weights themselves; see `fingerprint.py`'s docstring for why, and [Editions & Parity §7](editions-and-parity.md#7-implementation-order) step 1 for the real ONNX content-hash pinning this stands in for. `weights_snapshot_id` is `"uniform"` until an admin exports a snapshot via `GET /{admin-path}/skill-vectors/snapshot`.
 
 ### `GET /health`
 `{ "status": "ok", "engine_fingerprint": { … } }`: the liveness probe, and the value a Community user compares against the web deployment (FR-11.2).
@@ -186,7 +186,7 @@ Domain packages under `com.resumeanalyser.*`; each owns its entity, DTOs, contro
 | `resume` | Upload (PDF ≤ 5 MB), versioning (USER capped at the 3 most recent, FR-6.2/12.2), MinIO storage (`ResumeStorageService`, key `userId/version-filename`), one ML call per upload with a tier-selected `explainer`, `ParsedProfile` persistence incl. ATS + explanation + `explanationSource` | `POST /resumes`, `GET /resumes`, `GET /resumes/{id}/profile` |
 | `recommendation` | `Role`, `Recommendation` (with `resume`, `matchedSkills`, `missingSkills`), dashboard read incl. `explanationSource` | `GET /recommendations/dashboard` |
 | `feedback` | `Feedback` linked to recommendation + active `SkillVector` version; triggers recompute past the threshold | `POST /feedback`, `GET /feedback/{recommendationId}` |
-| `skillvector` | Versioned `SkillVector`; EMA `new = α·signal + (1−α)·old` (`SkillVectorService`), `recomputeAll`; role-spanning, hashed weights export (`SkillVectorSnapshotService`, FR-7.5) | `GET /roles/{roleId}/skill-vectors`, `POST /roles/{roleId}/skill-vectors/recompute` (`ADMIN`), `GET /roles/skill-vectors/snapshot` (`ADMIN`) |
+| `skillvector` | Versioned `SkillVector`; EMA `new = α·signal + (1−α)·old` (`SkillVectorService`), `recomputeAll`; role-spanning, hashed weights export (`SkillVectorSnapshotService`, FR-7.5) | `GET /roles/{roleId}/skill-vectors`, `POST /{admin-path}/roles/{roleId}/skill-vectors/recompute` (`ADMIN`), `GET /{admin-path}/skill-vectors/snapshot` (`ADMIN`) |
 | `client` | `MlServiceClient` (`RestClient`, `app.ml-service.base-url`), wraps `POST /analyze-file`; maps 415 and connectivity errors to typed exceptions | none |
 
 ### 7.1 Package convention
@@ -204,7 +204,7 @@ HS256 JWT signed with `app.jwt.secret`, expiry `app.jwt.expiration-ms` (default 
 - There is no frontend Premium page guard yet. An earlier revision of this page sketched one, but the app has no Premium-only page to guard: there is no JD-match page or export flow. What exists is a Premium/Standard badge on the dashboard's coaching-notes card (`isLlmExplanation` in `frontend/src/js/pages/dashboard-rules.js`, driven by `explanationSource`), the one Premium-vs-Free distinction a candidate can see today. Add the guard once a route needs gating.
 
 ### 7.4 Weights snapshot export (FR-7.5)
-`GET /roles/skill-vectors/snapshot` (`ADMIN`) is served by `SkillVectorSnapshotController` / `SkillVectorSnapshotService`, kept separate from `SkillVectorController` since it isn't scoped to one role. It walks every currently-active `SkillVector` row (`SkillVectorRepository.findByCurrentTrue()`), groups them `role.title → skill → weight` in a `TreeMap` (deterministic key order, so the hash below is stable), and returns `{snapshotId, createdAt, sha256, weights}`, where `sha256` is a SHA-256 of the weights payload. Nothing currently writes this export to `ml-service/app/data/weights_snapshot.json`; until an operator does that by hand (or a follow-up automates it), the engine keeps reading `weights.snapshot_id() == "uniform"`.
+`GET /{admin-path}/skill-vectors/snapshot` (`ADMIN`) is served by `SkillVectorSnapshotController` / `SkillVectorSnapshotService`, kept separate from `SkillVectorController` since it isn't scoped to one role. It walks every currently-active `SkillVector` row (`SkillVectorRepository.findByCurrentTrue()`), groups them `role.title → skill → weight` in a `TreeMap` (deterministic key order, so the hash below is stable), and returns `{snapshotId, createdAt, sha256, weights}`, where `sha256` is a SHA-256 of the weights payload. Nothing currently writes this export to `ml-service/app/data/weights_snapshot.json`; until an operator does that by hand (or a follow-up automates it), the engine keeps reading `weights.snapshot_id() == "uniform"`.
 
 ### 7.5 Still open (steps 4, 6, 7: these need a real run, not just code)
 | Item | Why it's still open |

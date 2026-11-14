@@ -677,7 +677,25 @@ textarea.input { resize: vertical; line-height: 1.5; }
 }
 .lay-suggestion:hover { border-color: var(--lay); color: var(--lay); }
 .lay-form { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border); }
+.lay-form { align-items: flex-end; }
 .lay-form .input { min-height: 40px; }
+/* a pasted job description fits: the box grows to a few lines, then scrolls */
+textarea.lay-input { resize: none; max-height: 150px; line-height: 1.4; padding-top: 9px; padding-bottom: 9px; overflow-y: auto; }
+.lay-msg { white-space: pre-line; }
+.rb-handoff { margin-top: 8px; padding: 8px 10px; border: 1px dashed var(--border-strong); border-radius: 10px; font-size: 13.5px; }
+@media (max-width: 640px) {
+  /* quick questions in one scrolling row, so the messages keep the room */
+  .lay-suggestions { flex-wrap: nowrap; overflow-x: auto; }
+  .lay-suggestion { flex: none; }
+}
+.lay-clear { margin-left: auto; }
+.lay-clear:not([hidden]) + .lay-close { margin-left: 0; }
+/* a drafted email, quoted in the chat */
+.lay-card { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); font-size: 13px; white-space: pre-wrap; }
+.lay-card p { margin: 0; }
+.lay-card-subject { margin-bottom: 8px; font-weight: 600; }
+.lay-card-label { display: block; margin-bottom: 2px; font: 600 11px/1 var(--mono); color: var(--faint); }
+.lay-card-body { color: var(--text); line-height: 1.5; }
 .lay-version-list { display: grid; align-content: start; gap: 8px; flex: 1; overflow-y: auto; padding: 14px; }
 .lay-version { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
 .lay-version.is-current { border-color: var(--green); background: var(--green-soft); }
@@ -908,6 +926,13 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .apps-actions .select { flex: 1 1 112px; min-width: 0; }
 .apps-actions .btn { flex: 1 1 auto; }
 .apps-checkin .row { gap: 6px; }
+.apps-notes summary { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; list-style: none; }
+.apps-notes summary::-webkit-details-marker { display: none; }
+.apps-notes summary:hover { color: var(--text); border-color: var(--text); }
+.apps-notes[open] summary { color: var(--text); border-color: var(--text); }
+.apps-notes-count { font: 500 11.5px/1 var(--mono); color: var(--faint); }
+.apps-notes-input { margin-top: 8px; width: 100%; min-height: 84px; font-size: 13.5px; }
+.apps-notes-hint { margin-top: 4px; font-size: 12px; color: var(--faint); }
 
 /* ---------- letters (preview) ---------- */
 .letters { display: grid; grid-template-columns: 280px minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
@@ -1330,6 +1355,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .apps-card { cursor: grab; }
 .apps-card:active { cursor: grabbing; }
 .apps-card .select, .apps-card .btn, .apps-card summary, .apps-card pre { cursor: pointer; }
+.apps-card textarea { cursor: text; }
 .apps-card.is-dragging { opacity: 0.4; outline: 2px dashed #000000; outline-offset: 2px; }
 .apps-col { transition: background-color 120ms; }
 .apps-col.is-over { background: #ffffff; outline: 2px dashed #000000; outline-offset: -5px; }
@@ -1351,3 +1377,181 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .settings-app-text { margin: 0; font-size: 13.5px; }
 .settings-app .field-hint { margin: 0; }
 .settings-app.is-planned, .settings-app.is-unavailable { opacity: 0.85; }
+
+/* ---------- product highlights (11 Nov 2026) ----------
+   The interface stays black and white. Colour is used only where it shows off what the product does:
+   the ATS score and its checks (green good, amber partial, red to fix), the role match percentage, the skills
+   you have (green) and the ones to add (amber), and the icon tile of each feature. Status is still written in
+   words as well, so nothing depends on hue alone. Every pair is at least 4.5:1. */
+:root {
+  --hl-green: #0b7a3b; --hl-green-soft: #dcf5e5; --hl-green-bar: #19a357;
+  --hl-amber: #8a5300; --hl-amber-soft: #ffefcc; --hl-amber-bar: #e39a0b;
+  --hl-red: #b3261e; --hl-red-soft: #fde8e8;
+  --hl-blue: #1d4fd7; --hl-blue-soft: #e3ebff;
+  --hl-violet: #6b3fd1; --hl-violet-soft: #efe8ff;
+}
+.badge-green { background: var(--hl-green-soft); color: var(--hl-green); border-color: var(--hl-green); }
+.badge-amber { background: var(--hl-amber-soft); color: var(--hl-amber); border-color: var(--hl-amber); }
+.badge-red { background: var(--hl-red-soft); color: var(--hl-red); border-color: var(--hl-red); }
+.badge-blue { background: var(--hl-blue-soft); color: var(--hl-blue); border-color: var(--hl-blue); }
+.badge-violet { background: var(--hl-violet-soft); color: var(--hl-violet); border-color: var(--hl-violet); }
+
+.bar.tone-good span, .bar.tone-ok span { background: var(--hl-green-bar); }
+.bar.tone-warn span { background: var(--hl-amber-bar); }
+.bar.tone-bad span { background: var(--hl-red); }
+.ring.tone-good { --ring: var(--hl-green-bar); }
+.ring.tone-warn { --ring: var(--hl-amber-bar); }
+.ring.tone-bad { --ring: var(--hl-red); }
+.mock-score b { color: var(--hl-green); }
+.match-pct { color: var(--hl-green); }
+
+.chips-green li, .chips-demand li.have { background: var(--hl-green-soft); border: 1px solid var(--hl-green); color: var(--hl-green); }
+.chips-amber li { background: var(--hl-amber-soft); border: 1px solid var(--hl-amber); color: var(--hl-amber); }
+
+.check.pass .check-icon { background: var(--hl-green-soft); color: var(--hl-green); border-color: var(--hl-green); }
+.check.fail .check-icon { background: var(--hl-red-soft); color: var(--hl-red); border-color: var(--hl-red); }
+.check.partial .check-icon { background: var(--hl-amber-soft); color: var(--hl-amber); border-color: var(--hl-amber); }
+
+.feature-grid .feature:nth-child(1) .feature-icon { background: var(--hl-green-soft); color: var(--hl-green); border-color: var(--hl-green); }
+.feature-grid .feature:nth-child(2) .feature-icon { background: var(--hl-blue-soft); color: var(--hl-blue); border-color: var(--hl-blue); }
+.feature-grid .feature:nth-child(3) .feature-icon { background: var(--hl-amber-soft); color: var(--hl-amber); border-color: var(--hl-amber); }
+.feature-grid .feature:nth-child(4) .feature-icon { background: var(--hl-violet-soft); color: var(--hl-violet); border-color: var(--hl-violet); }
+.tick-list .icon { color: var(--hl-green); }
+.hero-points .icon { color: var(--hl-green); }
+
+/* The demo-account box on the sign-in page (development only). */
+.demo-box { margin-top: 16px; padding: 12px 14px; border: 1.5px dashed var(--hl-blue); border-radius: var(--radius-sm); background: var(--hl-blue-soft); font-size: 13.5px; }
+.demo-box p { margin: 0 0 8px; }
+.demo-box code { font-family: var(--mono); }
+
+/* ---------- colour pass, 11 Nov 2026 (third take) ----------
+   White and black stay the theme: white page, white cards, black outlines and hard shadows, Fira Mono. The accent is
+   blue, the opposite of the logo's orange, so the two never compete: the primary button, the current-page marker, the
+   active tab and the headline highlight. Sign out is red as a warning, always, and solid red when pointed at.
+   White on the blue is 6:1, black on the pale blue is 15:1, and the red pair is 5.6:1 or better. */
+:root { --c-blue: #2a52e0; --c-blue-hover: #1f3fb8; --c-blue-pale: #d6e2ff; --c-danger: #c4161c; }
+.btn { border: 1.5px solid #000000; box-shadow: 3px 3px 0 #000000; transition: transform 100ms, box-shadow 100ms, background-color 120ms; }
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000000; }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000000; }
+.btn:disabled { transform: none; box-shadow: 3px 3px 0 #000000; }
+.btn-primary { background: var(--c-blue); color: #ffffff; }
+.btn-primary:hover { background: var(--c-blue-hover); color: #ffffff; }
+.btn-secondary { background: #ffffff; }
+.btn-secondary:hover { background: var(--c-blue-pale); }
+.btn-ghost { border-color: transparent; box-shadow: none; }
+.btn-ghost:hover { transform: none; box-shadow: none; }
+.btn-sm { box-shadow: 2px 2px 0 #000000; }
+.hero h1 mark { background: var(--c-blue-pale); color: #000000; padding: 0 8px; border-radius: 8px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.sb-link[aria-current="page"] { background: var(--c-blue-pale); color: #000000; border: 1.5px solid #000000; box-shadow: 2px 2px 0 #000000; }
+.tab[aria-current="page"] { border-bottom: 4px solid var(--c-blue); }
+.avatar { background: var(--c-blue); color: #ffffff; border: 1.5px solid #000000; }
+.sb-foot .sb-link.sb-signout { color: var(--c-danger); font-weight: 700; }
+.sb-foot .sb-link.sb-signout:hover, .sb-foot .sb-link.sb-signout:focus-visible { background: var(--c-danger); color: #ffffff; border-color: #000000; box-shadow: 2px 2px 0 #000000; }
+
+/* Small blue cues so the feature screens read as working, not flat: the thing you chose, the thing you can act on, the title of each card. Everything stays white and black. */
+input[type="radio"], input[type="checkbox"] { accent-color: var(--c-blue); }
+:focus-visible { outline-color: var(--c-blue); }
+.card-head h2::before, .viz-title::before {
+  content: ""; display: inline-block; width: 6px; height: 1em; margin-right: 8px; border-radius: 3px; background: var(--c-blue); vertical-align: -0.12em;
+}
+.seg { border: 1.5px solid #000000; background: #ffffff; }
+.seg button[aria-selected="true"] { background: var(--c-blue); color: #ffffff; }
+.seg button:not([aria-selected="true"]):not(:disabled):hover { background: var(--c-blue-pale); color: #000000; }
+.letters-template { background: #ffffff; border-width: 1.5px; border-color: #000000; transition: background-color 100ms, box-shadow 100ms; }
+.letters-template:hover { background: var(--c-blue-pale); }
+.letters-template:has(input:checked) { background: var(--c-blue-pale); box-shadow: inset 5px 0 0 var(--c-blue), 2px 2px 0 #000000; }
+.lay-suggest-item { border-width: 1.5px; border-color: #000000; box-shadow: inset 4px 0 0 var(--c-blue); padding-left: 14px; }
+.lay-suggest-item.is-added { box-shadow: inset 4px 0 0 var(--hl-green-bar); }
+.lay-suggest-item.is-skipped { box-shadow: inset 4px 0 0 #8a8a8a; }
+.lay-diff-new { color: var(--hl-green); font-weight: 600; }
+.field-hint a, .letters-suggest a { color: var(--c-blue); }
+
+/* ---------- type, 11 Nov 2026 ----------
+   Simpler type than the monospace it replaces: Inter for the interface, Source Serif 4 for headings, both free Google
+   Fonts. Numbers keep equal-width digits so scores and columns line up. The documents (resume, letters) are unchanged. */
+:root {
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+body { font-weight: 400; font-size: 15px; line-height: 1.6; }
+.mono, .badge, .stat-big, .mock-score, .match-pct, .ring b, .insights-tile-value { font-variant-numeric: tabular-nums; }
+h1, h2, h3, .page-title, .section-title { font-family: var(--serif); font-weight: 600; letter-spacing: -0.01em; }
+.hero h1 { font-weight: 700; letter-spacing: -0.02em; }
+.btn, .tab, .sb-link, .seg button, .badge, .chips li { font-family: var(--font); }
+.badge { letter-spacing: 0.03em; font-weight: 600; }
+.sb-label, .crumb, .section-label, .eyebrow { letter-spacing: 0.06em; font-weight: 600; }
+
+/* ---------- profile picture and LinkedIn import ---------- */
+/* One round frame for every kind of picture: a photo or a drawn avatar fills it exactly (the photo is cut square before it is kept), the initials sit in the middle. */
+.avatar { position: relative; flex: none; overflow: hidden; border-radius: 50%; line-height: 1; }
+.avatar img, .avatar svg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-xl { border-width: 2px; box-shadow: 3px 3px 0 #000000; }
+.pic-row { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.pic-actions { display: grid; gap: 10px; min-width: 0; flex: 1 1 200px; }
+.pic-actions .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn.is-disabled { opacity: 0.5; pointer-events: none; }
+.pic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 10px; max-width: 360px; }
+.pic-option {
+  position: relative; aspect-ratio: 1; width: 100%; padding: 0; overflow: hidden; border-radius: 50%; cursor: pointer;
+  border: 1.5px solid #000000; background: #ffffff; transition: transform 100ms, box-shadow 100ms;
+}
+.pic-option:hover { transform: translateY(-2px); box-shadow: 2px 3px 0 #000000; }
+.pic-option.is-selected { box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px var(--c-blue); }
+.pic-option svg { display: block; width: 100%; height: 100%; }
+.linkedin-steps { display: grid; gap: 10px; margin: 0 0 14px; }
+.linkedin-steps li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14px; }
+.linkedin-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--c-blue); color: #ffffff; font-weight: 700; font-size: 13px; border: 1.5px solid #000000; }
+.linkedin-card > .btn { margin-bottom: 8px; }
+
+/* ---------- the admin console: its own window, so it must look like one ---------- */
+.app-admin .sidebar { background: #000000; border-right: 1.5px solid #000000; color: #ffffff; }
+.app-admin .brand { color: #ffffff; }
+.app-admin .sb-user { background: #1a1a1a; border-color: #3a3a3a; }
+.app-admin .sb-email { color: #ffffff; }
+.app-admin .sb-label { color: #b8b8b8; }
+.app-admin .sb-link { color: #e6e6e6; }
+.app-admin .sb-link:hover { background: #1f1f1f; color: #ffffff; }
+.app-admin .sb-link[aria-current="page"] { background: var(--c-blue); color: #ffffff; border-color: #ffffff; box-shadow: none; }
+.app-admin .sb-foot { background: #000000; border-top-color: #3a3a3a; }
+.app-admin .sb-tag { background: #ffffff; color: #000000; border-color: #ffffff; }
+.app-admin .sb-foot .sb-link.sb-signout { color: #ff8a8a; }
+.app-admin .sb-foot .sb-link.sb-signout:hover { background: var(--c-danger); color: #ffffff; border-color: #ffffff; box-shadow: none; }
+.app-admin .icon-btn.sb-close { background: #000000; color: #ffffff; border-color: #ffffff; }
+.admin-tag { margin-left: auto; padding: 2px 8px; border-radius: 6px; background: #ffffff; color: #000000; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+.app-admin .sb-top { gap: 8px; }
+.app-admin .sb-user { display: block; }
+
+/* ---------- my activity (RB-ACT) and community likes and replies (RB-COM-09 to 11) ---------- */
+.activity { display: grid; gap: 16px; }
+.activity .insights-section { display: flex; align-items: center; gap: 10px; }
+.activity-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.activity-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.activity-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid var(--accent-soft); }
+.activity-list li:first-child { border-top: 0; padding-top: 2px; }
+.activity-on { display: block; margin-top: 2px; }
+.community-post-actions { gap: 6px; }
+.community-votes { display: inline-flex; align-items: center; gap: 4px; }
+.community-vote { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px 0 8px; border: 0; border-radius: 999px; background: var(--accent-soft); color: var(--muted); font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.community-vote .icon { width: 15px; height: 15px; }
+.community-vote:hover, .community-vote:focus-visible { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 1px currentColor; }
+.community-vote.is-up[aria-pressed="true"] { color: var(--c-blue); }
+.community-vote.is-down[aria-pressed="true"] { color: var(--c-danger); }
+.community-vote[aria-pressed="true"] .icon { fill: currentColor; }
+.activity-votes { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.activity-votes .icon { width: 13px; height: 13px; }
+.community-comments { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.community-comments-root { padding-top: 6px; border-top: 1px solid var(--accent-soft); }
+.community-comment { position: relative; display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; padding-top: 6px; }
+.community-thread-line { justify-self: center; width: 12px; padding: 0; border: 0; background: linear-gradient(var(--accent-soft), var(--accent-soft)) center / 2px 100% no-repeat; cursor: pointer; }
+.community-thread-line:hover, .community-thread-line:focus-visible { background-image: linear-gradient(var(--c-blue), var(--c-blue)); }
+.community-comment.is-collapsed .community-thread-line { visibility: hidden; }
+.community-comment-body { display: grid; gap: 4px; min-width: 0; }
+.community-comment-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13.5px; }
+.community-collapse { padding: 0; border: 0; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+.community-comment-text { font-size: 14.5px; overflow-wrap: anywhere; }
+.community-comment .community-post-actions .btn { min-height: 28px; }
+.community-reply-form { display: grid; gap: 8px; }
+@media (max-width: 900px) { .activity-grid { grid-template-columns: minmax(0, 1fr); } }
+.activity-sub { margin-top: 14px; }
+.activity-gap-count { opacity: 0.7; font-size: 12px; }

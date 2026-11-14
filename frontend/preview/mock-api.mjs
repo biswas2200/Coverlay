@@ -7,6 +7,9 @@ export const PREVIEW_USER = {
   email: 'preview@coverlay.app',
   role: 'ADMIN',
   createdAt: '2026-11-01T09:00:00Z',
+  // Only an administrator's own account carries this: where the admin API lives. The real backend makes up a
+  // secret one (APP_ADMIN_PATH); this is the sample API's.
+  adminPath: '/preview-console-7f3k9q2m8x4w',
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -68,7 +71,7 @@ const ROUTES = [
   ['GET', /^\/watchlist\/companies$/, () => [200, []]],
   ['GET', /^\/bug-reports\/mine$/, () => [200, []]],
   ['POST', /^\/bug-reports$/, () => [201, { id: 'preview-bug', status: 'NEW' }]],
-  ['GET', /^\/admin\/bug-reports$/, () => [200, []]],
+  ['GET', /^\/preview-console-7f3k9q2m8x4w\/bug-reports$/, () => [200, []]],
 ];
 
 /** Answers one /api/... request from the sample data; anything else is a 404. */

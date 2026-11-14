@@ -395,7 +395,7 @@ function cellText(cell) {
  * in a two-column layout), a table row by row and cell by cell. People test a resume for ATS
  * by pasting it into a plain-text editor, and this is that text.
  */
-export function docToPlainText(doc, { hidden = [] } = {}) {
+export function docToPlainText(doc, { hidden = /** @type {string[]} */ ([]) } = {}) {
   const skip = new Set(hidden.map((name) => `${name}Section`));
   const lines = [];
   const heading = (text) => lines.push('', text.toUpperCase());

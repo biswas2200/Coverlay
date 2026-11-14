@@ -38,6 +38,8 @@ class SkillVectorSnapshotControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @org.springframework.beans.factory.annotation.Value("${app.admin.base-path}")
+    private String admin;
 
     @MockBean
     private SkillVectorSnapshotService snapshotService;
@@ -45,7 +47,7 @@ class SkillVectorSnapshotControllerTest {
     @Test
     @WithMockUser(roles = "USER")
     void snapshot_isForbidden_forANonAdminRole() throws Exception {
-        mockMvc.perform(get("/roles/skill-vectors/snapshot"))
+        mockMvc.perform(get(admin + "/skill-vectors/snapshot"))
                 .andExpect(status().isForbidden());
     }
 
@@ -56,7 +58,7 @@ class SkillVectorSnapshotControllerTest {
         when(snapshotService.exportSnapshot())
                 .thenReturn(new WeightsSnapshotDto(now.toString(), now, "abc123", Map.of()));
 
-        mockMvc.perform(get("/roles/skill-vectors/snapshot"))
+        mockMvc.perform(get(admin + "/skill-vectors/snapshot"))
                 .andExpect(status().isOk());
     }
 

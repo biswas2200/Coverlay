@@ -1,5 +1,7 @@
 package com.resumeanalyser.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.resumeanalyser.admin.AdminGateFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,12 +39,18 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    /** The secret path the admin API lives under; see {@code AdminPathEnvironmentPostProcessor}. */
+    @Value("${app.admin.base-path}")
+    private String adminBasePath;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ObjectMapper objectMapper) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -118,8 +126,10 @@ public class SecurityConfig {
                         .requestMatchers("/auth/register", "/auth/login").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         // Belt and braces with the controller's @PreAuthorize: the
-                        // whole admin surface is ADMIN-only at the URL level too.
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // whole admin surface is ADMIN-only at the URL level too. It
+                        // lives under a secret path, never /admin, and AdminGateFilter
+                        // (below) answers 404 to a signed-in account that is not an admin.
+                        .requestMatchers(adminBasePath, adminBasePath + "/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 // No valid token (none, expired or forged) is 401, so the frontend
                 // knows the session is over and sends the user to sign in again.
@@ -128,7 +138,8 @@ public class SecurityConfig {
                 // without the right role.
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new AdminGateFilter(adminBasePath, objectMapper), JwtAuthenticationFilter.class);
 
         return http.build();
     }

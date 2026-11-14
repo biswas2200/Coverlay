@@ -102,6 +102,7 @@ export function validateApplication({ company, role, portal }) {
   return null;
 }
 
+/** @param {number | null} [resumeVersion] the resume version the application is made with */
 export function addApplication(apps, { company, role, portal }, now, resumeVersion = null) {
   if (validateApplication({ company, role, portal })) {
     return apps;
@@ -154,6 +155,59 @@ export function outcomeRecord(app, { subjectId, experienceBand, skills }) {
     resume_version: app.resumeVersion,
     outcome: app.status.toLowerCase(),
   };
+}
+
+// ---------- the person's own notes on a card ----------
+// Interview dates, who they met, the questions asked, what went well, what a rejection taught them. The notes
+// belong to the person: they are not part of the outcome record the insights keep (outcomeRecord above picks its
+// fields one by one, so a note cannot slip into it) and Lay AI reads them only when the person asks to prepare.
+
+export const NOTES_MAX = 2000;
+
+/** What a note should say in its box, by where the card is: a hint, not a form. */
+export function notesPlaceholder(status) {
+  switch (status) {
+    case 'PREPARING': return 'Who to ask for, what to read first, things to mention…';
+    case 'APPLIED': return 'Who you wrote to, what you sent, when to follow up…';
+    case 'INTERVIEW': return 'Date, interviewers, questions asked, what to practise…';
+    case 'OFFER': return 'Pay, joining date, what to ask before you decide…';
+    case 'REJECTED': return 'What you were told, what you would do differently…';
+    default: return 'Your notes…';
+  }
+}
+
+/** A note as it is kept: line breaks as \n, no run of more than one blank line, no trailing spaces, at most NOTES_MAX characters. */
+export function cleanNotes(raw) {
+  return String(raw ?? '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[^\S\n]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\s+/, '')
+    .slice(0, NOTES_MAX)
+    .replace(/\s+$/, '');
+}
+
+/** The note on an application, always a string (a card from before notes existed has none). */
+export const notesOf = (app) => (typeof app?.notes === 'string' ? app.notes : '');
+
+/** How many words a note has, for the small count on the button. */
+export function noteWords(text) {
+  return String(text ?? '').split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * The list with one application's note set (a new list). An emptied note removes the field. Writing a note is not
+ * a move: the status, the dates and the reminders stay as they are. An unknown id changes nothing.
+ */
+export function setNotes(apps, id, text, now) {
+  const notes = cleanNotes(text);
+  return apps.map((app) => {
+    if (app.id !== id || notesOf(app) === notes) {
+      return app;
+    }
+    const { notes: _old, notesAt: _at, ...rest } = app;
+    return notes ? { ...rest, notes, notesAt: now } : rest;
+  });
 }
 
 export function sampleApplications(now) {
@@ -259,6 +313,26 @@ export function boardSummary(apps, now) {
   return `You have ${PLURAL(apps.length, 'application')}: ${counts}.${urgent}`;
 }
 
+/**
+ * Where the rejections are kept, said from the board: they stay on the board in the Rejected column, with their
+ * dates and the person's notes, and nothing is deleted when a card goes there. The insights keep only an
+ * anonymous record of each (the role, the resume version, the outcome), never the company or the notes.
+ */
+export function rejectionsSummary(apps) {
+  const rejected = apps.filter((a) => a.status === 'REJECTED');
+  const kept = 'They stay in the Rejected column with their dates and your notes, and moving a card there deletes nothing. The outcome insights keep only an anonymous record (the role, the resume version, "rejected"), never the company or your notes.';
+  if (!rejected.length) {
+    return `You have no rejections on your board. ${kept}`;
+  }
+  const names = rejected.slice(0, 3).map((a) => `${a.role} at ${a.company}`);
+  const more = rejected.length > 3 ? ` and ${rejected.length - 3} more` : '';
+  const withNotes = rejected.filter((a) => notesOf(a).trim()).length;
+  const noteLine = withNotes
+    ? ` ${withNotes === 1 ? 'One has a note' : `${withNotes} have notes`} from you.`
+    : ' Add a note on a rejected card to remember what it taught you.';
+  return `${PLURAL(rejected.length, 'application')} ${rejected.length === 1 ? 'was' : 'were'} rejected: ${names.join(', ')}${more}.${noteLine} ${kept}`;
+}
+
 function describe(app, now) {
   const since = app.appliedAt ? `you applied ${dayLabel(app.appliedAt, now)}` : `you added it ${dayLabel(app.createdAt, now)}`;
   const resume = app.resumeVersion ? ` with resume v${app.resumeVersion}` : '';
@@ -322,10 +396,16 @@ export function layApplicationsReply(text, apps, now) {
   }
 
   if (/\b(?:prepare|prep|ready for)\b/.test(lower) && app) {
+    const own = notesOf(app).trim();
+    const yourNotes = own ? ` Your notes say: "${own.length > 240 ? `${own.slice(0, 240).trim()}…` : own}"` : '';
     const reply = app.status === 'INTERVIEW'
-      ? `For ${app.role} at ${app.company}: read the job post again, and open resume v${app.resumeVersion ?? '?'} so your answers match what it says.`
-      : `${app.role} at ${app.company} is in ${statusLabel(app.status)}. Interview preparation starts when it moves to Interview.`;
+      ? `For ${app.role} at ${app.company}: read the job post again, and open resume v${app.resumeVersion ?? '?'} so your answers match what it says.${yourNotes}`
+      : `${app.role} at ${app.company} is in ${statusLabel(app.status)}. Interview preparation starts when it moves to Interview.${yourNotes}`;
     return { reply, proposal: null, focus: app.id };
+  }
+
+  if (/\brejections?\b|\brejected (?:ones|applications|jobs)\b/.test(lower) && !app) {
+    return { reply: rejectionsSummary(apps), proposal: null, focus: apps.find((a) => a.status === 'REJECTED')?.id ?? null };
   }
 
   if (app) {

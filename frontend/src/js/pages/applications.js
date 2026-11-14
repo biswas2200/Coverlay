@@ -2,11 +2,12 @@ import { byId, cloneTemplate, el, field, setText, show } from '../core/dom.js';
 import { readJson, writeJson } from '../core/local-store.js';
 import { getUser, requireAuth } from '../core/session.js';
 import { hydrateIcons } from '../components/icons.js';
-import { mountLayChat } from '../components/lay-chat.js';
+import { setLayPage } from '../components/lay-global.js';
 import { renderShell } from '../components/shell.js';
 import {
   PORTALS,
   STATUSES,
+  NOTES_MAX,
   addApplication,
   boardColumns,
   dayLabel,
@@ -16,8 +17,12 @@ import {
   moveTo,
   needsCheckIn,
   nextStatus,
+  noteWords,
+  notesOf,
+  notesPlaceholder,
   outcomeRecord,
   sampleApplications,
+  setNotes,
   snoozeCheckIn,
   statusLabel,
   validateApplication,
@@ -32,6 +37,9 @@ const KEY = `coverlay.preview.applications.${getUser()?.id ?? 'guest'}`;
 const SUBJECT = { subjectId: '7f3a…c21e', experienceBand: '1-3 yrs', skills: ['Java', 'Spring Boot', 'SQL'] };
 
 let apps = load();
+const NOTES_DELAY_MS = 500;
+const notesOpen = new Set(); // cards whose notes are open, kept across the redraw a move causes
+let notesTimer = 0;
 
 if (requireAuth()) {
   hydrateIcons();
@@ -95,11 +103,73 @@ function wire() {
       }
     }
   });
+  // Notes are kept as the person types (after a short pause, and at once when they leave the box). The board is
+  // not redrawn for a note, so the box keeps its caret. Inside a card that can be dragged, text cannot be selected
+  // with the mouse, so the card stops being draggable while its note has the focus.
+  const board = byId('board');
+  board.addEventListener('input', (event) => {
+    const box = event.target.closest?.('[data-notes]');
+    if (box) {
+      clearTimeout(notesTimer);
+      notesTimer = setTimeout(() => keepNotes(box), NOTES_DELAY_MS);
+    }
+  });
+  board.addEventListener('focusin', (event) => {
+    if (event.target.closest?.('[data-notes]')) {
+      event.target.closest('.apps-card').draggable = false;
+    }
+  });
+  board.addEventListener('focusout', (event) => {
+    const box = event.target.closest?.('[data-notes]');
+    if (box) {
+      clearTimeout(notesTimer);
+      keepNotes(box, { announceIt: true });
+      box.closest('.apps-card').draggable = true;
+    }
+  });
+  board.addEventListener('toggle', (event) => {
+    const details = event.target;
+    if (details.classList?.contains('apps-notes')) {
+      const id = details.closest('.apps-card')?.dataset.app;
+      if (details.open) {
+        notesOpen.add(id);
+        details.querySelector('textarea').focus({ preventScroll: true });
+      } else {
+        notesOpen.delete(id);
+      }
+    }
+  }, true);
   byId('reset-apps').addEventListener('click', () => {
     apps = sampleApplications(Date.now());
     save();
     render();
   });
+}
+
+/** Keeps what is in a note box and updates the small count on its button. */
+function keepNotes(box, { announceIt = false } = {}) {
+  const before = apps;
+  apps = setNotes(apps, box.dataset.notes, box.value, Date.now());
+  const app = apps.find((a) => a.id === box.dataset.notes);
+  if (!app) {
+    return;
+  }
+  paintNotesSummary(box.closest('.apps-card'), notesOf(app));
+  if (apps !== before) {
+    save();
+    if (announceIt) {
+      announce(`Notes saved for ${app.role} at ${app.company}.`);
+    }
+  }
+}
+
+/** "+ Notes" while a card has none, "Notes" and the word count once it has. */
+function paintNotesSummary(card, notes) {
+  const words = noteWords(notes);
+  setText(field(card, 'notes-label'), words ? 'Notes' : '+ Notes');
+  const count = field(card, 'notes-count');
+  setText(count, words ? `${words} ${words === 1 ? 'word' : 'words'}` : '');
+  show(count, words > 0);
 }
 
 function move(id, status) {
@@ -191,10 +261,10 @@ function wireDrag() {
 
 /** Lay AI on this page: answers from the board, and moves a card only when the person says yes. */
 function wireLay() {
-  mountLayChat({
+  setLayPage({
     sub: 'Preview: answers come from your board',
-    greeting: "Hi, I'm Lay AI. Ask me about your applications: what is due, who has not replied, or how one company is going.",
-    prompts: ["What's due?", "Who hasn't replied?", 'Summarise my board', 'Status of Swiggy', 'Move Razorpay to Applied'],
+    greeting: "Hi, I'm Lay AI. Ask me about your applications: what is due, who has not replied, or how one company is going. I can also work on your resume and a job description.",
+    prompts: ["What's due?", "Who hasn't replied?", 'Where are my rejections?', 'Status of Swiggy', 'Move Razorpay to Applied'],
     answer(text) {
       const result = layApplicationsReply(text, apps, Date.now());
       if (result.focus) {
@@ -263,6 +333,18 @@ function renderCard(app, now) {
   if (record) {
     setText(field(card, 'record'), JSON.stringify(record, null, 2));
   }
+
+  const notes = notesOf(app);
+  const input = field(card, 'notes');
+  input.value = notes;
+  input.dataset.notes = app.id;
+  input.id = `notes-${app.id}`;
+  input.maxLength = NOTES_MAX;
+  input.placeholder = notesPlaceholder(app.status);
+  field(card, 'notes-title').setAttribute('for', input.id);
+  setText(field(card, 'notes-title'), `Notes for ${app.role} at ${app.company}`);
+  field(card, 'notes-box').open = notesOpen.has(app.id);
+  paintNotesSummary(card, notes);
 
   const select = field(card, 'move');
   select.dataset.move = app.id;

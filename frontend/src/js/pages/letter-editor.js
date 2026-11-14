@@ -27,6 +27,8 @@ const lines = (text) => text.split('\n').flatMap((line, index) => [...(index ? [
 /**
  * Mounts the editor on `host` with `doc`. Callbacks: `onChange()` after an edit, `onSelection()` when the
  * caret or the document changes (to refresh the toolbar), `onBlur(relatedTarget)` when focus leaves.
+ * @param {HTMLElement} host
+ * @param {{ doc?: object, label?: string, onChange?: () => void, onSelection?: () => void, onBlur?: (to: Element | null) => void }} [options]
  */
 export function createLetterEditor(host, { doc, label = 'Your draft', onChange, onSelection, onBlur } = {}) {
   const editor = new Editor({
