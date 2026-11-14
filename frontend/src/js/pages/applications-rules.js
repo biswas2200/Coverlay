@@ -103,7 +103,9 @@ export function validateApplication({ company, role, portal }) {
 }
 
 /**
+ * @param {any} apps
  * @param {{ company: string, role: string, portal: string, externalId?: string | null }} fields
+ * @param {any} now
  * @param {number | null} [resumeVersion] the resume version the application is made with
  */
 export function addApplication(apps, { company, role, portal, externalId = null }, now, resumeVersion = null) {
